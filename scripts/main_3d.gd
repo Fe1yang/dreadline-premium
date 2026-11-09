@@ -219,6 +219,9 @@ func ads_offer_tap(pos: Vector2) -> void:
 		return
 	ads_offer_open=false
 
+## One zombie in twenty thousand carries a lottery ticket. No model: just the line of text.
+const VOUCHER_DROP_CHANCE := 0.00005
+
 const REMOVE_ADS_PACK:={"id":"removeads","kind":"bundle","name":"removeads","coins":0,"vouchers":0,"tier":3,"bonus":0,"once":true,"glow":"red","rays":10}
 var store_currency:=""
 ## "Top-up failed" popup (state "payfail"): shown whenever a purchase doesn't go through, with
@@ -3987,6 +3990,7 @@ func _hit_zombie(z: Node3D,amount: float,part:="torso",hit_position:=Vector3.ZER
 		# The kill creates a physical coin pile; coins are earned only on contact pickup.
 		var reward: int=int(round(float(z.reward)*player.coin_mult))
 		kills+=1; sound.play("kill")
+		_roll_voucher_drop(z.global_position)
 		_drop_coins(z.global_position,reward,String(z.kind))
 		if player.kill_heal>0.0: player.health=minf(player.max_health,player.health+player.kill_heal*player.heal_scale())
 		if player.drop_chance>0.0 and rng.randf()<player.drop_chance: _drop_pickup(z.global_position)
@@ -5078,6 +5082,16 @@ func _fx_label_at(pos: Vector3,text: String,color: Color,vel: Vector3,seconds: f
 func _burst(pos: Vector3,color: Color,count: int) -> void:
 	for i in range(count):
 		_fx_spark_at(pos,color,rng.randf_range(0.035,0.075),Vector3(rng.randf_range(-2,2),rng.randf_range(0.5,3),rng.randf_range(-2,2)),-5.0,rng.randf_range(0.35,0.65))
+
+## Rolled on every kill. A voucher is announced with the same popup the coins use.
+func _roll_voucher_drop(z_pos: Vector3) -> void:
+	if rng.randf() >= VOUCHER_DROP_CHANCE:
+		return
+	bank_vouchers += 1
+	_popup(z_pos + Vector3(0.0, 2.4, 0.0), "你获得了一张礼券！" if String(language_code).begins_with("zh") else "You found a voucher!", Color(1, 1, 1, 1))
+	sound.play("coin_get")
+	_save()
+
 
 func _popup(pos: Vector3,text: String,color: Color) -> void:
 	_fx_label_at(pos,text,color,Vector3(0,0.8,0),0.85,false)
