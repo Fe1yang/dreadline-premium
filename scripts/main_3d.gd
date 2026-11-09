@@ -444,9 +444,9 @@ func premium_build() -> bool:
 
 ## Hand the player the whole game the moment the save is loaded.
 func _apply_premium_unlocks() -> void:
-	# Coins and silver stay real currencies: everything is bought with them. Only the run energy
-	# is removed, and the flamethrower starts equipped.
-	weapon_equipped = true
+	# Coins and silver are earned from zero like any other player; no god-mode wallet here.
+	# Only the cans are gone, so runs never cost energy.
+	all_access = false
 	if stamina != null:
 		stamina.infinite = true
 
@@ -2181,7 +2181,22 @@ const HEALTH_AD_CELLS:=4
 var health_plus_rect:=Rect2()
 const WALLET_SHOP:=Vector2(96,598)
 const WALLET_STORE:=Vector2(150,78)
+## Buy-once build: no cans, no store. Coins, silver and vouchers only.
+func wallet_layout_premium(origin: Vector2,k:=1.0) -> Dictionary:
+	var cw: float=wallet_text_w.z
+	var gw: float=wallet_text_w.y
+	var vw: float=wallet_text_w.w
+	var coin_icon:=Rect2(origin,Vector2(34,34)*k)
+	var silver_icon:=Rect2(Vector2(coin_icon.end.x+11*k+cw+18*k,origin.y),Vector2(34,34)*k)
+	var v_icon:=Rect2(Vector2(silver_icon.end.x+11*k+gw+18*k,origin.y+2*k),Vector2(50,31)*k)
+	return {"coin_icon":coin_icon,"coin_text":Vector2(coin_icon.end.x+11*k,origin.y+24.5*k),
+		"silver_icon":silver_icon,"silver_text":Vector2(silver_icon.end.x+11*k,origin.y+24.5*k),
+		"v_icon":v_icon,"v_text":Vector2(v_icon.end.x+6*k,origin.y+24.5*k)}
+
+
 func wallet_layout(origin: Vector2,k:=1.0) -> Dictionary:
+	if PREMIUM_BUILD:
+		return wallet_layout_premium(origin, k)
 	# Full 4-item wallet for lobby + store: cans, silver, gold, voucher.
 	var sw: float=wallet_text_w.x; var cw: float=wallet_text_w.z; var gw: float=wallet_text_w.y; var vw: float=wallet_text_w.w
 	var can_plus:=Rect2(origin+Vector2(42*k+sw+11*k,3*k),Vector2(28,28)*k)
@@ -6430,7 +6445,7 @@ func _fire_cannon() -> void:
 
 ## DEV ONLY: unlock every purchasable thing on this account, so the vehicles can be
 ## tested without going through the store / ad flow. Flip to false before shipping.
-const DEV_UNLOCK_ALL:=true
+const DEV_UNLOCK_ALL:=false   # premium build: no god mode, everything is earned
 func _dev_unlock_all() -> void:
 	# Also requires the dev_unlock custom feature in export_presets.cfg, so a
 	# normal build never grants the paid content.

@@ -767,15 +767,16 @@ func _draw_character_select() -> void:
 		_text_center(tt,Vector2(270,630),16,Color(1,1,1,a))
 	var can_start: bool=game.stamina.value>=game.stamina.RUN_COST
 	_button(game.LOBBY_START,game.localize("start")+"   ›",can_start)
-	# Cost ON the red START button (right side, same size as wallet can above): can-icon + "-10".
-	var cost_txt: String="-%d"%game.stamina.RUN_COST
-	var ctw: float=bold.get_string_size(cost_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(19)).x
-	var icon_sz: float=34.0*game.LOBBY_WALLET_SCALE
-	var total_w: float=icon_sz+6+ctw
-	var cx0: float=game.LOBBY_START.end.x-14-total_w
-	var cy: float=game.LOBBY_START.get_center().y-icon_sz*0.5
-	clean_ops.append(["texture",can_tex,Rect2(cx0,cy,icon_sz,icon_sz)])
-	_clean_text(bold,Vector2(cx0+icon_sz+6,cy+icon_sz-5),cost_txt,19,WHITE)
+	# No cans in the buy-once build, so the start button carries no cost badge.
+	if not game.premium_build():
+		var cost_txt: String="-%d"%game.stamina.RUN_COST
+		var ctw: float=bold.get_string_size(cost_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(19)).x
+		var icon_sz: float=34.0*game.LOBBY_WALLET_SCALE
+		var total_w: float=icon_sz+6+ctw
+		var cx0: float=game.LOBBY_START.end.x-14-total_w
+		var cy: float=game.LOBBY_START.get_center().y-icon_sz*0.5
+		clean_ops.append(["texture",can_tex,Rect2(cx0,cy,icon_sz,icon_sz)])
+		_clean_text(bold,Vector2(cx0+icon_sz+6,cy+icon_sz-5),cost_txt,19,WHITE)
 	if not can_start and not game.ad_run_used:
 		var ad: Rect2=game.LOBBY_AD_RUN
 		_box(ad,Color("292316",0.98)); _frame(ad,Color(BRASS_LIGHT,0.85),1.0)
@@ -1412,15 +1413,20 @@ func _wallet(origin: Vector2,plus:=true,k:=1.0) -> void:
 	var ts:=int(round(24*k))
 	game.wallet_text_w=Vector4(bold.get_string_size(cans,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x,bold.get_string_size(coins,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x,bold.get_string_size(silver,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x,bold.get_string_size(vouchers,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x)
 	var w: Dictionary=game.wallet_layout(origin,k)
-	clean_ops.append(["texture",can_tex,w.can_icon])
-	_clean_text(bold,w.can_text,cans,ts,WHITE)
+	if w.has("can_icon"):
+		clean_ops.append(["texture",can_tex,w.can_icon])
+		_clean_text(bold,w.can_text,cans,ts,WHITE)
 	clean_ops.append(["texture",silver_tex,w.coin_icon])
 	_clean_text(bold,w.coin_text,silver,ts,Color(0.85,0.90,1.0))
 	clean_ops.append(["texture",coin_tex,w.silver_icon])
 	_clean_text(bold,w.silver_text,coins,ts,GOLD)
 	clean_ops.append(["texture",voucher_tex,w.v_icon])
 	_clean_text(bold,w.v_text,vouchers,ts,VOUCHER_COL)
-	if plus: _plus_button(w.can_plus); _plus_button(w.coin_plus); _plus_button(w.silver_plus); _plus_button(w.v_plus)
+	if plus:
+		if w.has("can_plus"): _plus_button(w.can_plus)
+		if w.has("coin_plus"): _plus_button(w.coin_plus)
+		if w.has("silver_plus"): _plus_button(w.silver_plus)
+		if w.has("v_plus"): _plus_button(w.v_plus)
 
 ## Shop ONLY: silver + gold (fits left of the shop button, nothing clips).
 func _wallet_shop_only(origin: Vector2,plus:=true,k:=1.0) -> void:
