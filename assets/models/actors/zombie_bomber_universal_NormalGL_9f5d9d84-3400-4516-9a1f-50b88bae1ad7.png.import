@@ -1,0 +1,45 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://bpr8dbag4gtlt"
+path.s3tc="res://.godot/imported/zombie_bomber_universal_NormalGL_9f5d9d84-3400-4516-9a1f-50b88bae1ad7.png-8098ad70e3a5229aef016e856e2214a9.s3tc.ctex"
+path.etc2="res://.godot/imported/zombie_bomber_universal_NormalGL_9f5d9d84-3400-4516-9a1f-50b88bae1ad7.png-8098ad70e3a5229aef016e856e2214a9.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "f68eb438852db2bc90e7aa600a2429d7"
+}
+
+[deps]
+
+source_file="res://assets/models/actors/zombie_bomber_universal_NormalGL_9f5d9d84-3400-4516-9a1f-50b88bae1ad7.png"
+dest_files=["res://.godot/imported/zombie_bomber_universal_NormalGL_9f5d9d84-3400-4516-9a1f-50b88bae1ad7.png-8098ad70e3a5229aef016e856e2214a9.s3tc.ctex", "res://.godot/imported/zombie_bomber_universal_NormalGL_9f5d9d84-3400-4516-9a1f-50b88bae1ad7.png-8098ad70e3a5229aef016e856e2214a9.etc2.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/normal_map=1
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=1
+roughness/src_normal="res://assets/models/actors/zombie_bomber_universal_NormalGL_9f5d9d84-3400-4516-9a1f-50b88bae1ad7.png"
+process/channel_remap/red=0
+process/channel_remap/green=1
+process/channel_remap/blue=2
+process/channel_remap/alpha=3
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=1024
+detect_3d/compress_to=0

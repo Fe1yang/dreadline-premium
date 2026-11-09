@@ -1,0 +1,14 @@
+# Godot
+.godot/
+*.import.bak
+# builds
+build/
+ios/
+ios_build/
+# tools and scratch
+tools/
+renders/
+backup_models_20261106/
+store_assets/
+"Claude outputs"/
+^*.tmp$

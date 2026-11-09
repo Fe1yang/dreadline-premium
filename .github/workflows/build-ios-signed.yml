@@ -1,0 +1,348 @@
+name: Build iOS (signed) and upload to TestFlight
+
+# Signed iOS build for Dead Frontier (Godot 4.7.2), built on a macOS runner with no local Mac.
+# Builds the StoreKit 2 IAP plugin from source (includes PR #21 deliver-then-finish, required by
+# scripts/iap_service.gd), exports the Godot project, signs with the distribution certificate,
+# uploads the IPA to TestFlight via an App Store Connect API key, and keeps the dSYMs so crash
+# reports from TestFlight can be symbolicated offline (no Mac required).
+on:
+  workflow_dispatch:
+    inputs:
+      crash_offsets:
+        description: 'Comma-separated crash image offsets to symbolicate (hex, e.g. 0x1516128,0x152edc0). Empty = the bundled default set.'
+        required: false
+        default: ''
+  # Branch pushes stay off (builds would fire on every commit), but a build tag is a deliberate
+  # one-line trigger:  git tag build-18 && git push origin build-18
+  push:
+    tags:
+      - "build-*"
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+  TEMPLATE_DIR: 4.7.2.stable
+  IOS_PRESET: iOS
+  NAME: DeadFrontier
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  # --- real values to fill in (not secrets, but keep them accurate) ---
+  APPLE_TEAM_ID: "M48F7Z7CSB"              # 10-character App Store Team ID
+  BUNDLE_ID: "com.deadfrontier.game"        # must match export_presets.cfg + provisioning profile
+  PROFILE_NAME: "DeadFrontier App Store"   # provisioning profile name as shown in Apple Developer portal
+  # IAP plugin: pinned to main @ 2026-11-03 = PR #21 merge (setAutoFinish/finishTransaction)
+  PLUGIN_REPO: hrk4649/godot_ios_plugin_iap
+  PLUGIN_REF: b04ffbfe1c620947e1268a507d0f07a3991ede87
+  # Frames of the 2026-11-07 18:44:25 crash report (incident 92E6252A), image-relative offsets.
+  DEFAULT_CRASH_OFFSETS: >-
+    0x1516128 0x152edc0 0x152eb18 0x8af9e4 0x2b43b30 0x8abb60 0x2e44dec 0x150f024
+    0x1a34fd4 0x2e453e0 0x1510c84 0x1510c3c 0x1515734 0x1121c38 0x111d0d0 0x1140710
+
+jobs:
+  build-ios-signed:
+    runs-on: macos-15
+    timeout-minutes: 120
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Verify signing secrets are configured
+      env:
+        BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+        P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+        KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        ASC_AUTH_KEY: ${{ secrets.ASC_AUTH_KEY }}
+      run: |
+        missing=0
+        for s in BUILD_CERTIFICATE_BASE64 P12_PASSWORD BUILD_PROVISION_PROFILE_BASE64 KEYCHAIN_PASSWORD ASC_KEY_ID ASC_ISSUER_ID ASC_AUTH_KEY; do
+          if [ -z "${!s}" ]; then echo "::error::Repository secret '$s' is not set. See docs/app-store-connect-setup.md."; missing=1; fi
+        done
+        if [ "$missing" != "0" ]; then exit 1; fi
+
+    - name: Checkout IAP plugin source (deliver-then-finish)
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ env.PLUGIN_REPO }}
+        ref: ${{ env.PLUGIN_REF }}
+        path: iap-plugin-src
+
+    # The 0.4.0 release binary predates PR #21, so the plugin is built from source here.
+    # Documented build flow of hrk4649/godot_ios_plugin_iap (README: build from source).
+    - name: Build IAP plugin from source
+      working-directory: iap-plugin-src/godot_ios_plugin_iap
+      run: |
+        brew install --quiet scons
+        script/build.sh -g          # clean godot header dir
+        script/build.sh -G 4.7      # download godot 4.7 source
+        script/build.sh -Ht 600     # generate godot headers (waits up to 600 s for scons)
+        ./generate_static_library.sh
+        bash copy_plugin.sh "$GITHUB_WORKSPACE"
+
+    - name: Download Godot (macOS)
+      run: |
+        curl -fL "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_macos.universal.zip" -o godot.zip
+        unzip -q godot.zip -d godot
+
+    - name: Install iOS export template
+      run: |
+        curl -fL "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz" -o templates.tpz
+        unzip -q -j templates.tpz "templates/ios.zip" "templates/version.txt" -d ios_template
+        dest="$HOME/Library/Application Support/Godot/export_templates/${TEMPLATE_DIR}"
+        mkdir -p "$dest"
+        cp ios_template/ios.zip ios_template/version.txt "$dest/"
+        rm templates.tpz
+
+    # NOTE: this step used to be `--import || true`. On a clean checkout that pass dies while
+    # compiling the scripts that preload a not-yet-imported .glb, so nothing was imported, the
+    # `|| true` hid it, and the export packed a project with zero model/texture payload.
+    # Every build that reached TestFlight before 2026-11-08 was therefore an empty shell:
+    # every runtime load("res://assets/...") returned null and the first unguarded use crashed.
+    - name: Import project
+      run: |
+        set -o pipefail
+        GODOT="godot/Godot.app/Contents/MacOS/Godot"
+        # A .blend in the project makes the headless macOS importer abort the whole queue
+        # ("Blender path is invalid or not set ... Cannot configure blender path in headless
+        # mode"). This machine has Blender installed, CI does not -- that is why the import
+        # worked here and packed nothing there. Blender files are authoring sources only.
+        find . -name '*.blend' -not -path './iap-plugin-src/*' -delete
+        find . -name '*.blend1' -not -path './iap-plugin-src/*' -delete
+        find . -name '*.blend.import' -not -path './iap-plugin-src/*' -delete
+        # Pass 1 imports meshes/textures, pass 2 recompiles the scripts that preload them.
+        for pass in 1 2; do
+          echo "=== import pass ${pass} ==="
+          "$GODOT" --headless --path . --import 2>&1 | tail -n 60 || echo "import pass ${pass} exited non-zero (see above)"
+        done
+        if [ "$(find .godot/imported -name '*.scn' 2>/dev/null | wc -l)" -eq 0 ]; then
+          echo "=== no .scn after --import, falling back to an editor run ==="
+          "$GODOT" --headless --editor --path . --quit-after 4000 2>&1 | tail -n 80 || true
+        fi
+        echo "=== imported artefacts ==="
+        find .godot/imported -name '*.scn' 2>/dev/null | wc -l
+        du -sh .godot/imported 2>/dev/null || true
+        test "$(find .godot/imported -name '*.scn' 2>/dev/null | wc -l)" -ge 30
+
+    - name: Export to Xcode project
+      run: |
+        mkdir -p build/ios
+        godot/Godot.app/Contents/MacOS/Godot --headless --path . \
+          --export-release "${IOS_PRESET}" build/ios/${NAME}.xcodeproj 2>&1 | tee export.log
+        test -d build/ios/${NAME}.xcodeproj
+
+    # Hard gate: never upload a package that has no model/texture payload again.
+    - name: Verify the exported PCK really contains the assets
+      run: |
+        python3 - <<'PY'
+        import glob, struct, sys
+        packs = glob.glob("build/ios/*.pck")
+        if not packs:
+            sys.exit("no .pck next to the Xcode project")
+        p = packs[0]
+        d = open(p, "rb").read()
+        if d[:4] != b"GDPC":
+            sys.exit("bad pck magic")
+        file_base, dir_off = struct.unpack_from("<QQ", d, 24)
+        cnt = struct.unpack_from("<I", d, dir_off)[0]
+        pos, ents = dir_off + 4, []
+        for _ in range(cnt):
+            plen = struct.unpack_from("<I", d, pos)[0]; pos += 4
+            name = d[pos:pos + plen].split(b"\x00")[0].decode("utf-8", "replace"); pos += plen
+            pos += (4 - (plen % 4)) % 4
+            off, size = struct.unpack_from("<QQ", d, pos); pos += 36
+            ents.append((name, size))
+        scn = [n for n, s in ents if n.endswith(".scn") and s > 0]
+        ctex = [n for n, s in ents if n.endswith(".ctex") and s > 0]
+        payload = sum(s for _, s in ents)
+        print(f"pck={p} entries={cnt} payload={payload/1e6:.1f} MB .scn>0={len(scn)} .ctex>0={len(ctex)}")
+        # The export packs every imported resource, so this report is the honest answer to
+        # "why is the build this big" (builds 10-16 all sat around 1.75 GB of payload).
+        by_ext = {}
+        for n, s in ents:
+            tail = n.rsplit("/", 1)[-1]
+            ext = tail.rsplit(".", 1)[-1].lower() if "." in tail else "(none)"
+            by_ext[ext] = by_ext.get(ext, 0) + s
+        print("payload by type (MB):")
+        for ext, s in sorted(by_ext.items(), key=lambda kv: -kv[1])[:10]:
+            print(f"  {ext:<10} {s/1e6:9.1f}  {100.0*s/payload:5.1f}%")
+        print("largest 25 entries:")
+        for n, s in sorted(ents, key=lambda kv: -kv[1])[:25]:
+            print(f"  {s/1e6:8.1f} MB  {n}")
+        if len(scn) < 20 or len(ctex) < 20:
+            sys.exit("PCK has no model/texture payload -- refusing to upload")
+        PY
+
+    # --- signing ---
+    - name: Install Apple distribution certificate
+      uses: apple-actions/import-codesign-certs@v3
+      with:
+        p12-file-base64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+        p12-password: ${{ secrets.P12_PASSWORD }}
+
+    - name: Install App Store provisioning profile
+      run: |
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        echo -n "${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}" | base64 -D -o "$HOME/Library/MobileDevice/Provisioning Profiles/${PROFILE_NAME}.mobileprovision"
+        ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+
+    - name: Select latest Xcode (Godot 4.7.2 templates need the new iOS SDK symbols)
+      run: |
+        LATEST_XCODE=$(ls -d /Applications/Xcode_*.app | sort -t_ -k2 -V | tail -1)
+        echo "Selecting $LATEST_XCODE"
+        sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+        xcodebuild -version
+
+    - name: xcodebuild archive (signed)
+      run: |
+        set -o pipefail
+        xcodebuild archive \
+          -project build/ios/${NAME}.xcodeproj \
+          -scheme "${NAME}" \
+          -archivePath build/ios/App.xcarchive \
+          -configuration Release \
+          -destination "generic/platform=iOS" \
+          CODE_SIGN_STYLE=Manual \
+          DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
+          PROVISIONING_PROFILE_SPECIFIER="${PROFILE_NAME}" \
+          CODE_SIGNING_REQUIRED=YES \
+          CODE_SIGNING_ALLOWED=YES 2>&1 | tee xcodebuild.log | grep -E "error:|\*\* ARCHIVE" || true
+        test -d build/ios/App.xcarchive/Products/Applications
+
+    # --- crash symbolication support -------------------------------------------------
+    # TestFlight gives us raw .ips files with no file:line info. The dSYM produced by this
+    # archive is the only way to turn "image offset 0x1516128" into a function name. Keep it.
+    - name: Keep dSYMs and symbolicate requested crash offsets
+      if: always()
+      env:
+        OFFSETS_INPUT: ${{ github.event.inputs.crash_offsets }}
+      run: |
+        mkdir -p symbols
+        APP="build/ios/App.xcarchive/Products/Applications/${NAME}.app/${NAME}"
+        DSYM="build/ios/App.xcarchive/dSYMs/${NAME}.app.dSYM/Contents/Resources/DWARF/${NAME}"
+        echo "app:  $APP";  ls -la "$APP"  || true
+        echo "dsym: $DSYM"; ls -la "$DSYM" || true
+        if [ ! -f "$DSYM" ]; then
+          echo "::error::dSYM missing - archive was not built with DWARF; crash reports will stay unsymbolicated."
+          find build/ios/App.xcarchive -maxdepth 2 -print | head -50 || true
+          exit 0
+        fi
+        # UUIDs let us check that a crash's slice_uuid matches this build's binary.
+        xcrun dwarfdump --uuid "$APP"  | tee symbols/app-uuid.txt  || true
+        xcrun dwarfdump --uuid "$DSYM" | tee symbols/dsym-uuid.txt || true
+        # __TEXT vmaddr (usually 0x100000000) and slice size, for offset math sanity.
+        xcrun otool -l "$APP" | sed -n '1,40p' | tee symbols/otool-head.txt || true
+        OFFSETS="$OFFSETS_INPUT"
+        if [ -z "$OFFSETS" ]; then OFFSETS="$DEFAULT_CRASH_OFFSETS"; fi
+        ADDRS=""
+        for off in $OFFSETS; do
+          off=$(echo "$off" | tr -d ',')
+          [ -z "$off" ] && continue
+          ADDRS="$ADDRS $(printf '0x%x' $((0x100000000 + off)))"
+        done
+        echo "symbolicating:$ADDRS"
+        echo "$OFFSETS" > symbols/offsets.txt
+        # shellcheck disable=SC2086
+        xcrun atos -o "$DSYM" -arch arm64 -l 0x100000000 $ADDRS 2>&1 | tee symbols/atos.txt
+        mkdir -p symbols/dSYMs
+        cp -R build/ios/App.xcarchive/dSYMs/. symbols/dSYMs/ 2>/dev/null || true
+        (cd symbols && zip -qry ../DeadFrontier-symbols.zip .) || true
+        ls -la DeadFrontier-symbols.zip || true
+
+    - name: Upload dSYM + symbolication artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: DeadFrontier-dsym
+        path: |
+          DeadFrontier-symbols.zip
+          symbols/atos.txt
+          symbols/app-uuid.txt
+        if-no-files-found: warn
+        retention-days: 30
+
+    # --- export ---
+    # Apple parks any build without this key in "Missing Compliance" and never hands it to
+    # testers, which is why uploaded builds looked like they vanished.
+    # Apple parks any build without this key in "Missing Compliance" and never hands it to
+    # testers, which is why uploaded builds looked like they vanished.
+    # Apple parks any build without this key in "Missing Compliance" and never hands it to
+    # testers. The exported project names its plist differently between Godot versions, so patch
+    # every plist it produced and never fail the job over it.
+    - name: Declare export compliance in the exported plists
+      run: |
+        count=0
+        while IFS= read -r plist; do
+          if /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$plist" 2>/dev/null \
+             || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$plist" 2>/dev/null; then
+            echo "patched $plist"
+            count=$((count+1))
+          else
+            echo "could not patch $plist"
+          fi
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$plist" 2>/dev/null || true
+        done < <(find build/ios -name '*Info.plist' -not -path '*/export/*' 2>/dev/null)
+        echo "plists patched: $count"
+
+    - name: Write App Store export options
+      run: |
+        cat > ExportOptions.plist <<EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>method</key><string>app-store</string>
+          <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+          <key>signingStyle</key><string>manual</string>
+          <key>provisioningProfiles</key>
+          <dict>
+            <key>${BUNDLE_ID}</key><string>${PROFILE_NAME}</string>
+          </dict>
+          <key>compileBitcode</key><false/>
+          <key>uploadSymbols</key><true/>
+        </dict>
+        </plist>
+        EOF
+        cat ExportOptions.plist
+
+    - name: Export signed IPA
+      run: |
+        xcodebuild -exportArchive \
+          -archivePath build/ios/App.xcarchive \
+          -exportPath build/ios/export \
+          -exportOptionsPlist ExportOptions.plist 2>&1 | tee exportarchive.log
+        test -f build/ios/export/${NAME}.ipa
+
+    # --- upload ---
+    - name: Upload to TestFlight (App Store Connect)
+      env:
+        ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        ASC_AUTH_KEY: ${{ secrets.ASC_AUTH_KEY }}
+      run: |
+        mkdir -p ~/.private_keys
+        echo -n "$ASC_AUTH_KEY" | base64 -D -o ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+        chmod 600 ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+        xcrun altool --upload-app \
+          -f build/ios/export/${NAME}.ipa \
+          --type ios \
+          --apiKey "$ASC_KEY_ID" \
+          --apiIssuer "$ASC_ISSUER_ID"
+
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DeadFrontier-signed-ipa
+        path: build/ios/export/${{ env.NAME }}.ipa
+        retention-days: 14
+
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs-signed
+        path: |
+          export.log
+          xcodebuild.log
+          exportarchive.log
+        if-no-files-found: ignore

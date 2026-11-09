@@ -1,0 +1,283 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+[   0% ] [90m[1mfirst_scan_filesystem[22m | Started 项目初始化 (5 steps)[39m[0m
+[   0% ] [90m[1mfirst_scan_filesystem[22m | 正在扫描文件结构……[39m[0m
+[  16% ] [90m[1mfirst_scan_filesystem[22m | 正在加载全局类名……[39m[0m
+[  33% ] [90m[1mfirst_scan_filesystem[22m | 正在校验 GDExtension……[39m[0m
+[  50% ] [90m[1mfirst_scan_filesystem[22m | 正在创建自动加载脚本……[39m[0m
+[  66% ] [90m[1mfirst_scan_filesystem[22m | 正在初始化插件……[39m[0m
+[  83% ] [90m[1mfirst_scan_filesystem[22m | 正在启动文件扫描……[39m[0m
+[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
+[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Started 正在扫描动作…… (96 steps)[39m[0m
+[   0% ] [90m[1m_update_scan_actions[22m | Color_3ca719b2-b973-4436-85c3-3f9b785e418f.jpg[39m[0m
+[   1% ] [90m[1m_update_scan_actions[22m | Color_26cd56b5-87cf-47fb-b13e-f4cf3e41c61c.jpg[39m[0m
+[   2% ] [90m[1m_update_scan_actions[22m | Color_492d1674-7bba-4e84-a39f-b559a2f96100.jpg[39m[0m
+[   3% ] [90m[1m_update_scan_actions[22m | Color_559c98d4-feaf-4965-9caf-90ae58c81a87.jpg[39m[0m
+[   4% ] [90m[1m_update_scan_actions[22m | NormalGL_3ca719b2-b973-4436-85c3-3f9b785e418f.png[39m[0m
+[   5% ] [90m[1m_update_scan_actions[22m | NormalGL_26cd56b5-87cf-47fb-b13e-f4cf3e41c61c.png[39m[0m
+[   6% ] [90m[1m_update_scan_actions[22m | NormalGL_492d1674-7bba-4e84-a39f-b559a2f96100.png[39m[0m
+[   7% ] [90m[1m_update_scan_actions[22m | NormalGL_559c98d4-feaf-4965-9caf-90ae58c81a87.png[39m[0m
+[   8% ] [90m[1m_update_scan_actions[22m | ORM_3ca719b2-b973-4436-85c3-3f9b785e418f.jpg[39m[0m
+[   9% ] [90m[1m_update_scan_actions[22m | ORM_26cd56b5-87cf-47fb-b13e-f4cf3e41c61c.jpg[39m[0m
+[  10% ] [90m[1m_update_scan_actions[22m | ORM_492d1674-7bba-4e84-a39f-b559a2f96100.jpg[39m[0m
+[  11% ] [90m[1m_update_scan_actions[22m | ORM_559c98d4-feaf-4965-9caf-90ae58c81a87.jpg[39m[0m
+[  12% ] [90m[1m_update_scan_actions[22m | czech_wolfdog.blend[39m[0m
+[  13% ] [90m[1m_update_scan_actions[22m | doberman.blend[39m[0m
+[  14% ] [90m[1m_update_scan_actions[22m | german_shepherd.blend[39m[0m
+[  15% ] [90m[1m_update_scan_actions[22m | tibetan_mastiff.blend[39m[0m
+[  16% ] [90m[1m_update_scan_actions[22m | police_car.blend[39m[0m
+[  17% ] [90m[1m_update_scan_actions[22m | boss_chaser_Color.001.png[39m[0m
+[  18% ] [90m[1m_update_scan_actions[22m | boss_chaser_NormalGL.001.png[39m[0m
+[  19% ] [90m[1m_update_scan_actions[22m | Color_b293d99e-e8a4-4a09-a567-10a05ccf4119.jpg[39m[0m
+[  20% ] [90m[1m_update_scan_actions[22m | NormalGL_b293d99e-e8a4-4a09-a567-10a05ccf4119.png[39m[0m
+[  21% ] [90m[1m_update_scan_actions[22m | ORM_b293d99e-e8a4-4a09-a567-10a05ccf4119.jpg[39m[0m
+[  22% ] [90m[1m_update_scan_actions[22m | ammo_pickup.blend[39m[0m
+[  23% ] [90m[1m_update_scan_actions[22m | armor.blend[39m[0m
+[  24% ] [90m[1m_update_scan_actions[22m | barrel.blend[39m[0m
+[  25% ] [90m[1m_update_scan_actions[22m | barrier.blend[39m[0m
+[  26% ] [90m[1m_update_scan_actions[22m | boss_chaser.blend[39m[0m
+[  27% ] [90m[1m_update_scan_actions[22m | coin_stack.blend[39m[0m
+[  28% ] [90m[1m_update_scan_actions[22m | fire_round.blend[39m[0m
+[  29% ] [90m[1m_update_scan_actions[22m | flashbang.blend[39m[0m
+[  30% ] [90m[1m_update_scan_actions[22m | frag_grenade.blend[39m[0m
+[  31% ] [90m[1m_update_scan_actions[22m | helmet.blend[39m[0m
+[  32% ] [90m[1m_update_scan_actions[22m | medkit.blend[39m[0m
+[  34% ] [90m[1m_update_scan_actions[22m | pursuer_abomination.blend[39m[0m
+[  35% ] [90m[1m_update_scan_actions[22m | supply_truck.blend[39m[0m
+[  36% ] [90m[1m_update_scan_actions[22m | survivor.blend[39m[0m
+[  37% ] [90m[1m_update_scan_actions[22m | survivor_female.blend[39m[0m
+[  38% ] [90m[1m_update_scan_actions[22m | zombie_walker.blend[39m[0m
+[  39% ] [90m[1m_update_scan_actions[22m | survivor_maya_tactical_universal.glb[39m[0m
+[  40% ] [90m[1m_update_scan_actions[22m | survivor_maya_universal.glb[39m[0m
+[  41% ] [90m[1m_update_scan_actions[22m | survivor_riley_universal.glb[39m[0m
+[  42% ] [90m[1m_update_scan_actions[22m | char_darius.png[39m[0m
+[  43% ] [90m[1m_update_scan_actions[22m | char_maya.png[39m[0m
+[  44% ] [90m[1m_update_scan_actions[22m | skin_maya_tactical.png[39m[0m
+[  45% ] [90m[1m_update_scan_actions[22m | intro-chase.png[39m[0m
+[  46% ] [90m[1m_update_scan_actions[22m | intro-horde.png[39m[0m
+[  47% ] [90m[1m_update_scan_actions[22m | intro-turn.png[39m[0m
+[  48% ] [90m[1m_update_scan_actions[22m | bomber-blast.png[39m[0m
+[  49% ] [90m[1m_update_scan_actions[22m | bomber-pair.png[39m[0m
+[  50% ] [90m[1m_update_scan_actions[22m | gameover-revival.png[39m[0m
+[  51% ] [90m[1m_update_scan_actions[22m | gameplay-specials.png[39m[0m
+[  52% ] [90m[1m_update_scan_actions[22m | roadblocks.png[39m[0m
+[  53% ] [90m[1m_update_scan_actions[22m | fire-detonation.png[39m[0m
+[  54% ] [90m[1m_update_scan_actions[22m | flash-detonation.png[39m[0m
+[  55% ] [90m[1m_update_scan_actions[22m | frag-explosion.png[39m[0m
+[  56% ] [90m[1m_update_scan_actions[22m | launcher-closeup.png[39m[0m
+[  57% ] [90m[1m_update_scan_actions[22m | launcher-held.png[39m[0m
+[  58% ] [90m[1m_update_scan_actions[22m | launcher-projectile.png[39m[0m
+[  59% ] [90m[1m_update_scan_actions[22m | pickups.png[39m[0m
+[  60% ] [90m[1m_update_scan_actions[22m | lobby-0.png[39m[0m
+[  61% ] [90m[1m_update_scan_actions[22m | lobby-1.png[39m[0m
+[  62% ] [90m[1m_update_scan_actions[22m | lobby-2.png[39m[0m
+[  63% ] [90m[1m_update_scan_actions[22m | lobby-3.png[39m[0m
+[  64% ] [90m[1m_update_scan_actions[22m | maya-bust.png[39m[0m
+[  65% ] [90m[1m_update_scan_actions[22m | riley-bust.png[39m[0m
+[  67% ] [90m[1m_update_scan_actions[22m | gameplay_female_pistol.png[39m[0m
+[  68% ] [90m[1m_update_scan_actions[22m | gameplay_female_rifle.png[39m[0m
+[  69% ] [90m[1m_update_scan_actions[22m | gameplay_female_shotgun.png[39m[0m
+[  70% ] [90m[1m_update_scan_actions[22m | gameplay_female_smg.png[39m[0m
+[  71% ] [90m[1m_update_scan_actions[22m | gameplay_female_sniper.png[39m[0m
+[  72% ] [90m[1m_update_scan_actions[22m | gameplay_pistol.png[39m[0m
+[  73% ] [90m[1m_update_scan_actions[22m | gameplay_rifle.png[39m[0m
+[  74% ] [90m[1m_update_scan_actions[22m | gameplay_shotgun.png[39m[0m
+[  75% ] [90m[1m_update_scan_actions[22m | gameplay_smg.png[39m[0m
+[  76% ] [90m[1m_update_scan_actions[22m | gameplay_sniper.png[39m[0m
+[  77% ] [90m[1m_update_scan_actions[22m | chase-segment.png[39m[0m
+[  78% ] [90m[1m_update_scan_actions[22m | ui-map-table-right.png[39m[0m
+[  79% ] [90m[1m_update_scan_actions[22m | ui-map-table.png[39m[0m
+[  80% ] [90m[1m_update_scan_actions[22m | ui-maya-lobby.png[39m[0m
+[  81% ] [90m[1m_update_scan_actions[22m | ui-restyle-lobby.png[39m[0m
+[  82% ] [90m[1m_update_scan_actions[22m | ui-restyle-signin.png[39m[0m
+[  83% ] [90m[1m_update_scan_actions[22m | ui-restyle-store.png[39m[0m
+[  84% ] [90m[1m_update_scan_actions[22m | ui-restyle-tasks.png[39m[0m
+[  85% ] [90m[1m_update_scan_actions[22m | ui-riley-lobby.png[39m[0m
+[  86% ] [90m[1m_update_scan_actions[22m | armor-3d.png[39m[0m
+[  87% ] [90m[1m_update_scan_actions[22m | blood-3d.png[39m[0m
+[  88% ] [90m[1m_update_scan_actions[22m | equipment-closeup-3d.png[39m[0m
+[  89% ] [90m[1m_update_scan_actions[22m | explosion-3d.png[39m[0m
+[  90% ] [90m[1m_update_scan_actions[22m | gameplay-3d.png[39m[0m
+[  91% ] [90m[1m_update_scan_actions[22m | gameplay-male-hd.png[39m[0m
+[  92% ] [90m[1m_update_scan_actions[22m | gameplay-touch.png[39m[0m
+[  93% ] [90m[1m_update_scan_actions[22m | languages-3d.png[39m[0m
+[  94% ] [90m[1m_update_scan_actions[22m | lobby-mason.png[39m[0m
+[  95% ] [90m[1m_update_scan_actions[22m | lobby-riley.png[39m[0m
+[  96% ] [90m[1m_update_scan_actions[22m | menu-3d.png[39m[0m
+[  97% ] [90m[1m_update_scan_actions[22m | shop-3d.png[39m[0m
+[92m[ DONE ][39m [1m_update_scan_actions[22m
+[0m
+[   0% ] [90m[1mreimport[22m | Started 正在导入或重新导入资产 (66 steps)[39m[0m
+[   0% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[   1% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[   2% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[   4% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[   5% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[   7% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[   8% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  10% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  11% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  13% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  14% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  16% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  17% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  19% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  20% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  22% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  23% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  25% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  26% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  28% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  29% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  31% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  32% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  34% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  35% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  37% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  38% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  40% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  41% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  43% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  44% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  46% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  47% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  49% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  50% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  52% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  53% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  55% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  56% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  58% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  59% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  61% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  62% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  64% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  65% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  67% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  68% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  70% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  71% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  73% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  74% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  76% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  77% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  79% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  80% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  82% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  83% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  85% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  86% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  88% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  89% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  91% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  92% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  94% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  95% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[  97% ] [90m[1mreimport[22m | 正在准备重新导入文件……[39m[0m
+[   0% ] [90m[1mreimport[22m | 正在执行重新导入的前置操作……[39m[0m
+[   0% ] [90m[1mpreload_reimporting_scene[22m | Started 正在准备重新加载场景 (1 steps)[39m[0m
+[   0% ] [90m[1mpreload_reimporting_scene[22m | 正在分析场景 [空][39m[0m
+[  50% ] [90m[1mpreload_reimporting_scene[22m | 准备完成。[39m[0m
+[92m[ DONE ][39m [1mpreload_reimporting_scene[22m
+[0m
+[   0% ] [90m[1mreimport[22m | lobby-3.png[39m[0m
+[   1% ] [90m[1mreimport[22m | maya-bust.png[39m[0m
+[   2% ] [90m[1mreimport[22m | riley-bust.png[39m[0m
+[   4% ] [90m[1mreimport[22m | gameplay_female_pistol.png[39m[0m
+[   5% ] [90m[1mreimport[22m | gameplay_female_rifle.png[39m[0m
+[   7% ] [90m[1mreimport[22m | gameplay_female_shotgun.png[39m[0m
+[   8% ] [90m[1mreimport[22m | gameplay_female_smg.png[39m[0m
+[  10% ] [90m[1mreimport[22m | gameplay_female_sniper.png[39m[0m
+[  11% ] [90m[1mreimport[22m | gameplay_pistol.png[39m[0m
+[  13% ] [90m[1mreimport[22m | gameplay_rifle.png[39m[0m
+[  14% ] [90m[1mreimport[22m | gameplay_shotgun.png[39m[0m
+[  16% ] [90m[1mreimport[22m | gameplay_smg.png[39m[0m
+[  17% ] [90m[1mreimport[22m | gameplay_sniper.png[39m[0m
+[  19% ] [90m[1mreimport[22m | chase-segment.png[39m[0m
+[  20% ] [90m[1mreimport[22m | ui-map-table-right.png[39m[0m
+[  22% ] [90m[1mreimport[22m | ui-map-table.png[39m[0m
+[  23% ] [90m[1mreimport[22m | shop-3d.png[39m[0m
+[  25% ] [90m[1mreimport[22m | lobby-riley.png[39m[0m
+[  26% ] [90m[1mreimport[22m | lobby-mason.png[39m[0m
+[  28% ] [90m[1mreimport[22m | languages-3d.png[39m[0m
+[  29% ] [90m[1mreimport[22m | gameplay-touch.png[39m[0m
+[  31% ] [90m[1mreimport[22m | gameplay-male-hd.png[39m[0m
+[  32% ] [90m[1mreimport[22m | gameplay-3d.png[39m[0m
+[  34% ] [90m[1mreimport[22m | explosion-3d.png[39m[0m
+[  35% ] [90m[1mreimport[22m | equipment-closeup-3d.png[39m[0m
+[  37% ] [90m[1mreimport[22m | blood-3d.png[39m[0m
+[  38% ] [90m[1mreimport[22m | armor-3d.png[39m[0m
+[  40% ] [90m[1mreimport[22m | ui-riley-lobby.png[39m[0m
+[  41% ] [90m[1mreimport[22m | ui-restyle-tasks.png[39m[0m
+[  43% ] [90m[1mreimport[22m | ui-restyle-store.png[39m[0m
+[  44% ] [90m[1mreimport[22m | ui-restyle-signin.png[39m[0m
+[  46% ] [90m[1mreimport[22m | ui-restyle-lobby.png[39m[0m
+[  47% ] [90m[1mreimport[22m | ui-maya-lobby.png[39m[0m
+[  49% ] [90m[1mreimport[22m | survivor_maya_tactical_universal_Color_31e52174-e8ab-477d-9b7b-73d1cf60c47e.jpg[39m[0m
+[  50% ] [90m[1mreimport[22m | survivor_maya_tactical_universal_ORM_31e52174-e8ab-477d-9b7b-73d1cf60c47e.jpg[39m[0m
+[  52% ] [90m[1mreimport[22m | survivor_maya_tactical_universal_NormalGL_31e52174-e8ab-477d-9b7b-73d1cf60c47e.png[39m[0m
+[  53% ] [90m[1mreimport[22m | survivor_maya_universal_Color_a0b1323e-79ac-43da-a9c2-65db5d31036d.jpg[39m[0m
+[  55% ] [90m[1mreimport[22m | survivor_maya_universal_ORM_a0b1323e-79ac-43da-a9c2-65db5d31036d.jpg[39m[0m
+[  56% ] [90m[1mreimport[22m | survivor_maya_universal_NormalGL_a0b1323e-79ac-43da-a9c2-65db5d31036d.png[39m[0m
+[  58% ] [90m[1mreimport[22m | survivor_riley_universal_Color_8d4a68b5-65cb-40f3-86df-ec8c8f5d4967.jpg[39m[0m
+[  59% ] [90m[1mreimport[22m | survivor_riley_universal_ORM_8d4a68b5-65cb-40f3-86df-ec8c8f5d4967.jpg[39m[0m
+[  61% ] [90m[1mreimport[22m | survivor_riley_universal_NormalGL_8d4a68b5-65cb-40f3-86df-ec8c8f5d4967.png[39m[0m
+[  62% ] [90m[1mreimport[22m | char_darius.png[39m[0m
+[  64% ] [90m[1mreimport[22m | char_maya.png[39m[0m
+[  65% ] [90m[1mreimport[22m | skin_maya_tactical.png[39m[0m
+[  67% ] [90m[1mreimport[22m | intro-chase.png[39m[0m
+[  68% ] [90m[1mreimport[22m | intro-horde.png[39m[0m
+[  70% ] [90m[1mreimport[22m | intro-turn.png[39m[0m
+[  71% ] [90m[1mreimport[22m | bomber-blast.png[39m[0m
+[  73% ] [90m[1mreimport[22m | bomber-pair.png[39m[0m
+[  74% ] [90m[1mreimport[22m | gameover-revival.png[39m[0m
+[  76% ] [90m[1mreimport[22m | gameplay-specials.png[39m[0m
+[  77% ] [90m[1mreimport[22m | roadblocks.png[39m[0m
+[  79% ] [90m[1mreimport[22m | fire-detonation.png[39m[0m
+[  80% ] [90m[1mreimport[22m | flash-detonation.png[39m[0m
+[  82% ] [90m[1mreimport[22m | frag-explosion.png[39m[0m
+[  83% ] [90m[1mreimport[22m | launcher-closeup.png[39m[0m
+[  85% ] [90m[1mreimport[22m | launcher-held.png[39m[0m
+[  86% ] [90m[1mreimport[22m | launcher-projectile.png[39m[0m
+[  88% ] [90m[1mreimport[22m | pickups.png[39m[0m
+[  89% ] [90m[1mreimport[22m | lobby-2.png[39m[0m
+[  91% ] [90m[1mreimport[22m | lobby-0.png[39m[0m
+[  92% ] [90m[1mreimport[22m | lobby-1.png[39m[0m
+[  94% ] [90m[1mreimport[22m | survivor_maya_tactical_universal.glb[39m[0m
+[   0% ] [90m[1mimport[22m | Started 导入场景 (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | 导入场景中...[39m[0m
+[   1% ] [90m[1mimport[22m | 执行自定义脚本...[39m[0m
+[  99% ] [90m[1mimport[22m | 保存中...[39m[0m
+[92m[ DONE ][39m [1mimport[22m
+[0m
+[  95% ] [90m[1mreimport[22m | survivor_maya_universal.glb[39m[0m
+[   0% ] [90m[1mimport[22m | Started 导入场景 (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | 导入场景中...[39m[0m
+[   1% ] [90m[1mimport[22m | 执行自定义脚本...[39m[0m
+[  99% ] [90m[1mimport[22m | 保存中...[39m[0m
+[92m[ DONE ][39m [1mimport[22m
+[0m
+[  97% ] [90m[1mreimport[22m | survivor_riley_universal.glb[39m[0m
+[   0% ] [90m[1mimport[22m | Started 导入场景 (104 steps)[39m[0m
+[   0% ] [90m[1mimport[22m | 导入场景中...[39m[0m
+[   1% ] [90m[1mimport[22m | 执行自定义脚本...[39m[0m
+[  99% ] [90m[1mimport[22m | 保存中...[39m[0m
+[92m[ DONE ][39m [1mimport[22m
+[0m
+[  98% ] [90m[1mreimport[22m | 正在结束资产导入……[39m[0m
+[92m[ DONE ][39m [1mreimport[22m
+[0m
+[   0% ] [90m[1mreimport[22m | Started 正在导入或重新导入资产 (66 steps)[39m[0m
+[   0% ] [90m[1mreimport[22m | 正在执行重新导入的后置操作……[39m[0m
+[92m[ DONE ][39m [1mreimport[22m
+[0m
+[   0% ] [90m[1mloading_editor_layout[22m | Started 正在加载编辑器 (5 steps)[39m[0m
+[   0% ] [90m[1mloading_editor_layout[22m | 正在加载编辑器布局……[39m[0m
+[  16% ] [90m[1mloading_editor_layout[22m | 正在加载停靠面板……[39m[0m
+[  33% ] [90m[1mloading_editor_layout[22m | 正在重新打开场景……[39m[0m
+[  50% ] [90m[1mloading_editor_layout[22m | 正在加载中央编辑器布局……[39m[0m
+[  66% ] [90m[1mloading_editor_layout[22m | 正在加载插件窗口布局……[39m[0m
+[  83% ] [90m[1mloading_editor_layout[22m | 编辑器布局就绪。[39m[0m
+[92m[ DONE ][39m [1mloading_editor_layout[22m
+[0m

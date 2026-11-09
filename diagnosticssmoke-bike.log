@@ -1,0 +1,88 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 3.3.0 Core Profile Context 25.20.42.17.260320 - Compatibility - Using Device: ATI Technologies Inc. - AMD Radeon(TM) 880M Graphics
+
+SMOKE_SWAP_OK
+SMOKE_CRATE_OK
+SCRIPT ERROR: Parse Error: Cannot infer the type of "foot" variable because the value doesn't have a set type.
+   at: GDScript::reload (res://scripts/rider_pose.gd:46)
+   GDScript backtrace (most recent call first):
+       [0] mount_vehicle (res://scripts/player_3d.gd:164)
+       [1] _break_crate (res://scripts/main_3d.gd:2385)
+       [2] _smoke_test (res://scripts/main_3d.gd:3424)
+ERROR: Failed to load script "res://scripts/rider_pose.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)
+   GDScript backtrace (most recent call first):
+       [0] mount_vehicle (res://scripts/player_3d.gd:164)
+       [1] _break_crate (res://scripts/main_3d.gd:2385)
+       [2] _smoke_test (res://scripts/main_3d.gd:3424)
+SCRIPT ERROR: Invalid call. Nonexistent function 'new' in base 'GDScript'.
+   at: mount_vehicle (res://scripts/player_3d.gd:164)
+   GDScript backtrace (most recent call first):
+       [0] mount_vehicle (res://scripts/player_3d.gd:164)
+       [1] _break_crate (res://scripts/main_3d.gd:2385)
+       [2] _smoke_test (res://scripts/main_3d.gd:3424)
+ERROR: The calculated index 3 is out of bounds (the array has 3 elements). Leaving the array untouched.
+   at: remove_at (core/variant/array.cpp:512)
+   GDScript backtrace (most recent call first):
+       [0] _tick_zombies (res://scripts/main_3d.gd:1872)
+       [1] _smoke_test (res://scripts/main_3d.gd:3430)
+SMOKE_BIKE_OK
+SMOKE_3D_OK languages=20 settings=true character_select=true shop=true rewards=true weapons=true reload=true armor=true helmet=true helmet_protection=true barrel_collision=true barrel_aim=true ordnance=true damage_numbers=true audio=true jockey=true banshee=true fire_frenzy=true revival=true revival_rewards=true intro=true
+ERROR: 1 RID allocations of type 'N5GLES34MeshE' were leaked at exit.
+ERROR: 2 RID allocations of type 'N5GLES38MaterialE' were leaked at exit.
+ERROR: 1 RID allocations of type 'N5GLES36ShaderE' were leaked at exit.
+ERROR: 1 RID allocations of type 'N17RendererSceneCull8InstanceE' were leaked at exit.
+ERROR: Pages in use exist at exit in PagedAllocator: N20RasterizerSceneGLES323GeometryInstanceSurfaceE
+   at: ~PagedAllocator (./core/templates/paged_allocator.h:170)
+ERROR: Pages in use exist at exit in PagedAllocator: N20RasterizerSceneGLES321GeometryInstanceGLES3E
+   at: ~PagedAllocator (./core/templates/paged_allocator.h:170)
+WARNING: Leaked instance dependency: Bug - did not call instance_notify_deleted when freeing.
+   at: ~Dependency (servers/rendering/storage/utilities.cpp:56)
+ERROR: 1 shaders of type SceneShaderGLES3 were never freed
+   at: ~ShaderGLES3 (drivers/gles3/shader_gles3.cpp:838)
+WARNING: Leaked instance dependency: Bug - did not call instance_notify_deleted when freeing.
+   at: ~Dependency (servers/rendering/storage/utilities.cpp:56)
+WARNING: Leaked instance dependency: Bug - did not call instance_notify_deleted when freeing.
+   at: ~Dependency (servers/rendering/storage/utilities.cpp:56)
+ERROR: Buffer with GL ID of 4130: leaked 67780 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4131: leaked 54224 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4132: leaked 54224 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4133: leaked 34392 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4134: leaked 17196 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4135: leaked 8592 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4136: leaked 4296 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4137: leaked 1764 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4138: leaked 528 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4139: leaked 103140 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4140: leaked 82512 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4141: leaked 82512 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4142: leaked 48072 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4143: leaked 24036 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4144: leaked 12012 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4145: leaked 6000 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4146: leaked 3000 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4147: leaked 1188 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+ERROR: Buffer with GL ID of 4148: leaked 492 bytes.
+   at: ~Utilities (drivers/gles3/storage/utilities.cpp:113)
+WARNING: 53 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 48 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)
