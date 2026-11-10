@@ -204,7 +204,13 @@ func _animate(delta: float) -> void:
 	last_pos = position
 	is_moving = moved > 0.0015
 	if bite_time>0.0:
-		ModelFix.play_animation(model,"Dog_Bite",false)
+		var bite_clip := ""
+		if anim != null:
+			bite_clip = _first_clip(anim, ["Bite", "Bite_Up", "Dog_Bite", "Attack"])
+		if bite_clip != "":
+			anim.play(bite_clip, 0.08)
+		else:
+			ModelFix.play_animation(model,"Dog_Bite",false)
 		if gallop!=null and gallop.has_method("bite"): gallop.bite()
 		# bite voice: occasional, and never layered over a roar that is still playing
 		if (breed==TIGER_BREED or breed==LION_BREED) and not bark_player.playing and randf()<BITE_VOICE_CHANCE:
@@ -223,15 +229,14 @@ func _animate(delta: float) -> void:
 			# the dogs keep their baked cycle; "moving" has to include the scrolling road,
 			# otherwise a dog that has caught up plays its idle while the ground races past
 			var dog_moving: bool = is_moving or (game != null and (float(game.get("world_speed")) > 0.05 or String(game.get("state")) in ["playing", "intro"]))
-			var own_run := _first_clip(anim, ["Dog_Run", "Dog_Run_001", "Run"])
+			var own_run := _first_clip(anim, ["Gallop", "Gallop_001", "Dog_Run", "Run"])
 			var own_idle := "" if dog_moving else idle
 			var pick := own_idle if own_idle != "" else own_run
 			if pick != "":
 				if anim.current_animation != pick or not anim.is_playing():
 					anim.play(pick, 0.15)
-				# The baked dog cycle is a trot: played at 1.0 it reads as walking. Speed it up so
-				# the legs match the ground scrolling past.
-				anim.speed_scale = 1.0 if own_idle != "" else 1.75
+				# Gallop at its authored rate: it is already the fast cycle, no need to over-clock it
+				anim.speed_scale = 1.0
 				return
 		# The road scrolls under the animal, so a pet that has caught up sits still in world space
 		# while the ground races past: that still counts as running.
