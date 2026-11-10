@@ -98,6 +98,10 @@ func setup(index: int, slot:=0) -> void:
 	yaw_offset=float(LobbyScene.PETS[breed].get("yaw",0.0))
 	if breed==LION_BREED:
 		yaw_offset += PI   # rebuilt lion rig faces backwards against the run direction
+	elif breed in GALLOP_DISABLED:
+		# the dog scans are authored nose-towards-camera: the NODE turns, not the mesh, so the
+		# bite still happens at the head and the pack runs away from the player
+		yaw_offset += PI
 	# Some of these scans are authored nose-along-X and some nose-along-Z, so half the pack ran
 	# sideways. Measure the head against the body and turn the model onto the travel axis.
 	var sk_probe := model.find_child("Skeleton3D", true, false) as Skeleton3D
@@ -108,10 +112,7 @@ func setup(index: int, slot:=0) -> void:
 			var d := sk_probe.get_bone_global_rest(hb).origin - sk_probe.get_bone_global_rest(bb).origin
 			if absf(d.x) > absf(d.z) * 1.2:
 				model.rotation.y = -signf(d.x) * PI * 0.5
-			elif breed in GALLOP_DISABLED and d.z > 0.0:
-				# the dog scans are authored nose-towards-camera: turn them around so the pack
-				# runs away from the player like the rest of the lane traffic
-				model.rotation.y = PI
+
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
 	model.position.y=base_y
 	anim=model.find_child("AnimationPlayer",true,false) as AnimationPlayer
