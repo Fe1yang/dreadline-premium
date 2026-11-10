@@ -634,14 +634,10 @@ func _build_flame_jet() -> void:
 	jet.emitting = false
 	add_child(jet)
 	flame_jet = jet
-	# the jet lights the street in front of the survivor
-	var glow := OmniLight3D.new()
-	glow.light_color = Color("ff8a3c")
-	glow.omni_range = 3.2
-	glow.light_energy = 0.0
-	glow.shadow_enabled = false
-	jet.add_child(glow)
-	flame_glow = glow
+	# No omni "glow" any more: on dark tarmac it drew a bright ball a few metres ahead of the
+	# nozzle, which is the orb that kept showing up in screenshots. The additive particles already
+	# light the scene.
+	flame_glow = null
 
 
 func pulse_flame() -> void:
@@ -1109,7 +1105,22 @@ func _build_flash_quad() -> void:
 
 
 func tick(delta: float) -> void:
+	# The jet and its glow belong to the flamethrower. Picking up another gun changes the weapon
+	# without a pulse, and the leftover glow sat on the road as a bright orb.
+	if is_instance_valid(flame_jet) and weapon != "FLAME":
+		if flame_jet.emitting:
+			flame_jet.emitting = false
+			flame_jet.restart()
+		flame_jet_timer = 0.0
+		if is_instance_valid(flame_glow):
+			flame_glow.light_energy = 0.0
 	if is_instance_valid(flame_jet) and flame_jet.emitting:
+		# The stream rides the muzzle and points where the survivor aims, every frame, so turning
+		# does not leave a bent trail behind.
+		var from2 := muzzle_position()
+		var dir2 := aim_direction if aim_direction.length() > 0.01 else Vector3.FORWARD
+		flame_jet.global_position = from2 + dir2.normalized() * 0.45
+		flame_jet.look_at(from2 + dir2 * 6.0, Vector3.UP)
 		flame_jet_timer = maxf(0.0, flame_jet_timer - delta)
 		if flame_jet_timer <= 0.0:
 			flame_jet.emitting = false
