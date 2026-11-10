@@ -1551,9 +1551,9 @@ func _wallet(origin: Vector2,plus:=true,k:=1.0) -> void:
 		clean_ops.append(["texture",can_tex,w.can_icon])
 		_clean_text(bold,w.can_text,cans,ts,WHITE)
 	clean_ops.append(["texture",silver_tex,w.coin_icon])
-	_clean_text(bold,w.coin_text,silver,ts,Color(0.85,0.90,1.0))
+	_clean_text(bold,w.coin_text,silver,ts,C_TEAL)
 	clean_ops.append(["texture",coin_tex,w.silver_icon])
-	_clean_text(bold,w.silver_text,coins,ts,GOLD)
+	_clean_text(bold,w.silver_text,coins,ts,C_ACID)
 	clean_ops.append(["texture",voucher_tex,w.v_icon])
 	_clean_text(bold,w.v_text,vouchers,ts,VOUCHER_COL)
 	if plus:
@@ -1570,9 +1570,9 @@ func _wallet_shop_only(origin: Vector2,plus:=true,k:=1.0) -> void:
 	game.wallet_text_w=Vector4(bold.get_string_size(silver,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x,bold.get_string_size(coins,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x,0,0)
 	var w: Dictionary=game.wallet_layout_shop(origin,k)
 	clean_ops.append(["texture",silver_tex,w.coin_icon])
-	_clean_text(bold,w.coin_text,silver,ts,Color(0.85,0.90,1.0))
+	_clean_text(bold,w.coin_text,silver,ts,C_TEAL)
 	clean_ops.append(["texture",coin_tex,w.silver_icon])
-	_clean_text(bold,w.silver_text,coins,ts,GOLD)
+	_clean_text(bold,w.silver_text,coins,ts,C_ACID)
 	if plus: _plus_button(w.coin_plus); _plus_button(w.silver_plus)
 
 ## How long until the can balance is back at CAP. Centred under the lobby's can counter so the two
