@@ -274,8 +274,10 @@ func show_pet(path: String) -> void:
 		if p.asset==path: yaw=float(p.get("yaw",0.0))
 	pet_base_yaw=yaw
 	pet.rotation.y=yaw
-	pet.position=STAND+Vector3(0,ModelFix.fit_pet(pet,length*ACTOR_SCALE),0)
-	var pet_span := length * ACTOR_SCALE
+	# the lion reads oversized on the stage and on a crate: draw it 20% smaller there
+	var pet_scale := 0.8 if path.contains("lion") else 1.0
+	pet.position=STAND+Vector3(0,ModelFix.fit_pet(pet,length*ACTOR_SCALE*pet_scale),0)
+	var pet_span := length * ACTOR_SCALE * pet_scale
 	pet_shadow = _blob_shadow(Vector2(pet_span * 0.92, pet_span * 0.62), STAND + Vector3(0, 0.021, 0.02))
 	ModelFix.play_animation(pet,"Dog_Idle")
 

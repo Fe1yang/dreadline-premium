@@ -3666,7 +3666,10 @@ func _fire_flame() -> bool:
 		var dist: float = d.length()
 		if dist > FLAME_RANGE: continue
 		if dist > 0.4 and flat_fwd.dot(d.normalized()) < cos(deg_to_rad(FLAME_HALF_ANGLE)): continue
-		_hit_zombie(z, FLAME_TICK_DAMAGE, "torso", z.position + Vector3(0, 1.0, 0), Color("ffb14d"))
+		# the cone rolls crit like a bullet does: base crit plus whatever the gates added
+		var crit: bool = player.crit_chance > 0.0 and rng.randf() < player.crit_chance
+		var tick_damage: float = FLAME_TICK_DAMAGE * (player.crit_mult if crit else 1.0)
+		_hit_zombie(z, tick_damage, "torso", z.position + Vector3(0, 1.0, 0), Color("ffb14d"), crit)
 		z.ignite(FLAME_BURN_SECONDS, z.max_health * FLAME_BURN_FRACTION)
 		hit += 1
 	player.fire()

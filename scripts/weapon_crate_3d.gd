@@ -129,7 +129,8 @@ func _ready() -> void:
 		var pi := pet_index()
 		weapon_model = (load(LobbyScene.PETS[pi].asset) as PackedScene).instantiate() as Node3D
 		weapon_pivot.add_child(weapon_model)
-		var lift := ModelFix.fit_pet(weapon_model,float(LobbyScene.PETS[pi].get("length",1.1))*1.3*ITEM_BOOST)
+		var lion_fix := 0.8 if String(LobbyScene.PETS[pi].asset).contains("lion") else 1.0
+		var lift := ModelFix.fit_pet(weapon_model,float(LobbyScene.PETS[pi].get("length",1.1))*1.3*ITEM_BOOST*lion_fix)
 		weapon_model.position.y = lift-0.75
 		ModelFix.play_animation(weapon_model,"Dog_Idle")
 		path = ""
