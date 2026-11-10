@@ -26,7 +26,9 @@ const GALLOP_RATE:=1.25
 ## Breeds whose rigs do not survive the procedural gallop: they play their own
 ## run clip instead (the czech wolfdog comes from a different import and its legs
 ## folded into each other when the gallop drove them).
-const GALLOP_DISABLED:=[2, 4, 5]   # wolfdog, tiger, lion: their rigs need the baked clips
+# Every pet rig here carries the same leg bones (F_L/H_R ...), and the procedural gallop
+# swings them 45 deg per stride against the baked clip's 28, so all six use it.
+const GALLOP_DISABLED:=[ ]
 const GAIT_OVERRIDES:={
 	4: {"amp":0.92, "spine":1.10},   # white tiger: slightly gentler swing, springier spine
 	5: {"amp":0.88, "spine":1.18},   # lion: same, a touch more spring (stride is speed-derived)
