@@ -76,17 +76,6 @@ const PACKS:=[
 const OFFER_HOURS:=6
 const GLOW:={"gold":Color(1.0,0.72,0.25),"amber":Color(1.0,0.48,0.15),"red":Color(0.95,0.2,0.15),"violet":Color(0.62,0.32,1.0),"silver":Color(0.85,0.90,1.0),"teal":Color(0.15,0.78,0.72)}
 const OFFERS:=[
-	{"id":"offer_supply","kind":"offer","name":"offer_supply","art":"bundle_supply","coins":8000,"vouchers":2,"tier":2,"was":4,"bonus":0,"glow":"violet","rays":12},
-	{"id":"offer_arms","kind":"offer","name":"offer_arms","art":"bundle_starter","coins":2000,"vouchers":8,"tier":3,"was":4,"bonus":0,"glow":"violet","rays":10},
-	{"id":"offer_hoard","kind":"offer","name":"offer_hoard","art":"bundle_legend","coins":30000,"vouchers":10,"tier":4,"was":5,"bonus":0,"glow":"violet","rays":16},
-	{"id":"offer_cans","kind":"offer","name":"can_packs","art":"cans_4","cans":150,"coins":0,"vouchers":0,"tier":2,"was":3,"bonus":0,"glow":"amber","rays":12},
-	{"id":"offer_legend_high","kind":"offer","name":"offer_hoard","art":"bundle_legend","coins":60000,"vouchers":20,"tier":5,"was":6,"bonus":0,"glow":"violet","rays":16},
-	{"id":"offer_cans_high","kind":"offer","name":"can_packs","art":"cans_6","cans":600,"coins":0,"vouchers":0,"tier":5,"was":6,"bonus":0,"glow":"violet","rays":16},
-	{"id":"offer_gold_bike","kind":"offer","name":"offer_gold_bike","art":"vehicle_gold","vehicle":"GOLD","coins":3000,"vouchers":0,"tier":4,"desc_key":"gold_desc","was":5,"bonus":0,"glow":"gold","rays":20},
-	{"id":"offer_tank","kind":"offer","name":"offer_tank","art":"vehicle_tank","vehicle":"TANK","coins":6000,"vouchers":2,"tier":5,"desc_key":"tank_desc","was":6,"bonus":0,"glow":"silver","rays":24},
-	{"id":"offer_sport_bike","kind":"offer","name":"offer_sport_bike","art":"vehicle_sport","vehicle":"SPORT","coins":2000,"vouchers":0,"tier":3,"desc_key":"sport_desc","was":4,"bonus":0,"glow":"amber","rays":12},
-	{"id":"offer_unlock_all","kind":"offer","name":"offer_unlock_all","art":"bundle_legend","coins":0,"vouchers":0,"tier":6,"desc_key":"unlock_all_desc","bonus":0,"glow":"gold","rays":24},
-	{"id":"offer_darius_bundle","kind":"offer","name":"offer_darius_bundle","art":"char_darius","char":2,"perk":"perk_darius","coins":5000,"vouchers":3,"tier":4,"was":5,"bonus":0,"glow":"violet","rays":10},
 ]
 static func offer(id: String) -> Dictionary:
 	for o in OFFERS:
