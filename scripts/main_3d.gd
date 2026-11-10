@@ -2013,6 +2013,11 @@ func open_language() -> void:
 ## Two payment buttons: gold (LOOTBOX_COST) or a single voucher (1 per draw).
 const LOOTBOX_COST:=500        # silver per case (buy-once build)
 const LOOTBOX_VOUCHER_COST:=1   # or a single voucher
+## Five free case opens a day, paid with a rewarded ad.
+const LOOTBOX_AD_DAILY := 5
+var lootbox_ad_day := ""
+var lootbox_ad_count := 0
+const LOOTBOX_AD_RECT := Rect2(30, 708, 480, 28)   # strip above the two pay buttons
 const LOOTBOX_GOLD_RECT:=Rect2(30,790,230,66) # gold payment
 const LOOTBOX_VOUCHER_RECT:=Rect2(280,790,230,66) # 1-voucher payment
 var lootbox_return_state:="cover"
@@ -2058,7 +2063,26 @@ func open_lootbox() -> void:
 	state="lootbox"; _release_touches(); lootbox_scene.reset_case()
 	lootbox_scene.visible=true; lobby.visible=false; shop_truck.visible=false; player.visible=false
 
-func buy_lootbox(use_voucher:=false) -> bool:
+## How many ad opens are left today.
+func lootbox_ads_left() -> int:
+	if lootbox_ad_day != today():
+		return LOOTBOX_AD_DAILY
+	return maxi(0, LOOTBOX_AD_DAILY - lootbox_ad_count)
+
+
+## The AD strip opens a case for free, up to LOOTBOX_AD_DAILY a day.
+func open_lootbox_by_ad() -> bool:
+	if state != "lootbox":
+		return false
+	if lootbox_ads_left() <= 0:
+		lootbox_message = "今天看广告开箱的机会用完了" if String(language_code).begins_with("zh") else "No free opens left today"
+		return false
+	if request_reward_ad("lootbox"):
+		return true
+	return false
+
+
+func buy_lootbox(use_voucher:=false, free:=false) -> bool:
 	if state!="lootbox" or lootbox_scene.opening: return false
 	var candidates: Array=[]
 	for item in shop_items:
@@ -2070,7 +2094,9 @@ func buy_lootbox(use_voucher:=false) -> bool:
 	for i in range(lobby.CHARACTERS.size()):
 		if i>=2 and not character_owned(i): char_candidates.append({"id":"char_%d"%i,"char":i})
 	if candidates.is_empty() and pet_candidates.is_empty() and char_candidates.is_empty(): lootbox_message=ShopText.text(language_code,"case_maxed"); return false
-	if use_voucher:
+	if free:
+		pass   # this open was paid for by the rewarded ad
+	elif use_voucher:
 		if bank_vouchers<LOOTBOX_VOUCHER_COST:
 			lootbox_message=ShopText.text(language_code,"case_no_voucher")
 			open_resource_pack("vouchers"); return false
@@ -2882,6 +2908,12 @@ func _on_ad_rewarded(purpose: String) -> void:
 	ad_pending=""
 	match purpose:
 		"signin_double": claim_signin(2)
+		"lootbox":
+			if lootbox_ad_day != today():
+				lootbox_ad_day = today()
+				lootbox_ad_count = 0
+			lootbox_ad_count += 1
+			buy_lootbox(false, true)
 		"airdrop": if airdrop_available(): _open_airdrop()
 		_ when purpose.begins_with("swap:"):
 			var a: PackedStringArray=purpose.split(":"); swap_mission(int(a[2]),a[1]=="daily")
@@ -5501,6 +5533,7 @@ func _pointer_down(pos: Vector2) -> bool:
 		_release_touches(); return true
 	if state=="lootbox":
 		if Rect2(24,24,100,48).has_point(pos): close_lootbox(); return true
+		if LOOTBOX_AD_RECT.has_point(pos): open_lootbox_by_ad(); return true
 		if LOOTBOX_GOLD_RECT.has_point(pos): buy_lootbox(false); return true
 		if LOOTBOX_VOUCHER_RECT.has_point(pos): buy_lootbox(true); return true
 		return true

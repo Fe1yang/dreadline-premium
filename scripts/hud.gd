@@ -584,11 +584,14 @@ func _draw_lootbox() -> void:
 	elif game.lootbox_scene.opening:
 		_text_center(ShopText.text(lang,"case_opening"),Vector2(270,756),21,WHITE)
 	else:
-		_text_center(ShopText.text(lang,"case_hint"),Vector2(270,752),16,MUTED)
+		_text_center(ShopText.text(lang,"case_hint"),Vector2(270,772),15,MUTED)
 	if not game.lootbox_message.is_empty(): _text_center(game.lootbox_message,Vector2(270,786),14,Color("ef9b82"))
 	var action: String=ShopText.text(lang,"case_again" if game.lootbox_scene.revealed else "case_open")
 	_button(game.LOOTBOX_GOLD_RECT,action+"  ·  %d %s"%[game.LOOTBOX_COST,StoreCatalog.text(lang,"silver")],game.bank_silver>=game.LOOTBOX_COST)
 	_button(game.LOOTBOX_VOUCHER_RECT,action+"  ·  1 %s"%ShopText.text(lang,"voucher"),game.bank_vouchers>=1)
+	# free open by ad: five a day
+	var left: int = game.lootbox_ads_left()
+	_button(game.LOOTBOX_AD_RECT, ("看广告开箱  %d/%d" % [left, game.LOOTBOX_AD_DAILY]) if String(lang).begins_with("zh") else ("AD OPEN  %d/%d" % [left, game.LOOTBOX_AD_DAILY]), left > 0)
 	_text_center("%s: %s  ·  %s: %d" % [ShopText.text(lang,"case_balance"),str(game.bank_coins),ShopText.text(lang,"voucher"),game.bank_vouchers],Vector2(270,889),16,GOLD)
 
 func _draw_map() -> void:
