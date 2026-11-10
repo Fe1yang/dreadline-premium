@@ -44,12 +44,8 @@ func _ready() -> void:
 					if cm != null:
 						cm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 				model.add_child(cone)
-		# the hole itself: a dark disc so the cones read as a warning, not random clutter
-		var disc:=MeshInstance3D.new()
-		var cyl:=CylinderMesh.new(); cyl.top_radius=0.55; cyl.bottom_radius=0.55; cyl.height=0.02
-		var dm:=StandardMaterial3D.new(); dm.albedo_color=Color(0.05,0.05,0.055); dm.roughness=0.95
-		cyl.material=dm; disc.mesh=cyl; disc.position=Vector3(0,0.012,0)
-		model.add_child(disc)
+		# No dark disc: on the road it read as a manhole, and this game has none.
+
 	elif kind=="police":
 		half_extents=Vector2(2.42,1.08) if police_crosswise else Vector2(1.08,2.42)
 		damage=24.0
