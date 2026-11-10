@@ -150,7 +150,7 @@ var owned_vehicle:=""
 ## Lobby loadout switch. false = no vehicle and no pet in the run (testing).
 var equip_menu_index:=-1  # card whose EQUIP dropdown is open
 var equip_menu_tab:=0     # ...and which tab it belongs to
-var loadout_on:=true
+var loadout_on:=true   # retired: kept only so old saves do not crash
 var vehicle_equipped:=true
 ## Whether the owned special weapon (the flamethrower) is carried into a run.
 var weapon_equipped:=false   # nothing equipped until the player chooses it         # "" = none, "BIKE" = bought motorcycle (auto-rides every run's first 1000m)
@@ -1344,9 +1344,27 @@ func _teardown_warmup() -> void:
 	warmup_done = true
 
 
+## The first zombie of a run costs ~200 ms (script compile, meshes, materials). Pay it during
+## the loading screen instead of when the horde appears.
+func _warm_zombie() -> void:
+	var warm: Array = []
+	for kind in ["walker", "runner", "jockey", "brute", "banshee", "bomber", "spitter"]:
+		for i in 2:
+			var z = ZombieScript.new()
+			z.position = Vector3(0.0, -60.0, -600.0)
+			add_child(z)
+			z.configure(kind, 1.0)
+			warm.append(z)
+	await get_tree().process_frame
+	for z in warm:
+		if is_instance_valid(z):
+			z.queue_free()
+
+
 func _finish_loading() -> void:
 	if state!="loading": return
 	_teardown_warmup()
+	_warm_zombie()
 	var target:=loading_target
 	if target=="run" and roads.size()<ROAD_COUNT:
 		_build_road()
@@ -1442,7 +1460,9 @@ func start_run(free_with_ad:=false,no_cost:=false) -> void:
 
 func _spawn_companion() -> void:
 	_cleanup_companions()
-	if not companion_pets.is_empty() or not loadout_on or not pet_equipped or not pet_owned(pet_choice): return
+	# The GEAR switch was retired: an equipped pet always comes into the run. Checking
+	# loadout_on here silently dropped the dog whenever that leftover flag was false.
+	if not companion_pets.is_empty() or not pet_equipped or not pet_owned(pet_choice): return
 	_recruit_pet(pet_choice,player.position+(load("res://scripts/pet_companion_3d.gd") as GDScript).follow_offset(0))
 
 ## Drops freed dogs from the pack and keeps companion_pet pointing at the first dog.
@@ -3434,6 +3454,7 @@ func _prebuild_lobby() -> void:
 
 
 func enter_lobby() -> void:
+	loadout_on = true   # retired switch: the loadout is always on
 	# Swallow the tap that brought us here: iOS sends an emulated mouse event for the
 	# same finger, and that second press landed on the lobby Start button underneath.
 	lobby_swallow_tap=0.45
