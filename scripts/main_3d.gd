@@ -3668,7 +3668,10 @@ func _fire_flame() -> bool:
 		z.ignite(FLAME_BURN_SECONDS, z.max_health * FLAME_BURN_FRACTION)
 		hit += 1
 	player.fire()
-	player.pulse_flame()
+	# Only the flamethrower shows a flame jet: incendiary rounds on a normal gun burn the
+	# target but must not spray fire out of the barrel.
+	if player.weapon == "FLAME":
+		player.pulse_flame()
 	# the cone also cooks whatever drop is in it, so auto-fire breaks crates and barrels
 	for crate in crates:
 		if not is_instance_valid(crate) or crate.is_queued_for_deletion():

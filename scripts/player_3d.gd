@@ -1153,7 +1153,9 @@ func tick(delta: float) -> void:
 		if reload_timer<=0: finish_reload()
 	flash_time = maxf(0,flash_time-delta)
 	hurt_flash = maxf(0,hurt_flash-delta)
-	light.light_energy = 0.75 if flash_time>0 else 0.0
+	# The muzzle light is off: an omni light right at the nozzle paints a bright round
+	# patch on the tarmac, which is the glowing ball seen while firing.
+	light.light_energy = 0.0
 	# No muzzle flash at all: both the stock VFX sprite and the additive quad read as a glowing
 	# ball floating at the nozzle.
 	if is_instance_valid(flash):
