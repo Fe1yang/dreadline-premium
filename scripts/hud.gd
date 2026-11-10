@@ -1503,11 +1503,10 @@ func _section(pos: Vector2,label: String,size:=22) -> void:
 	var spacing:=1.2
 	var w:=_tracked_width(bold,t,size,spacing)
 	if pos.x<0: pos.x=270.0-w/2.0
-	# red band behind the title, the way the reference labels its panels
-	var band := Rect2(pos.x - 12.0, pos.y - size + 4.0, w + 24.0, size + 6.0)
-	_box(band, C_BLOOD)
-	_box(Rect2(band.position, Vector2(band.size.x, 2.0)), Color(0.98, 0.30, 0.26))
-	_tracked_text(bold,pos,t,size,WHITE,spacing)
+	# Title sits inside the panel, bone white with a short red underline. The red plate version
+	# spilled past the panel edge and read as a label glued on top.
+	_tracked_text(bold,pos,t,size,C_BONE,spacing)
+	_box(Rect2(pos.x, pos.y + 7.0, w, 3.0), C_BLOOD)
 
 func _ghost_button(rect: Rect2,label: String,col:=WHITE) -> void:
 	_box(rect,Color("111516",0.82))
