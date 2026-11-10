@@ -1222,7 +1222,8 @@ func _ad_x2_button(r: Rect2,mode:="ready") -> void:
 	_clean_text(bold,Vector2(r.position.x+52,r.get_center().y+_scaled(size)*0.36),label,size,BRASS_LIGHT if not busy else MUTED,false)
 	var tag:=Rect2(r.end.x-30,r.position.y-9,34,20)
 	_box(tag,INK_DARK)
-	_clean_center(bold,Vector2(tag.get_center().x,tag.get_center().y+5),"AD",13,BRASS_LIGHT)
+	var aw3: float = bold.get_string_size("AD",HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
+	_clean_text(bold,Vector2(tag.get_center().x-aw3*0.5,tag.get_center().y+4),"AD",13,BRASS_LIGHT,false)
 
 func _swap_ad_button(r: Rect2,busy:=false) -> void:
 	_box(r,Color(1,1,1,0.10) if not busy else Color(1,1,1,0.04))
@@ -1238,7 +1239,9 @@ func _swap_ad_button(r: Rect2,busy:=false) -> void:
 	clean_ops.append(["poly",PackedVector2Array([tip+Vector2(-1,-7),tip+Vector2(8,1),tip+Vector2(-3,6)]),col])
 	var tag:=Rect2(r.end.x-22,r.position.y-8,26,16)
 	_box(tag,HILITE)
-	_clean_center(bold,Vector2(tag.get_center().x,tag.get_center().y+5),"AD",11,INK_DARK)
+	# plain text, no shadow: at 11 px the offset copy read as a double "AD"
+	var aw2: float = bold.get_string_size("AD",HORIZONTAL_ALIGNMENT_LEFT,-1,11).x
+	_clean_text(bold,Vector2(tag.get_center().x-aw2*0.5,tag.get_center().y+4),"AD",11,INK_DARK,false)
 
 ## Quiet secondary button: dark fill, thin light top edge, white label.
 func _plain_button(r: Rect2,label: String) -> void:
@@ -2223,9 +2226,12 @@ func _draw_signin() -> void:
 		_frame(r.grow(-4),Color(BRASS,0.9) if jackpot else Color(1,1,1,0.14),1.5 if jackpot else 1.0)
 		_clean_text(bold,r.position+Vector2(10,24),ProgressCatalog.text(lang,"day").replace("%d",str(i+1)).to_upper(),13,WHITE if current else MUTED,false)
 		if jackpot:
-			clean_ops.append(["texture",coin_tex,Rect2(r.get_center()+Vector2(-82,-26),Vector2(52,52))])
-			clean_ops.append(["texture",voucher_tex,Rect2(r.get_center()+Vector2(4,-20),Vector2(70,42))])
-			_clean_center(bold,Vector2(r.get_center().x,r.end.y-14),"%d  +  ×%d"%[int(reward.coins),int(reward.vouchers)],20,BRASS_LIGHT)
+			# two rewards side by side, each with its own number under the icon: nothing overflows
+			var half: float = r.size.x * 0.5
+			clean_ops.append(["texture",coin_tex,Rect2(r.position+Vector2(half*0.5-24,r.position.y+38),Vector2(48,48))])
+			clean_ops.append(["texture",voucher_tex,Rect2(r.position+Vector2(half*1.5-26,r.position.y+40),Vector2(52,44))])
+			_clean_center(bold,Vector2(r.position.x+half*0.5,r.end.y-14),"%d"%int(reward.coins),17,BRASS_LIGHT)
+			_clean_center(bold,Vector2(r.position.x+half*1.5,r.end.y-14),"×%d"%int(reward.vouchers),17,BRASS_LIGHT)
 		else:
 			clean_ops.append(["texture",coin_tex,Rect2(r.get_center()+Vector2(-26,-28),Vector2(52,52))])
 			_clean_center(bold,Vector2(r.get_center().x,r.end.y-14),_grouped(int(reward.coins)),20,WHITE)
