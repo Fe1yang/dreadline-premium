@@ -34,8 +34,8 @@ const GAIT_OVERRIDES:={
    1: {"amp":0.50, "spine":0.80},
    2: {"amp":0.45, "spine":0.75},
    3: {"amp":0.50, "spine":0.80},
-   4: {"amp":0.42, "spine":0.75, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
-   5: {"amp":0.40, "spine":0.70, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
+   5: {"amp":0.42, "spine":0.75, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
+   6: {"amp":0.40, "spine":0.70, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
    }  # stride speed matched to how fast the street scrolls past (Kimi's tuning)
 ## Barking: only now and then, so it never nags. Near the survivor the close bark plays (one or
 ## two barks cut from the clip); once the dog has run off after a zombie, the distant one.
@@ -45,12 +45,12 @@ const BARK_FAR_PATH:="res://assets/audio/dog_bark_distant.mp3"
 const BARK_SEGMENTS:=[[0.0,0.78],[0.0,1.36],[2.19,2.95],[3.36,3.92],[4.38,4.98]]  # seconds in BARK_NEAR
 const BARK_GAP:=Vector2(10.0,18.0)
 ## The lion is a pet too, but it growls on its own slow clock.
-const LION_BREED:=5
+const LION_BREED:=6
 const LION_ROAR_PATH:="res://assets/audio/lion_roar.mp3"
 const LION_GROWL_PATH:="res://assets/audio/lion_growl.mp3"
 const LION_GAP:=Vector2(22.0,40.0)
 ## The tiger and the lion share one voice pool: any of the four clips may play.
-const TIGER_BREED:=4
+const TIGER_BREED:=5
 ## ambience: roars and growls only
 const BIG_CAT_SOUNDS:=["res://assets/audio/lion_roar.mp3","res://assets/audio/lion_growl.mp3","res://assets/audio/tiger_roar.mp3"]
 ## the attack clip fires on the bite itself, not on the ambience timer
