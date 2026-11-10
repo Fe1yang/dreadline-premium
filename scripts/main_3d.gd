@@ -5556,7 +5556,13 @@ func _pointer_down(pos: Vector2) -> bool:
 		if SIDE_SIGNIN.has_point(pos): open_signin(); return true
 		if SIDE_TASKS.has_point(pos): open_tasks(); return true
 		if SIDE_SHOP.has_point(pos): open_shop(); return true
-		if SIDE_STORE.has_point(pos): open_store(); return true
+		if SIDE_STORE.has_point(pos):
+			# in the buy-once build the mail button is drawn where the store used to sit
+			if premium_build():
+				open_mail()
+			else:
+				open_store()
+			return true
 		if SIDE_MAIL.has_point(pos): open_mail(); return true
 		if SIDE_BAG.has_point(pos): open_bag(); return true
 		if SIDE_MAP.has_point(pos): open_map(); return true
