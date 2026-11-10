@@ -335,7 +335,11 @@ func tick(delta: float) -> void:
 	if is_instance_valid(embers): embers.emitting=flames.emitting
 	bar.visible=kind in ["brute","banshee"] or kind.begins_with("bomber") or health<max_health
 	bar_fill.visible=bar.visible
-	bar_fill.scale.x=clampf(health/max_health,0,1)
+	# The fill shrinks from the LEFT edge. Scaling a billboard quad shrinks it around its centre,
+	# which made the bar look like it was not moving at all.
+	var frac: float = clampf(health/max_health, 0.0, 1.0)
+	bar_fill.scale.x = frac
+	bar_fill.position.x = bar.position.x - 0.39 + 0.78 * frac * 0.5
 	# (bile sacs removed — no pustule throb)
 
 ## The Banshee keeps her distance: she walks backwards ahead of the survivor as fast as the
