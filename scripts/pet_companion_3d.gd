@@ -64,6 +64,7 @@ var breed:=0
 var slot_index:=0
 var base_y:=0.0
 var gallop: RefCounted
+var is_moving := false   # drives idle vs run clip selection
 var yaw_offset := 0.0   # the model's own forward axis, per breed
 var anim: AnimationPlayer
 var bark_player: AudioStreamPlayer
@@ -133,6 +134,14 @@ func run_beside(target_position: Vector3,delta: float) -> void:
 	rotation.y=lerp_angle(rotation.y,atan2(Vector3.FORWARD.x,Vector3.FORWARD.z),1.0-exp(-delta*12.0))
 	_animate(delta)
 
+## First animation name from `names` that this model actually has.
+func _first_clip(player: AnimationPlayer, names: Array) -> String:
+	for n in names:
+		if player.has_animation(String(n)):
+			return String(n)
+	return ""
+
+
 func _animate(delta: float) -> void:
 	if bite_time>0.0:
 		ModelFix.play_animation(model,"Dog_Bite",false)
@@ -148,11 +157,17 @@ func _animate(delta: float) -> void:
 		return
 	# Every four legged pet runs on the rig's own run cycle: the baked clip reads as a real
 	# gallop, the procedural version only wiggled the legs in place.
-	if anim and anim.has_animation("Dog_Run"):
-		if anim.current_animation != "Dog_Run" or not anim.is_playing():
-			anim.play("Dog_Run", 0.15)
-		anim.speed_scale = 1.0
-		return
+	if anim:
+		var idle := _first_clip(anim, ["Dog_Idle", "Lion_Idle", "Tiger_Idle", "Idle", "idle"])
+		var run := _first_clip(anim, ["Dog_Run", "Lion_Run", "Tiger_Run", "Run", "run"])
+		var want := "" if is_moving else idle
+		if want == "":
+			want = run
+		if want != "":
+			if anim.current_animation != want or not anim.is_playing():
+				anim.play(want, 0.15)
+			anim.speed_scale = 1.0
+			return
 	if anim and anim.is_playing():
 		anim.stop(); (gallop.sk as Skeleton3D).reset_bone_poses()
 	if gallop:
@@ -194,6 +209,7 @@ func tick(delta: float) -> void:
 	var distance: float=flat_delta.length()
 	var bite_range: float=0.72+(float(target.radius) if attacking else 0.0)
 	if attacking and distance<=bite_range:
+		is_moving = false
 		if cooldown<=0.0:
 			cooldown=BITE_INTERVAL; bite_time=0.28
 			var hit_at: Vector3=target.global_position+Vector3(0,0.82 if target.kind!="brute" else 1.35,0)
@@ -205,6 +221,7 @@ func tick(delta: float) -> void:
 	else:
 		var speed: float=ATTACK_SPEED if attacking else FOLLOW_SPEED
 		# Catch up smoothly after a lunge without overtaking the survivor when no target exists.
+		is_moving = distance > 0.12
 		position+=flat_delta.normalized()*minf(distance,speed*delta)
 		position.x=clampf(position.x,-3.25,3.25)
 		position.y=0.0
