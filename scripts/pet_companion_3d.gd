@@ -34,8 +34,8 @@ const GAIT_OVERRIDES:={
    1: {"amp":0.50, "spine":0.80},
    2: {"amp":0.45, "spine":0.75},
    3: {"amp":0.50, "spine":0.80},
-   4: {"amp":0.42, "spine":0.75},
-   5: {"amp":0.40, "spine":0.70},
+   4: {"amp":0.42, "spine":0.75, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
+   5: {"amp":0.40, "spine":0.70, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
    }  # stride speed matched to how fast the street scrolls past (Kimi's tuning)
 ## Barking: only now and then, so it never nags. Near the survivor the close bark plays (one or
 ## two barks cut from the clip); once the dog has run off after a zombie, the distant one.

@@ -44,6 +44,7 @@ var stride:=STRIDE
 var amp:=1.0
 var spine:=1.0
 var ids:={}
+var leg_phase:={}   # per-leg touchdown offset, overridable per breed
 var swing_axis:={}   # bone -> Vector3, the local axis that swings it fore/aft
 var swing_sign:={}   # bone -> +1/-1
 var rest_rot:={}
@@ -56,6 +57,11 @@ func _init(skeleton: Skeleton3D,opts:={}) -> void:
 	sk=skeleton
 	stride=maxf(0.12,float(opts.get("stride",STRIDE)))
 	amp=float(opts.get("amp",1.0))
+	# A dog bounds with both front legs together; a cat runs a diagonal gait, so the
+	# caller can hand in its own touchdown offsets.
+	var lp: Dictionary = opts.get("leg_phases", {})
+	for k in lp:
+		leg_phase[String(k)] = float(lp[k])
 	spine=float(opts.get("spine",1.0))
 	var names:=["body","chest","neck","head","tail_1","tail_2"]
 	for leg in LEGS: names.append_array([leg+"_upper",leg+"_lower",leg+"_paw"])
@@ -174,7 +180,8 @@ func step(delta: float,rate:=1.0) -> void:
 	phase=fmod(phase+delta*rate/stride,1.0)
 	for leg in LEGS:
 		var cfg: Array=LEGS[leg]
-		var pose:=_sample(cfg[0],fposmod(phase-float(cfg[1]),1.0))
+		var off: float = float(leg_phase.get(leg, cfg[1]))
+		var pose:=_sample(cfg[0],fposmod(phase-off,1.0))
 		_rot(leg+"_upper",pose[0]*amp)
 		_rot(leg+"_lower",pose[1]*amp)
 		_rot(leg+"_paw",pose[2]*amp)
