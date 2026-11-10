@@ -691,9 +691,7 @@ func _draw_character_select() -> void:
 	_energy_refill_timer(game.WALLET_LOBBY,game.LOBBY_WALLET_SCALE)
 	if game.offer_active() and game.state=="character_select" and not game.premium_build(): _offer_badge(game.OFFER_BADGE)
 	if game.state=="character_select":
-		# no daily handout in the buy-once build: coins come from playing
-		if not game.premium_build():
-			_side_button(game.SIDE_SIGNIN,"signin",ProgressCatalog.text(lang,"signin"),game.signin_available())
+		_side_button(game.SIDE_SIGNIN,"signin",ProgressCatalog.text(lang,"signin"),game.signin_available())
 		_side_button(game.SIDE_TASKS,"tasks",ProgressCatalog.text(lang,"tasks"),game.missions_ready_count()>0)
 		_side_button(game.SIDE_SHOP,"shop",game.localize("shop"),false)
 		if not game.premium_build():
@@ -746,14 +744,20 @@ func _draw_character_select() -> void:
 					_info_tip(mpl,RunText.text(String(sk4.get("name","")),lang),game.character_name(int(sk4.get("char",-1))),
 						ExtraText.text(lang,"skin_locked"))
 				elif game.lobby_tab==1 and ci<game.lobby.PETS.size():
-					_info_tip(mpl,game.pet_name(ci),ShopText.text(lang,"pets"),
-						game.card_price_text(1, ci) if game.premium_build() else ExtraText.text(lang,"pet_locked"))
+					var psub := ExtraText.text(lang,"pet_locked")
+					if game.premium_build():
+						psub = ("已拥有" if String(lang).begins_with("zh") else "OWNED") if game.pet_owned(ci) else ("%d %s" % [int(game.pack_by_id("pet_%d" % ci).get("coins",0)), "金币" if String(lang).begins_with("zh") else "coins"])
+					_info_tip(mpl,game.pet_name(ci),ShopText.text(lang,"pets"), psub)
 				elif game.lobby_tab==0 and ci<game.lobby.CHARACTERS.size():
 					var ch: Dictionary=game.lobby.CHARACTERS[ci]
 					var perk2: String=String(ch.get("perk",""))
-					var sub: String = RunText.text(perk2,lang) if perk2!="" else ExtraText.text(lang,"char_locked")
+					var sub: String = RunText.text(perk2 if perk2!="" else "perk_mason", lang)
 					if game.premium_build():
-						sub = game.card_price_text(0, ci)
+						# ability first, then what it costs (or that you own it)
+						if game.character_owned(ci):
+							sub += "   ·   " + ("已拥有" if String(lang).begins_with("zh") else "OWNED")
+						else:
+							sub += "   ·   " + game.card_price_text(0, ci)
 					_info_tip(mpl,game.character_name(ci),ShopText.text(lang,"chars"), sub)
 				break
 	for side in [-1,1]:

@@ -7,12 +7,17 @@ extends RefCounted
 
 ## 7-day check-in cycle; day 7 also gives a voucher. Missing a day does not reset the cycle.
 const SIGNIN:=[
-	{"coins":50,"vouchers":0},{"coins":60,"vouchers":0},{"coins":80,"vouchers":0},{"coins":100,"vouchers":0},
-	{"coins":120,"vouchers":0},{"coins":150,"vouchers":0},{"coins":200,"vouchers":1}]
+	{"silver":400,"coins":0,"vouchers":0},
+	{"silver":0,"coins":0,"vouchers":1},
+	{"silver":600,"coins":0,"vouchers":0},
+	{"silver":0,"coins":120,"vouchers":0},
+	{"silver":900,"coins":0,"vouchers":0},
+	{"silver":0,"coins":0,"vouchers":2},
+	{"silver":1500,"coins":300,"vouchers":1}]
 
 ## Monthly check-in: same idea as the week, 30 days, richer rewards, resets each month.
 const SIGNIN_MONTH:=[
-	{"coins":60,"vouchers":0},{"coins":72,"vouchers":0},{"coins":83,"vouchers":0},{"coins":95,"vouchers":0},{"coins":107,"vouchers":0},{"coins":119,"vouchers":0},{"coins":130,"vouchers":1},{"coins":142,"vouchers":0},{"coins":154,"vouchers":0},{"coins":166,"vouchers":0},{"coins":177,"vouchers":0},{"coins":189,"vouchers":0},{"coins":201,"vouchers":0},{"coins":212,"vouchers":1},{"coins":224,"vouchers":0},{"coins":236,"vouchers":0},{"coins":248,"vouchers":0},{"coins":259,"vouchers":0},{"coins":271,"vouchers":0},{"coins":283,"vouchers":0},{"coins":294,"vouchers":1},{"coins":306,"vouchers":0},{"coins":318,"vouchers":0},{"coins":330,"vouchers":0},{"coins":341,"vouchers":0},{"coins":353,"vouchers":0},{"coins":365,"vouchers":0},{"coins":377,"vouchers":0},{"coins":388,"vouchers":0},{"coins":500,"vouchers":3}]
+	{"silver":345,"coins":0,"vouchers":0},{"silver":390,"coins":0,"vouchers":0},{"silver":435,"coins":0,"vouchers":0},{"silver":480,"coins":0,"vouchers":0},{"silver":525,"coins":0,"vouchers":0},{"silver":570,"coins":0,"vouchers":0},{"silver":615,"coins":162,"vouchers":1},{"silver":660,"coins":0,"vouchers":0},{"silver":705,"coins":0,"vouchers":0},{"silver":750,"coins":0,"vouchers":0},{"silver":795,"coins":0,"vouchers":0},{"silver":840,"coins":0,"vouchers":0},{"silver":885,"coins":0,"vouchers":0},{"silver":930,"coins":204,"vouchers":1},{"silver":975,"coins":0,"vouchers":0},{"silver":1020,"coins":0,"vouchers":0},{"silver":1065,"coins":0,"vouchers":0},{"silver":1110,"coins":0,"vouchers":0},{"silver":1155,"coins":0,"vouchers":0},{"silver":1200,"coins":0,"vouchers":0},{"silver":1245,"coins":246,"vouchers":1},{"silver":1290,"coins":0,"vouchers":0},{"silver":1335,"coins":0,"vouchers":0},{"silver":1380,"coins":0,"vouchers":0},{"silver":1425,"coins":0,"vouchers":0},{"silver":1470,"coins":0,"vouchers":0},{"silver":1515,"coins":0,"vouchers":0},{"silver":1560,"coins":0,"vouchers":0},{"silver":1605,"coins":0,"vouchers":0},{"silver":4000,"coins":600,"vouchers":3}]
 
 ## Daily missions: three are picked from this pool each day. stat names are what main_3d counts:
 ## kills, brute_kills, banshee_kills, distance (metres), runs, bites (dog bites).

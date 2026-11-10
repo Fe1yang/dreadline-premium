@@ -2853,7 +2853,9 @@ func claim_signin(times:=1) -> bool:
 		signin_month_index = (signin_month_index + 1) % list.size()
 	else:
 		signin_index = (signin_index + 1) % list.size()
-	_grant(int(r.coins)*times,int(r.vouchers)*times); return true
+	bank_silver += int(r.get("silver", 0)) * times
+	_grant(int(r.get("coins", 0))*times,int(r.get("vouchers", 0))*times)
+	return true
 
 func can_ads_left() -> int:
 	return maxi(0,CAN_AD_DAILY_LIMIT-clampi(can_ad_count,0,CAN_AD_DAILY_LIMIT)) if can_ad_day==today() else CAN_AD_DAILY_LIMIT
@@ -2927,10 +2929,6 @@ func gameover_double_rect() -> Rect2:
 	return Rect2(262,y+30,196,58)
 
 func open_signin() -> void:
-	if PREMIUM_BUILD:
-		lobby_toast = 1.6
-		lobby_toast_key = "coming"
-		return
 	if state=="signin": return
 	signin_return_state=state; state="signin"; _release_touches()
 
