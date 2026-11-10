@@ -64,7 +64,7 @@ const PACKS:=[
 	{"id":"vehicle_sport","kind":"vehicle","vehicle":"SPORT","name":"sport","coins":4000,"silver":0,"vouchers":0,"tier":3,"bonus":0,"once":true,"glow":"amber","rays":12,"art":"vehicle_sport"},
 	{"id":"vehicle_car","kind":"vehicle","vehicle":"CRUISER","name":"cruiser","coins":7000,"silver":0,"vouchers":0,"tier":4,"bonus":0,"once":true,"glow":"red","rays":16,"art":"vehicle_cruiser"},
 	{"id":"vehicle_gold","kind":"vehicle","vehicle":"GOLD","name":"gold","coins":10000,"silver":0,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":20,"art":"vehicle_gold"},
-	{"id":"vehicle_tank","kind":"vehicle","vehicle":"TANK","name":"tank","coins":15000,"silver":0,"vouchers":0,"tier":6,"bonus":0,"once":true,"glow":"silver","rays":24,"art":"vehicle_tank"},
+	{"id":"vehicle_tank","kind":"vehicle","vehicle":"TANK","name":"tank","coins":20000,"silver":0,"vouchers":0,"tier":6,"bonus":0,"once":true,"glow":"silver","rays":24,"art":"vehicle_tank"},
 {"id":"weapon_flame","kind":"special","weapon":"FLAME","name":"flame","coins":10000,"silver":0,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":14},
 	{"id":"vehicle_sedan","kind":"vehicle","vehicle":"SEDAN","name":"sedan","coins":5000,"silver":0,"vouchers":0,"tier":3,"bonus":0,"once":true,"glow":"silver","rays":18,"art":"vehicle_sedan"},
 {"id":"vehicle_gold_car","kind":"vehicle","vehicle":"GOLD_CAR","name":"gold_car","coins":30000,"silver":0,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":22,"art":"vehicle_gold_car"},
