@@ -109,7 +109,12 @@ func _ready() -> void:
 	clean.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(clean); clean.draw.connect(_draw_clean)
 	portraits=[load("res://assets/ui/male_hd_portrait.png"),load("res://assets/ui/riley_hd_portrait.png"),load("res://assets/ui/medic_hd_portrait.png"),load("res://assets/ui/maya_hd_portrait.png")]
-	pet_portraits=[load("res://assets/ui/pets/doberman.png"),load("res://assets/ui/pets/german_shepherd.png"),load("res://assets/ui/pets/czech_wolfdog.png"),load("res://assets/ui/pets/tibetan_mastiff.png"),load("res://assets/ui/pets/white_tiger.png"),load("res://assets/ui/pets/lion.png")]
+	# Built from the pet table so adding a breed cannot leave the portraits one slot behind.
+	pet_portraits=[]
+	for _p in preload("res://scripts/lobby_scene_3d.gd").PETS:
+		var _file: String = String(_p.asset).get_file().get_basename()
+		var _path: String = "res://assets/ui/pets/%s.png" % _file
+		pet_portraits.append(load(_path) if ResourceLoader.exists(_path) else null)
 	airdrop_tex=load("res://assets/ui/airdrop.png") if ResourceLoader.exists("res://assets/ui/airdrop.png") else null
 	can_tex=load("res://assets/ui/currency/can.png")
 	coin_tex=load("res://assets/ui/currency/coin.png"); voucher_tex=load("res://assets/ui/currency/voucher.png")
