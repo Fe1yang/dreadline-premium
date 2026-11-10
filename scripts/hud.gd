@@ -723,8 +723,9 @@ func _draw_character_select() -> void:
 		_airdrop_button(lang)
 	for t in [0, 1, 3, 4]:
 		var tab: Rect2=game.lobby_tab_rect(t); var tab_on: bool=game.lobby_tab==t
+		if tab_on: _blood_banner(tab)
 		var tlabel: String = "载具" if t==3 else ("武器" if t==4 else ShopText.text(lang,"chars" if t==0 else "pets"))
-		_text_center(tlabel,Vector2(tab.get_center().x,tab.end.y-12),14,WHITE if tab_on else MUTED)
+		_text_center(tlabel,Vector2(tab.get_center().x,tab.end.y-12),15,C_BONE if tab_on else MUTED)
 	# The settings gear lives in the same corner on every tab, always white. Equipping happens
 	# on the cards themselves, so the per-tab gear toggles are gone.
 	_lobby_settings_gear(game.LOBBY_GEAR)
@@ -1341,7 +1342,7 @@ func _brush_underline(rect: Rect2,color:=PAINT_RED) -> void:
 
 func _panel(rect: Rect2,bg: Color,border: Color,radius: int) -> void:
 	# Clean charcoal plates with hairline separators. No repeated brush texture on every panel.
-	_box(rect,bg)
+	_box(rect,C_PLATE if bg.a>0.5 else bg)
 	var edge: Color=Color(1,1,1,0.12)
 	if border.is_equal_approx(RED) or border.is_equal_approx(PAINT_RED):
 		edge=Color("b84a43",0.85)
@@ -1408,6 +1409,29 @@ func _clean_center(f: Font,center: Vector2,value: String,size: int,color: Color,
 	_clean_text(f,Vector2(center.x-w/2,center.y),value,size,color,shadow)
 
 ## Flat fill (only for full-screen dimming and scroll masks).
+## Dead Island 2 style palette: bone white text, blood red for the selection, acid yellow for
+## currency, near-black plates with a hairline edge.
+const C_BONE := Color(0.96, 0.94, 0.88)
+const C_BLOOD := Color(0.72, 0.10, 0.12)
+const C_ACID := Color(0.95, 0.72, 0.02)
+const C_PLATE := Color(0.028, 0.030, 0.033, 0.88)
+
+
+## A red painted banner behind the selected row, with a skewed end so it reads as a brush stroke.
+func _blood_banner(r: Rect2) -> void:
+	var top := r.position.y
+	var bot := r.end.y
+	var p := PackedVector2Array([
+		Vector2(r.position.x - 14.0, top),
+		Vector2(r.end.x + 6.0, top + 2.0),
+		Vector2(r.end.x + 14.0, bot),
+		Vector2(r.position.x - 22.0, bot - 3.0),
+	])
+	clean_ops.append(["poly", p, C_BLOOD])
+	# a darker slash on the left edge, the way the reference banners are torn
+	clean_ops.append(["line", PackedVector2Array([Vector2(r.position.x - 18.0, top + 3.0), Vector2(r.position.x - 8.0, bot - 4.0)]), Color(0.25, 0.03, 0.04, 0.9), 3.0])
+
+
 func _box(rect: Rect2,bg: Color,border:=Color(0,0,0,0),width:=0,radius:=0) -> void:
 	var sb:=StyleBoxFlat.new(); sb.bg_color=bg; sb.set_corner_radius_all(radius)
 	if width>0: sb.border_color=border; sb.set_border_width_all(width)
