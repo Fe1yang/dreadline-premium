@@ -56,7 +56,7 @@ func _ready() -> void:
 		if not anim.has_animation(clip_name): clip_name=String(anim.get_animation_list()[0])
 		var clip:=anim.get_animation(clip_name)
 		clip.loop_mode=Animation.LOOP_LINEAR
-		anim.speed_scale=0.90 # slowed for the opening: heavy stride, no ice-skate slide
+		anim.speed_scale=1.0   # refreshed every frame against the road speed, see _process
 		anim.play(clip_name)
 		# The clip's first frames have the arms up (looks like it surrenders); start mid-stride
 		# instead so the beast charges with its arms down.
@@ -72,3 +72,17 @@ func _ready() -> void:
 
 func height() -> float:
 	return 1.84*SCALE
+
+
+## The chaser rides the scrolling road, so the stride has to be locked to its speed: at a fixed
+## rate the legs cycle slower than the ground moves and the beast reads as ice skating.
+func _process(_delta: float) -> void:
+	if not is_instance_valid(anim):
+		return
+	var ws: float = 0.0
+	var parent := get_parent()
+	if parent != null:
+		ws = float(parent.get("world_speed"))
+	if ws <= 0.01:
+		ws = 3.5
+	anim.speed_scale = clampf(ws / 2.0, 0.85, 2.2)
