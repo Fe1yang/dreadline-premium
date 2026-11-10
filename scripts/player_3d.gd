@@ -827,6 +827,10 @@ func weapon_points() -> Array:
 func _load_muzzle_flash() -> void:
 	if is_instance_valid(flash):
 		flash.get_parent().remove_child(flash); flash.queue_free()
+	if weapon == "FLAME":
+		# the nozzle has no flash; this scene was the white disc in front of the barrel
+		flash = null
+		return
 	var scene_path: String="res://assets/BinbunVFX/muzzle_flash/effects/"+str(FLASH_SCENES.get(weapon,FLASH_SCENES["PISTOL"]))
 	flash=load(scene_path).instantiate() as Node3D
 	flash.set("autoplay",false); flash.set("one_shot",true); flash.set("light_enable",false)
@@ -1136,7 +1140,7 @@ func fire() -> void:
 	if not can_fire(): return
 	ammo -= 1
 	flash_time = 0.070 if weapon!="SNIPER" else 0.10
-	if is_instance_valid(flash): flash.call("play")
+	if is_instance_valid(flash) and weapon != "FLAME": flash.call("play")
 
 func request_reload() -> bool:
 	if reloading or ammo>=magazine_size or (reserve_ammo<=0 and not infinite_ammo()): return false
