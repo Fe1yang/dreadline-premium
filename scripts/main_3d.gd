@@ -222,7 +222,7 @@ func ads_offer_tap(pos: Vector2) -> void:
 	ads_offer_open=false
 
 ## One zombie in twenty thousand carries a lottery ticket. No model: just the line of text.
-const VOUCHER_DROP_CHANCE := 0.00005
+const VOUCHER_DROP_CHANCE := 0.001   # one kill in a thousand
 
 const REMOVE_ADS_PACK:={"id":"removeads","kind":"bundle","name":"removeads","coins":0,"vouchers":0,"tier":3,"bonus":0,"once":true,"glow":"red","rays":10}
 var store_currency:=""
