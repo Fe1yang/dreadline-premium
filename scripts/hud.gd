@@ -1356,7 +1356,7 @@ func _panel(rect: Rect2,bg: Color,border: Color,radius: int) -> void:
 	if rect.size.x >= 320.0:
 		# corner rules only on dialogs: on a card they read as stubby half lines
 		_box(Rect2(rect.position,Vector2(64,3)),C_BLOOD)
-		_box(Rect2(rect.position+Vector2(rect.size.x-64,0),Vector2(64,3)),Color(C_BONE,0.16))
+		_box(Rect2(rect.position+Vector2(rect.size.x-64,0),Vector2(64,3)),C_ACID)
 
 func _text(value: String,pos: Vector2,size: int,color: Color) -> void:
 	size=maxi(size,12); _string(font,pos,value,size,color)
@@ -1421,6 +1421,7 @@ func _clean_center(f: Font,center: Vector2,value: String,size: int,color: Color,
 const C_BONE := Color(0.96, 0.94, 0.88)
 const C_BLOOD := Color(0.72, 0.10, 0.12)
 const C_ACID := Color(0.95, 0.72, 0.02)
+const C_TEAL := Color(0.36, 0.62, 0.64)
 const C_PLATE := Color(0.028, 0.030, 0.033, 0.88)
 
 
