@@ -108,6 +108,10 @@ func setup(index: int, slot:=0) -> void:
 			var d := sk_probe.get_bone_global_rest(hb).origin - sk_probe.get_bone_global_rest(bb).origin
 			if absf(d.x) > absf(d.z) * 1.2:
 				model.rotation.y = -signf(d.x) * PI * 0.5
+			elif breed in GALLOP_DISABLED and d.z > 0.0:
+				# the dog scans are authored nose-towards-camera: turn them around so the pack
+				# runs away from the player like the rest of the lane traffic
+				model.rotation.y = PI
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
 	model.position.y=base_y
 	anim=model.find_child("AnimationPlayer",true,false) as AnimationPlayer
