@@ -132,7 +132,7 @@ func _tick_bark(delta: float) -> void:
 ## Gallop (or finish a bite) without any chasing logic; used while the opening intro plays.
 func run_beside(target_position: Vector3,delta: float) -> void:
 	position=position.lerp(target_position,1.0-exp(-delta*4.0)); position.y=0.0
-	rotation.y=lerp_angle(rotation.y,atan2(Vector3.FORWARD.x,Vector3.FORWARD.z),1.0-exp(-delta*12.0))
+	rotation.y=lerp_angle(rotation.y,atan2(Vector3.FORWARD.x,Vector3.FORWARD.z)+yaw_offset,1.0-exp(-delta*12.0))
 	_animate(delta)
 
 ## First animation name from `names` that this model actually has.
@@ -243,7 +243,7 @@ func tick(delta: float) -> void:
 	else:
 		facing=Vector3.FORWARD
 	var yaw: float=atan2(facing.x,facing.z)
-	rotation.y=lerp_angle(rotation.y,yaw,1.0-exp(-delta*12.0))
+	rotation.y=lerp_angle(rotation.y,yaw+yaw_offset,1.0-exp(-delta*12.0))
 	model.position.y=base_y
 	# The run is always moving forward, so the dog gallops except during a bite.
 	_animate(delta)
