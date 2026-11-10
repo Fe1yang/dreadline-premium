@@ -220,8 +220,11 @@ func _animate(delta: float) -> void:
 				return
 		# The road scrolls under the animal, so a pet that has caught up sits still in world space
 		# while the ground races past: that still counts as running.
+		# While a run is live the pet is always moving relative to the road, so it always needs the
+		# gallop: the lion used to catch up, read as "not moving" and play its idle instead.
+		var in_run: bool = game != null and String(game.get("state")) in ["playing", "intro"]
 		var scrolling: bool = game != null and float(game.get("world_speed")) > 0.05
-		var moving_now: bool = is_moving or scrolling
+		var moving_now: bool = is_moving or scrolling or in_run
 		if not moving_now and idle != "":
 			# standing: the baked idle reads well on every breed
 			if anim.current_animation != idle or not anim.is_playing():

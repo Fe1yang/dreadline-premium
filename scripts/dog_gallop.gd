@@ -44,6 +44,8 @@ var stride:=STRIDE
 var amp:=1.0
 var spine:=1.0
 var ids:={}
+var swing_axis:={}   # bone -> Vector3, the local axis that swings it fore/aft
+var swing_sign:={}   # bone -> +1/-1
 var rest_rot:={}
 var body_rest:=Vector3.ZERO
 var phase:=0.0
@@ -62,6 +64,46 @@ func _init(skeleton: Skeleton3D,opts:={}) -> void:
 		if i<0: continue
 		ids[bone_name]=i; rest_rot[bone_name]=sk.get_bone_rest(i).basis.get_rotation_quaternion()
 	if ids.has("body"): body_rest=sk.get_bone_rest(ids["body"]).origin
+	_calibrate_axes()
+
+
+## Every scan rig points its bones somewhere different, so the hard-coded local X swing only
+## worked on the dogs it was tuned on. Test each axis and keep the one that actually moves the
+## paw along the animal's nose.
+func _calibrate_axes() -> void:
+	var head_i := sk.find_bone("head")
+	var body_i := sk.find_bone("body")
+	var nose := Vector3.FORWARD
+	if head_i >= 0 and body_i >= 0:
+		var d := sk.get_bone_global_rest(head_i).origin - sk.get_bone_global_rest(body_i).origin
+		d.y = 0.0
+		if d.length() > 0.001:
+			nose = d.normalized()
+	for leg in LEGS:
+		for part in ["upper", "lower", "paw"]:
+			var bn := "%s_%s" % [leg, part]
+			if not ids.has(bn):
+				continue
+			var idx: int = ids[bn]
+			var rest: Quaternion = rest_rot[bn]
+			var paw_bn := "%s_paw" % leg
+			var probe_bn := paw_bn if ids.has(paw_bn) else bn
+			var probe_i: int = ids.get(probe_bn, idx)
+			var base_paw: Vector3 = sk.get_bone_global_rest(probe_i).origin
+			var best_axis := Vector3.RIGHT
+			var best_sign := 1.0
+			var best := -1.0
+			for axis in [Vector3.RIGHT, Vector3.UP, Vector3.BACK]:
+				for sgn in [1.0, -1.0]:
+					sk.set_bone_pose_rotation(idx, rest * Quaternion(axis, deg_to_rad(18.0) * sgn))
+					var moved: float = (sk.get_bone_global_pose(probe_i).origin - base_paw).dot(nose)
+					if absf(moved) > best:
+						best = absf(moved)
+						best_axis = axis
+						best_sign = signf(moved)
+			sk.set_bone_pose_rotation(idx, rest)
+			swing_axis[bn] = best_axis
+			swing_sign[bn] = best_sign
 
 
 ## Mean hip/shoulder-to-paw distance of the four legs, in metres. The stride length a leg can
@@ -96,7 +138,9 @@ func stride_for_speed(speed: float) -> float:
 
 func _rot(bone_name: String,angle_deg: float) -> void:
 	if not ids.has(bone_name): return
-	sk.set_bone_pose_rotation(ids[bone_name],rest_rot[bone_name]*Quaternion(Vector3.RIGHT,deg_to_rad(angle_deg)))
+	var axis: Vector3 = swing_axis.get(bone_name, Vector3.RIGHT)
+	var sgn: float = float(swing_sign.get(bone_name, 1.0))
+	sk.set_bone_pose_rotation(ids[bone_name], rest_rot[bone_name]*Quaternion(axis, deg_to_rad(angle_deg) * sgn))
 
 ## Smooth cyclic interpolation (Catmull-Rom) of the key poses at stride fraction t.
 static func _sample(keys: Array,t: float) -> Array:
