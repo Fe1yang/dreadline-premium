@@ -40,7 +40,7 @@ var crit_chance := 0.0        # total 0..1.0: weapon base + gate buffs
 var crit_bonus := 0.0         # the part that comes from gates
 ## Every weapon crits a little on its own; precision guns a lot more.
 const BASE_CRIT := {"PISTOL":0.05, "SMG":0.04, "SHOTGUN":0.08, "SNIPER":0.25,
-    "RIFLE":0.10, "MAKAROV":0.06, "SUOMI":0.05, "FLAME":0.0, "LAUNCHER":0.0}
+	"RIFLE":0.10, "MAKAROV":0.06, "SUOMI":0.05, "FLAME":0.0, "LAUNCHER":0.0}
 var crit_mult := 1.5          # damage x on a crit
 var mag_scale := 1.0
 var reload_scale := 1.0       # reload time multiplier, down to 0.3

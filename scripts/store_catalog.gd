@@ -53,13 +53,13 @@ const PACKS:=[
 	# one-time App Store purchase. `char` indexes lobby.CHARACTERS, `skin` indexes lobby.SKINS.
 	{"id":"char_darius","kind":"character","name":"char_darius","char":2,"perk":"perk_darius","coins":1200,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"gold","rays":8},
 	{"id":"char_maya","kind":"character","name":"char_maya","char":3,"perk":"perk_maya","coins":1600,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"violet","rays":10},
-	{"id":"char_riley","kind":"character","name":"char_riley","char":1,"coins":800,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"teal","rays":8},
+	{"id":"char_riley","kind":"character","name":"char_riley","char":1,"coins":5000,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"teal","rays":8},
 	{"id":"pet_0","kind":"pet","name":"pets","pet":0,"coins":500,"vouchers":0,"tier":2,"bonus":0,"once":true,"glow":"gold","rays":8},
 	{"id":"pet_1","kind":"pet","name":"pets","pet":1,"silver":4000,"coins":0,"vouchers":0,"tier":2,"bonus":0,"once":true,"glow":"amber","rays":8},
 	{"id":"pet_2","kind":"pet","name":"pets","pet":2,"coins":900,"vouchers":0,"tier":2,"bonus":0,"once":true,"glow":"violet","rays":10},
 	{"id":"pet_3","kind":"pet","name":"pets","pet":3,"coins":1400,"vouchers":0,"tier":2,"bonus":0,"once":true,"glow":"red","rays":10},
 	{"id":"pet_4","kind":"pet","name":"pets","pet":4,"coins":3000,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":20},
-{"id":"pet_5","kind":"pet","name":"pets","pet":5,"coins":3500,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":20},
+{"id":"pet_5","kind":"pet","name":"pets","pet":5,"coins":10000,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":20},
 	{"id":"vehicle_bike","kind":"vehicle","vehicle":"BIKE","name":"bike","coins":600,"vouchers":0,"tier":3,"bonus":0,"once":true,"glow":"teal","rays":12,"art":"vehicle_bike"},
 	{"id":"vehicle_sport","kind":"vehicle","vehicle":"SPORT","name":"sport","coins":1200,"vouchers":0,"tier":3,"bonus":0,"once":true,"glow":"amber","rays":12,"art":"vehicle_sport"},
 	{"id":"vehicle_car","kind":"vehicle","vehicle":"CRUISER","name":"cruiser","coins":2200,"vouchers":0,"tier":4,"bonus":0,"once":true,"glow":"red","rays":16,"art":"vehicle_cruiser"},
@@ -67,7 +67,7 @@ const PACKS:=[
 	{"id":"vehicle_tank","kind":"vehicle","vehicle":"TANK","name":"tank","coins":4500,"vouchers":0,"tier":6,"bonus":0,"once":true,"glow":"silver","rays":24,"art":"vehicle_tank"},
 {"id":"weapon_flame","kind":"special","weapon":"FLAME","name":"flame","coins":1500,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":14},
 	{"id":"vehicle_sedan","kind":"vehicle","vehicle":"SEDAN","name":"sedan","coins":1600,"vouchers":0,"tier":3,"bonus":0,"once":true,"glow":"silver","rays":18,"art":"vehicle_sedan"},
-{"id":"vehicle_gold_car","kind":"vehicle","vehicle":"GOLD_CAR","name":"gold_car","coins":6000,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":22,"art":"vehicle_gold_car"},
+{"id":"vehicle_gold_car","kind":"vehicle","vehicle":"GOLD_CAR","name":"gold_car","coins":75000,"vouchers":0,"tier":5,"bonus":0,"once":true,"glow":"gold","rays":22,"art":"vehicle_gold_car"},
 ]
 
 ## Limited-time offers: one pops up every two to three days (see main_3d.maybe_show_offer) and
