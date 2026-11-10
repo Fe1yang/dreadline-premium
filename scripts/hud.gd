@@ -2247,17 +2247,22 @@ func _draw_signin() -> void:
 			var cv: int = int(reward.get("coins", 0))
 			var vv: int = int(reward.get("vouchers", 0))
 			var icx: float = r.position.x + 20.0
-			if sv > 0:
-				clean_ops.append(["texture",silver_tex,Rect2(Vector2(icx, r.position.y+14),Vector2(28,28))])
-				_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),str(sv),12,Color(0.85,0.90,1.0))
-			elif cv > 0:
+			# the biggest thing that day pays is the icon; the rest ride as small badges
+			if cv >= sv and cv > 0:
 				clean_ops.append(["texture",coin_tex,Rect2(Vector2(icx, r.position.y+14),Vector2(28,28))])
 				_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),str(cv),12,GOLD)
+				if sv > 0:
+					_clean_text(font,r.position+Vector2(43,13),"+%ds"%sv,9,Color(0.85,0.90,1.0))
+			elif sv > 0:
+				clean_ops.append(["texture",silver_tex,Rect2(Vector2(icx, r.position.y+14),Vector2(28,28))])
+				_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),str(sv),12,Color(0.85,0.90,1.0))
+				if cv > 0:
+					_clean_text(font,r.position+Vector2(43,13),"+"+str(cv),9,GOLD)
 			elif vv > 0:
 				clean_ops.append(["texture",voucher_tex,Rect2(Vector2(icx, r.position.y+16),Vector2(28,24))])
 				_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),"×%d"%vv,12,VOUCHER_COL)
 			if vv > 0 and (sv > 0 or cv > 0):
-				clean_ops.append(["texture",voucher_tex,Rect2(r.position+Vector2(42,2),Vector2(24,20))])
+				clean_ops.append(["texture",voucher_tex,Rect2(r.position+Vector2(42,2),Vector2(22,18))])
 		else:
 			_clean_text(bold,r.position+Vector2(10,24),ProgressCatalog.text(lang,"day").replace("%d",str(i+1)).to_upper(),13,WHITE if current else MUTED)
 			if jackpot:
