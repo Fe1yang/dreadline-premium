@@ -9,6 +9,10 @@ var mode := "spark"
 var visual: Node3D
 var label: Label3D
 var effect_material: StandardMaterial3D
+## Base size of the current shape: shockwaves and blasts are built at unit size once and then
+## scaled, because rebuilding a mesh + material per explosion was what stalled the frame.
+var base_scale := 1.0
+var smoke_mat := false
 
 ## The effects are pooled by main_3d: the first call builds the node, every later one
 ## just re-arms it (arm/disarm below), so a fight allocates nothing.
@@ -40,22 +44,37 @@ func make_drop(color: Color,size: float) -> void:
 	effect_material.albedo_color=color
 	if velocity.length()>0.01: visual.look_at(global_position+velocity.normalized(),Vector3.UP)
 
+## Unit torus, scaled to `size`: the mesh and its material are built once per pooled node.
 func make_shockwave(color: Color,size: float) -> void:
 	mode="shockwave"
-	var n:=MeshInstance3D.new(); var mesh:=TorusMesh.new(); mesh.inner_radius=size*0.78; mesh.outer_radius=size
-	mesh.rings=32; mesh.ring_segments=8; n.mesh=mesh
-	effect_material=StandardMaterial3D.new(); effect_material.albedo_color=color
-	effect_material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA; effect_material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
-	n.material_override=effect_material; add_child(n); visual=n
+	if visual==null:
+		var n:=MeshInstance3D.new(); var mesh:=TorusMesh.new()
+		mesh.inner_radius=0.78; mesh.outer_radius=1.0
+		mesh.rings=24; mesh.ring_segments=6; n.mesh=mesh
+		effect_material=StandardMaterial3D.new()
+		effect_material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+		effect_material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		n.material_override=effect_material; add_child(n); visual=n
+	base_scale=size
+	visual.scale=Vector3.ONE*size
+	effect_material.albedo_color=color
 
+## Unit sphere, scaled to `size`; the shading mode is switched in place when smoke changes.
 func make_blast(color: Color,size: float,smoke:=false) -> void:
 	mode="smoke" if smoke else "blast"
-	var n:=MeshInstance3D.new(); var mesh:=SphereMesh.new(); mesh.radius=size; mesh.height=size*2
-	mesh.radial_segments=16; mesh.rings=8; n.mesh=mesh
-	effect_material=StandardMaterial3D.new(); effect_material.albedo_color=color
-	effect_material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
-	effect_material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED if not smoke else BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	n.material_override=effect_material; add_child(n); visual=n
+	if visual==null:
+		var n:=MeshInstance3D.new(); var mesh:=SphereMesh.new()
+		mesh.radius=1.0; mesh.height=2.0
+		mesh.radial_segments=12; mesh.rings=6; n.mesh=mesh
+		effect_material=StandardMaterial3D.new()
+		effect_material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+		n.material_override=effect_material; add_child(n); visual=n
+	if smoke_mat!=smoke:
+		smoke_mat=smoke
+		effect_material.shading_mode=BaseMaterial3D.SHADING_MODE_PER_PIXEL if smoke else BaseMaterial3D.SHADING_MODE_UNSHADED
+	base_scale=size
+	visual.scale=Vector3.ONE*size
+	effect_material.albedo_color=color
 
 func make_part(source: Node3D,names: Array) -> void:
 	mode="part"; visual=Node3D.new(); add_child(visual)
@@ -77,7 +96,7 @@ func _copy_named(node: Node,names: Array) -> void:
 func arm(seconds: float) -> void:
 	life=seconds; total_life=maxf(0.01,seconds); visible=true
 	if label: label.visible=true
-	elif visual: visual.visible=true; visual.scale=Vector3.ONE
+	elif visual: visual.visible=true; visual.scale=Vector3.ONE*base_scale
 
 func disarm() -> void:
 	life=0.0; visible=false
@@ -90,7 +109,7 @@ func tick(delta: float) -> void:
 	if label: label.modulate.a=a
 	elif mode in ["blast","smoke","shockwave"] and visual:
 		var growth: float=3.8 if mode=="shockwave" else (1.6 if mode=="smoke" else 3.0)
-		visual.scale=Vector3.ONE*(1.0+(1.0-a)*growth)
+		visual.scale=Vector3.ONE*base_scale*(1.0+(1.0-a)*growth)
 		effect_material.albedo_color.a=a*(0.38 if mode=="smoke" else 0.78)
 	elif mode=="drop" and visual:
 		visual.scale=Vector3(0.65,0.65,2.8)*a
