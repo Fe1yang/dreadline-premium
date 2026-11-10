@@ -828,8 +828,11 @@ func _load_muzzle_flash() -> void:
 	if is_instance_valid(flash):
 		flash.get_parent().remove_child(flash); flash.queue_free()
 	if weapon == "FLAME":
-		# the nozzle has no flash; this scene was the white disc in front of the barrel
-		flash = null
+		# the nozzle has no flash; this scene was the white disc in front of the barrel.
+		# Keep a silent placeholder rather than null: the tick writes flash.visible every frame.
+		flash = Node3D.new()
+		flash.visible = false
+		add_child(flash)
 		return
 	var scene_path: String="res://assets/BinbunVFX/muzzle_flash/effects/"+str(FLASH_SCENES.get(weapon,FLASH_SCENES["PISTOL"]))
 	flash=load(scene_path).instantiate() as Node3D
