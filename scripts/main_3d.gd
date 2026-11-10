@@ -102,6 +102,7 @@ var skin_choice:={} # char index -> index into lobby.SKINS (outfit override, sta
 var pet_choice:=0
 var language_code:="zh_CN"
 var player: Node3D
+var debug_show_fps := false   # F3: on-screen frame time counter
 var debug_hide_pickups := false
 var companion_pet: Node3D  # first dog; kept as an alias of companion_pets[0] for HUD/tests
 var companion_pets: Array=[]  # up to MAX_COMPANION_PETS dogs, duplicates allowed
@@ -5272,6 +5273,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			armory_drag = false
 	# F9 hides every ground pickup: one keypress tells us whether the stray white dot is a
 	# pickup or something else.
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
+		debug_show_fps = not debug_show_fps
+		print("fps overlay: ", debug_show_fps)
+		return
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F9:
 		debug_hide_pickups = not debug_hide_pickups
 		for q in pickups:

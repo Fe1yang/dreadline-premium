@@ -151,7 +151,8 @@ func _draw() -> void:
 	_draw_missing_assets()
 	clean_ops.clear(); list_ops.clear()
 	if game==null or font==null: return
-	if game.state in ["playing","paused","health_ad"]: _draw_hud()
+	if game.state in ["playing","paused","health_ad"]:
+		_draw_hud()
 	elif game.state=="intro": _draw_intro()
 	elif game.state=="cover": _draw_cover()
 	elif game.state=="loading": _draw_loading()
@@ -197,6 +198,7 @@ func _draw() -> void:
 	if game.state=="health_ad": clean_ops.clear(); _draw_hud(); _draw_health_ad_prompt() # frozen run behind the offer
 	if game.damage_flash>0: draw_rect(Rect2(0,0,540,game.ui_h),Color(0.65,0.025,0.025,game.damage_flash*0.36))
 	draw_rect(Rect2(0,0,540,2),Color(0.45,0.04,0.055,0.65))
+	_debug_fps()
 	if clean: clean.queue_redraw()
 	if list_clip: list_clip.queue_redraw()
 
@@ -677,6 +679,20 @@ func _draw_equip_menu() -> void:
 		_clean_center(bold,Vector2(er.get_center().x,er.position.y+34),etxt,20,WHITE)
 
 
+## F3 overlay: frames per second, the worst frame of the last second, and the live object counts.
+func _debug_fps() -> void:
+	if not game.debug_show_fps:
+		return
+	var fps: float = Engine.get_frames_per_second()
+	var msg: String = "%d fps   %.1f ms   z:%d  fx:%d  pk:%d" % [
+		int(fps), 1000.0 / maxf(fps, 1.0),
+		(game.get("zombies") as Array).size() if game.get("zombies") != null else 0,
+		(game.get("effects") as Array).size() if game.get("effects") != null else 0,
+		(game.get("pickups") as Array).size() if game.get("pickups") != null else 0]
+	_box(Rect2(6, 66, 330, 26), Color(0, 0, 0, 0.72))
+	_clean_text(bold, Vector2(14, 84), msg, 14, Color(0.6, 1.0, 0.6))
+
+
 func _draw_character_select() -> void:
 	# Main screen. The 3D survivor and pet stand in the middle (lobby_scene_3d.gd); this draws the
 	# frame: one column on the left with 角色 / 宠物 tabs over a vertically scrolling list.
@@ -798,6 +814,7 @@ func _draw_character_select() -> void:
 
 ## One card of the scrolling list, cut off cleanly where it leaves the visible area.
 	_draw_equip_menu()
+	_debug_fps()
 
 func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 	var vis:=card.intersection(view)
