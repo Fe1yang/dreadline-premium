@@ -1349,7 +1349,11 @@ func _panel(rect: Rect2,bg: Color,border: Color,radius: int) -> void:
 	elif border.a>0.05 and not border.is_equal_approx(LINE):
 		edge=Color(border,0.48)
 	_frame(rect,edge,1.0)
-	_box(Rect2(rect.position,Vector2(rect.size.x,1)),Color(1,1,1,0.08))
+	# Dead Island 2 plate dressing: a bone hairline along the top and a short red rule at the
+	# left corner, so every panel reads as the same piece of kit.
+	_box(Rect2(rect.position,Vector2(rect.size.x,1)),Color(C_BONE,0.10))
+	_box(Rect2(rect.position+Vector2(0,0),Vector2(46,3)),C_BLOOD)
+	_box(Rect2(rect.position+Vector2(rect.size.x-46,0),Vector2(46,3)),Color(C_BONE,0.16))
 
 func _text(value: String,pos: Vector2,size: int,color: Color) -> void:
 	size=maxi(size,12); _string(font,pos,value,size,color)
