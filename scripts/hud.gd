@@ -1419,18 +1419,14 @@ const C_PLATE := Color(0.028, 0.030, 0.033, 0.88)
 
 ## A red painted banner behind the selected row, with a skewed end so it reads as a brush stroke.
 func _blood_banner(r: Rect2) -> void:
-	var top := r.position.y
-	var bot := r.end.y
-	var p := PackedVector2Array([
-		Vector2(r.position.x - 14.0, top),
-		Vector2(r.end.x + 6.0, top + 2.0),
-		Vector2(r.end.x + 14.0, bot),
-		Vector2(r.position.x - 22.0, bot - 3.0),
-	])
-	clean_ops.append(["poly", p, C_BLOOD])
-	# a darker slash on the left edge, the way the reference banners are torn
-	clean_ops.append(["line", PackedVector2Array([Vector2(r.position.x - 18.0, top + 3.0), Vector2(r.position.x - 8.0, bot - 4.0)]), Color(0.25, 0.03, 0.04, 0.9), 3.0])
-
+	# A flat red slab with one square cut on the left: the skewed polygon version came out as a
+	# hard-edged, jagged diamond.
+	var slab := Rect2(r.position.x - 10.0, r.position.y + 2.0, r.size.x + 18.0, r.size.y - 4.0)
+	_box(slab, C_BLOOD)
+	# a slightly darker wedge on the left edge so it does not read as a plain rectangle
+	_box(Rect2(slab.position.x, slab.position.y, 5.0, slab.size.y), Color(0.48, 0.05, 0.06))
+	# crisp bottom rule
+	_box(Rect2(slab.position.x, slab.end.y - 2.0, slab.size.x, 2.0), Color(0.95, 0.24, 0.22))
 
 func _box(rect: Rect2,bg: Color,border:=Color(0,0,0,0),width:=0,radius:=0) -> void:
 	var sb:=StyleBoxFlat.new(); sb.bg_color=bg; sb.set_corner_radius_all(radius)
