@@ -160,7 +160,11 @@ func _animate(delta: float) -> void:
 	if anim:
 		var idle := _first_clip(anim, ["Dog_Idle", "Lion_Idle", "Tiger_Idle", "Idle", "idle"])
 		var run := _first_clip(anim, ["Dog_Run", "Lion_Run", "Tiger_Run", "Run", "run"])
-		var want := "" if is_moving else idle
+		# The road scrolls under the animal, so a pet that has caught up sits still in world space
+		# while the ground races past: that still has to play the run cycle, or it slides.
+		var scrolling: bool = game != null and float(game.get("world_speed")) > 0.05
+		var moving_now: bool = is_moving or scrolling
+		var want := "" if moving_now else idle
 		if want == "":
 			want = run
 		if want != "":
