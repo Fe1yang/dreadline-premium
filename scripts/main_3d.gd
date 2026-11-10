@@ -5678,6 +5678,28 @@ func _load_save() -> void:
 		airdrop_at_run=int(c.get_value("crates","at_run",-5))
 		# A locked survivor can never stay selected (e.g. an old save from before the store).
 		if not character_owned(character_choice): character_choice=0
+		# Same for the pet and the vehicle: nothing equipped means nothing highlighted and the
+		# stage shows the first card, not whatever a stale save pointed at.
+		if pet_equipped and not pet_owned(pet_choice):
+			pet_choice = 0
+			pet_equipped = false
+		if not owned_vehicle.is_empty() and not vehicle_is_owned(String(owned_vehicle)):
+			owned_vehicle = ""
+			vehicle_choice = 0
+		if not pet_equipped:
+			pet_choice = 0
+		if owned_vehicle.is_empty():
+			vehicle_choice = 0
+		# One-time reset of the starting loadout: older saves carried the pet, vehicle and
+		# flamethrower that happened to be equipped during testing. A new player starts with
+		# nothing but Mason and the pistol; after this migration the player's own choices stick.
+		if String(c.get_value("misc", "loadout_v2", "")) != "done":
+			pet_choice = 0
+			pet_equipped = false
+			owned_vehicle = ""
+			vehicle_choice = 0
+			weapon_equipped = false
+			character_choice = 0
 		if is_instance_valid(player): player.set_character(character_choice,character_asset(character_choice))
 		language_code=str(c.get_value("ui","language",language_code)); bank_coins=int(c.get_value("wallet","coins",0)); bank_silver=int(c.get_value("wallet","silver",0)); bank_vouchers=int(c.get_value("wallet","vouchers",0))
 		can_ad_day=str(c.get_value("can_ads","day","")); can_ad_count=clampi(int(c.get_value("can_ads","count",0)),0,CAN_AD_DAILY_LIMIT)
@@ -5718,7 +5740,7 @@ func _read_muted() -> bool:
 	return bool(c.get_value("audio","muted",false)) if (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK) else false
 func _save() -> void:
 	if "--smoke-test" in OS.get_cmdline_user_args() or "--soak-test" in OS.get_cmdline_user_args() or "--lootbox-test" in OS.get_cmdline_user_args() or "--stamina-test" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_user_args() or "--capture-medic" in OS.get_cmdline_user_args() or "--capture-bike" in OS.get_cmdline_user_args(): return # test and capture runs must never touch the player's real save
-	var c:=ConfigFile.new(); c.set_value("run","best",best_distance); c.set_value("run","character",character_choice); c.set_value("run","skins",skin_choice); c.set_value("run","pet",pet_choice); c.set_value("run","pet_equipped",pet_equipped); c.set_value("pets","owned",owned_pets); c.set_value("pets","rules",2); c.set_value("chars","owned",owned_characters); c.set_value("chars","skins",owned_skins); c.set_value("vehicles","owned",owned_vehicle); c.set_value("run","loadout_on",loadout_on); c.set_value("puzzle","pieces",puzzle_pieces); c.set_value("pass","owned",passes); c.set_value("pass","days",pass_days); c.set_value("pass","all_access",all_access); c.set_value("mail","claimed",mail_claimed); c.set_value("airdrop","day",airdrop_day); c.set_value("run","intro_seen",intro_seen); c.set_value("run","ad_run_used",ad_run_used); c.set_value("gameplay","auto_reload_v3",auto_reload); c.set_value("display","text_size",text_size); c.set_value("display","quality_high",quality_high); c.set_value("audio","music_volume",sound.music_volume if is_instance_valid(sound) else 0.8); c.set_value("audio","sfx_volume",sound.sfx_volume if is_instance_valid(sound) else 1.0)
+	var c:=ConfigFile.new(); c.set_value("misc","loadout_v2","done"); c.set_value("run","best",best_distance); c.set_value("run","character",character_choice); c.set_value("run","skins",skin_choice); c.set_value("run","pet",pet_choice); c.set_value("run","pet_equipped",pet_equipped); c.set_value("pets","owned",owned_pets); c.set_value("pets","rules",2); c.set_value("chars","owned",owned_characters); c.set_value("chars","skins",owned_skins); c.set_value("vehicles","owned",owned_vehicle); c.set_value("run","loadout_on",loadout_on); c.set_value("puzzle","pieces",puzzle_pieces); c.set_value("pass","owned",passes); c.set_value("pass","days",pass_days); c.set_value("pass","all_access",all_access); c.set_value("mail","claimed",mail_claimed); c.set_value("airdrop","day",airdrop_day); c.set_value("run","intro_seen",intro_seen); c.set_value("run","ad_run_used",ad_run_used); c.set_value("gameplay","auto_reload_v3",auto_reload); c.set_value("display","text_size",text_size); c.set_value("display","quality_high",quality_high); c.set_value("audio","music_volume",sound.music_volume if is_instance_valid(sound) else 0.8); c.set_value("audio","sfx_volume",sound.sfx_volume if is_instance_valid(sound) else 1.0)
 	c.set_value("ui","language",language_code); c.set_value("wallet","coins",bank_coins); c.set_value("wallet","silver",bank_silver); c.set_value("wallet","vouchers",bank_vouchers); c.set_value("store","owned",store_owned.keys()); c.set_value("store","remove_ads",remove_ads); c.set_value("store","ads_offer_shows",ads_offer_shows); c.set_value("store","iap_ledger",iap_ledger.keys()); c.set_value("legal","terms_v1",terms_accepted)
 	c.set_value("can_ads","day",can_ad_day); c.set_value("can_ads","count",can_ad_count)
 	c.set_value("crates","day",airdrop_day); c.set_value("crates","count",airdrop_count_today);

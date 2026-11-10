@@ -198,13 +198,15 @@ func _ready() -> void:
 	torch.spot_angle_attenuation=1.15; torch.spot_attenuation=1.0; torch.shadow_enabled=false; torch.light_energy=0.0
 	add_child(torch); torch.visible=false
 	torch_spill=OmniLight3D.new(); torch_spill.light_color=Color("c9dcff"); torch_spill.omni_range=2.8; torch_spill.light_energy=0.0
+	torch_spill.visible=false
 	add_child(torch_spill)
 	set_aim(aim_direction)
 
 func set_night(night: float) -> void:
 	if is_instance_valid(torch):
 		torch.visible=night>0.025; torch.light_energy=9.0*night
-	if is_instance_valid(torch_spill): torch_spill.light_energy=0.65*night
+	# No spill omni: it sat at the muzzle and painted a glowing sun on the road ahead.
+	if is_instance_valid(torch_spill): torch_spill.light_energy=0.0
 
 func set_character(index: int, asset_override:="") -> void:
 	character = clampi(index,0,CHARACTER_ASSETS.size()-1)
