@@ -3127,7 +3127,7 @@ func _pack_id_for_card(tab: int, index: int) -> String:
 		0:
 			return ["", "char_riley", "char_darius", "char_maya"][clampi(index, 0, 3)]
 		1:
-			return "pet_%d" % clampi(index, 0, 5)
+			return "pet_%d" % clampi(index, 0, lobby.PETS.size() - 1)
 		3:
 			return ["vehicle_bike", "vehicle_sport", "vehicle_car", "vehicle_gold",
 				"vehicle_tank", "vehicle_sedan", "vehicle_gold_car"][clampi(index, 0, 6)]
