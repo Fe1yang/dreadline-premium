@@ -584,7 +584,7 @@ func _draw_lootbox() -> void:
 	elif game.lootbox_scene.opening:
 		_text_center(ShopText.text(lang,"case_opening"),Vector2(270,756),21,WHITE)
 	else:
-		_text_center(ShopText.text(lang,"case_hint"),Vector2(270,772),15,MUTED)
+		_text_center(ShopText.text(lang,"case_hint"),Vector2(270,722),15,MUTED)
 	if not game.lootbox_message.is_empty(): _text_center(game.lootbox_message,Vector2(270,786),14,Color("ef9b82"))
 	var action: String=ShopText.text(lang,"case_again" if game.lootbox_scene.revealed else "case_open")
 	_button(game.LOOTBOX_GOLD_RECT,action+"  ·  %d %s"%[game.LOOTBOX_COST,StoreCatalog.text(lang,"silver")],game.bank_silver>=game.LOOTBOX_COST)
