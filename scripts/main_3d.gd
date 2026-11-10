@@ -357,6 +357,9 @@ const FX_LABELS:=16
 var fx_sparks: Array=[[],[],[]]
 var fx_drops: Array=[[],[],[]]
 var fx_labels: Array=[]
+# Shockwaves and blasts: the explosion moments used to build three or four nodes
+# per hit, which is what stalled the frame when a crate burst.
+var fx_rings: Array=[]
 var blood_free: Array=[]
 var roads: Array=[]
 var scenery: Array=[]
@@ -3985,9 +3988,7 @@ func _detonate_ordnance(projectile: Node3D) -> void:
 		# a burning pool: everything inside catches fire exactly like a flamethrower hit
 		sound.play("explosion"); shake=maxf(shake,0.35)
 		_burst(center,Color("ff9b35"),30); _fire_spray(center)
-		var pool:=EffectScript.new(); pool.position=Vector3(center.x,0.06,center.z)
-		pool.life=3.0; pool.total_life=3.0
-		add_child(pool); pool.make_shockwave(Color(1.0,0.55,0.15,0.85),4.0); effects.append(pool)
+		_fx_ring_at(Vector3(center.x,0.06,center.z),Color(1.0,0.55,0.15,0.85),4.0,3.0)
 		for z in zombies:
 			if is_instance_valid(z) and not z.dead and _flat_distance(z.position,center)<4.5:
 				_z_ignite_molotov(z)
@@ -3996,10 +3997,8 @@ func _detonate_ordnance(projectile: Node3D) -> void:
 		sound.play("explosion"); shake=maxf(shake,0.5)
 		_burst(center,Color("ffffff"),50); _blast_sphere(center,Color(0.85,0.96,1.0,0.95),2.2,false)
 		_blast_sphere(center,Color(1,1,1,0.9),1.4,false)
-		var ring:=EffectScript.new(); ring.position=Vector3(center.x,0.10,center.z); ring.life=0.55; ring.total_life=0.55
-		add_child(ring); ring.make_shockwave(Color(0.85,0.96,1.0,0.95),1.4); effects.append(ring)
-		var ring2:=EffectScript.new(); ring2.position=Vector3(center.x,0.10,center.z); ring2.life=0.7; ring2.total_life=0.7
-		add_child(ring2); ring2.make_shockwave(Color(1,1,1,0.8),2.2); effects.append(ring2)
+		_fx_ring_at(Vector3(center.x,0.10,center.z),Color(0.85,0.96,1.0,0.95),1.4,0.55)
+		_fx_ring_at(Vector3(center.x,0.10,center.z),Color(1,1,1,0.8),2.2,0.7)
 		for z in zombies:
 			if is_instance_valid(z) and not z.dead and _flat_distance(z.position,center)<8.0:
 				z.stun_timer=maxf(z.stun_timer,4.0)
@@ -4363,8 +4362,7 @@ func _ram_zombie(z: Node3D) -> void:
 	# Knock-fly: blood burst + forward shockwave before the body is gone, so the hit
 	# reads as the zombie flying off the vehicle, then dying into a blood pool.
 	_blood_spray(zp+Vector3(0,1.0,0),18); _burst(zp+Vector3(0,0.8,0),Color("a5282c"),10)
-	var ring:=EffectScript.new(); ring.position=Vector3(zp.x,0.10,zp.z); ring.life=0.35; ring.total_life=0.35
-	add_child(ring); ring.make_shockwave(Color(1.0,0.6,0.3,0.8),0.7); effects.append(ring)
+	_fx_ring_at(Vector3(zp.x,0.10,zp.z),Color(1.0,0.6,0.3,0.8),0.7,0.35)
 	_hit_zombie(z,1e9,"torso",zp+Vector3(0,1.0,0))
 	# The golden bike shakes coins out of whatever it runs down: a second, gold pile
 	# on top of the kill reward, so ramming always pays.
@@ -5212,8 +5210,7 @@ func _custom_explosion(pos: Vector3) -> void:
 	effects.append(fx)
 
 func _blast_sphere(pos: Vector3,color: Color,size: float,smoke: bool) -> void:
-	var e:=EffectScript.new(); e.position=pos; e.life=0.38 if not smoke else 0.9; e.total_life=e.life
-	add_child(e); e.make_blast(color,size,smoke); effects.append(e)
+	_fx_ring_at(pos,color,size,0.38 if not smoke else 0.9,smoke)
 
 func _fire_spray(pos: Vector3) -> void:
 	for i in range(36):
@@ -5278,6 +5275,7 @@ func _fx_release(e) -> void:
 	match String(e.get_meta("fx_kind","")):
 		"spark": fx_sparks[int(e.get_meta("fx_bucket",0))].append(e)
 		"drop": fx_drops[int(e.get_meta("fx_bucket",0))].append(e)
+		"ring": fx_rings.append(e)
 		_: fx_labels.append(e)
 
 func _fx_spark_at(pos: Vector3,color: Color,size: float,vel: Vector3,grav: float,seconds: float) -> void:
@@ -5311,6 +5309,23 @@ func _fx_label_at(pos: Vector3,text: String,color: Color,vel: Vector3,seconds: f
 	if big: e.label.font_size=64; e.label.pixel_size=0.0085; e.label.outline_size=12
 	e.position=pos; e.velocity=vel; e.gravity=0.0; e.arm(seconds)
 	effects.append(e)
+
+## Shockwave or blast sphere from the pool. `seconds` is the effect lifetime.
+func _fx_ring_at(pos: Vector3,color: Color,size: float,seconds: float,smoke:=false) -> void:
+	var e
+	if fx_rings.is_empty():
+		e=EffectScript.new(); add_child(e)
+	else:
+		e=fx_rings.pop_back()
+		e.visible=true
+	e.position=pos
+	e.life=seconds; e.total_life=seconds
+	e.velocity=Vector3.ZERO; e.gravity=0.0
+	e.make_blast(color,size,smoke) if smoke else e.make_shockwave(color,size)
+	e.set_meta("fx_kind","ring")
+	e.arm(seconds)
+	effects.append(e)
+
 
 func _burst(pos: Vector3,color: Color,count: int) -> void:
 	for i in range(count):
