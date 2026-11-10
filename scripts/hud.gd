@@ -821,7 +821,7 @@ func _draw_character_select() -> void:
 func _card_buy_row(card: Rect2, tab: int, index: int, lang: String) -> void:
 	if not game.premium_build():
 		return
-	var row := Rect2(card.position.x - 4.0, card.end.y - 18.0, card.size.x + 8.0, 18.0)
+	var row := Rect2(card.position.x - 4.0, card.end.y + 2.0, card.size.x + 8.0, 16.0)
 	var owned_now := false
 	match tab:
 		0: owned_now = game.character_owned(index)
