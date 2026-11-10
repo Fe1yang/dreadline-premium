@@ -648,6 +648,8 @@ func pulse_flame() -> void:
 	if not is_instance_valid(flame_jet):
 		return
 	flame_jet_timer = 0.20
+	if not flame_jet.emitting:
+		flame_jet.restart()
 	flame_jet.emitting = true
 	if is_instance_valid(flame_glow):
 		flame_glow.light_energy = 0.35
@@ -1081,6 +1083,9 @@ func tick(delta: float) -> void:
 		flame_jet_timer = maxf(0.0, flame_jet_timer - delta)
 		if flame_jet_timer <= 0.0:
 			flame_jet.emitting = false
+			# Clear the cloud instead of letting the tail die: a paused tail froze in place and
+			# read as a still picture of fire hanging in the air.
+			flame_jet.restart()
 			if is_instance_valid(flame_glow):
 				flame_glow.light_energy = 0.0
 	_tick_vehicle_visual(delta)
