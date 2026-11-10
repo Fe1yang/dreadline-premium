@@ -112,8 +112,8 @@ func _ready() -> void:
 	pet_portraits=[load("res://assets/ui/pets/doberman.png"),load("res://assets/ui/pets/german_shepherd.png"),load("res://assets/ui/pets/czech_wolfdog.png"),load("res://assets/ui/pets/tibetan_mastiff.png"),load("res://assets/ui/pets/white_tiger.png"),load("res://assets/ui/pets/lion.png")]
 	airdrop_tex=load("res://assets/ui/airdrop.png") if ResourceLoader.exists("res://assets/ui/airdrop.png") else null
 	can_tex=load("res://assets/ui/currency/can.png")
-	coin_tex=load("res://assets/ui/currency/coin_bone.png"); voucher_tex=load("res://assets/ui/currency/voucher_bone.png")
-	silver_tex=load("res://assets/ui/currency/silver_bone.png") if ResourceLoader.exists("res://assets/ui/currency/silver_bone.png") else coin_tex
+	coin_tex=load("res://assets/ui/currency/coin.png"); voucher_tex=load("res://assets/ui/currency/voucher.png")
+	silver_tex=load("res://assets/ui/currency/silver_coin.png") if ResourceLoader.exists("res://assets/ui/currency/silver_coin.png") else coin_tex
 	for p in StoreCatalog.PACKS+StoreCatalog.OFFERS:
 		var path: String="res://assets/ui/store/%s.png"%p.id
 		pack_art[p.id]=load(path) if ResourceLoader.exists(path) else null
@@ -829,14 +829,14 @@ func _card_buy_row(card: Rect2, tab: int, index: int, lang: String) -> void:
 		3: owned_now = game.vehicle_is_owned(String(["vehicle_bike","vehicle_sport","vehicle_car","vehicle_gold","vehicle_tank","vehicle_sedan","vehicle_gold_car"][clampi(index,0,6)]))
 		4: owned_now = game.flame_owned()
 	if owned_now:
-		_panel(row, Color(0.10,0.16,0.12,0.95), Color(0.32,0.55,0.40,0.9), 0)
-		_text_center("已拥有" if String(lang).begins_with("zh") else "OWNED", row.get_center()+Vector2(0,4), 10, Color(0.62,0.90,0.70))
+		_box(row, Color(0.03,0.032,0.035,0.92))
+		_text_center("已拥有" if String(lang).begins_with("zh") else "OWNED", row.get_center()+Vector2(0,4), 10, Color(C_BONE.r,C_BONE.g,C_BONE.b,0.55))
 	else:
 		var price: String = String(game.card_price_text(tab, index))
 		if price == "":
 			return
-		_panel(row, Color(0.22,0.16,0.06,0.95), Color(0.72,0.55,0.20,0.95), 0)
-		_text_center(price, row.get_center()+Vector2(0,4), 10, Color(1.0,0.86,0.45))
+		_box(row, Color(0.03,0.032,0.035,0.92)); _box(Rect2(row.position,Vector2(3,row.size.y)),C_BLOOD)
+		_text_center(price, row.get_center()+Vector2(0,4), 10, C_ACID)
 
 
 func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
@@ -962,11 +962,11 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 				3: owned_now = game.vehicle_is_owned(String(["vehicle_bike","vehicle_sport","vehicle_car","vehicle_gold","vehicle_tank","vehicle_sedan","vehicle_gold_car"][clampi(i,0,6)]))
 				4: owned_now = game.flame_owned()
 			if owned_now:
-				_panel(row, Color(0.10,0.16,0.12,0.95), Color(0.32,0.55,0.40,0.9), 0)
-				_text_center("已拥有" if String(lang).begins_with("zh") else "OWNED", row.get_center()+Vector2(0,5), 11, Color(0.62,0.90,0.70))
+				_box(row, Color(0.03,0.032,0.035,0.92))
+				_text_center("已拥有" if String(lang).begins_with("zh") else "OWNED", row.get_center()+Vector2(0,5), 11, Color(C_BONE.r,C_BONE.g,C_BONE.b,0.55))
 			else:
-				_panel(row, Color(0.22,0.16,0.06,0.95), Color(0.72,0.55,0.20,0.95), 0)
-				_text_center(game.card_price_text(game.lobby_tab, i), row.get_center()+Vector2(0,5), 11, Color(1.0,0.86,0.45))
+				_box(row, Color(0.03,0.032,0.035,0.92)); _box(Rect2(row.position,Vector2(3,row.size.y)),C_BLOOD)
+				_text_center(game.card_price_text(game.lobby_tab, i), row.get_center()+Vector2(0,5), 11, C_ACID)
 		if on: draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),Color("b94a43"))
 
 func _locked_slot(rect: Rect2,pet:=false,skin:=false) -> void:
@@ -1352,8 +1352,10 @@ func _panel(rect: Rect2,bg: Color,border: Color,radius: int) -> void:
 	# Dead Island 2 plate dressing: a bone hairline along the top and a short red rule at the
 	# left corner, so every panel reads as the same piece of kit.
 	_box(Rect2(rect.position,Vector2(rect.size.x,1)),Color(C_BONE,0.10))
-	_box(Rect2(rect.position+Vector2(0,0),Vector2(46,3)),C_BLOOD)
-	_box(Rect2(rect.position+Vector2(rect.size.x-46,0),Vector2(46,3)),Color(C_BONE,0.16))
+	if rect.size.x >= 320.0:
+		# corner rules only on dialogs: on a card they read as stubby half lines
+		_box(Rect2(rect.position,Vector2(64,3)),C_BLOOD)
+		_box(Rect2(rect.position+Vector2(rect.size.x-64,0),Vector2(64,3)),Color(C_BONE,0.16))
 
 func _text(value: String,pos: Vector2,size: int,color: Color) -> void:
 	size=maxi(size,12); _string(font,pos,value,size,color)
