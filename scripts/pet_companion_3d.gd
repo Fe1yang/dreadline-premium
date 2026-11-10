@@ -28,7 +28,7 @@ const GALLOP_RATE:=1.25
 ## folded into each other when the gallop drove them).
 # Every pet rig here carries the same leg bones (F_L/H_R ...), and the procedural gallop
 # swings them 45 deg per stride against the baked clip's 28, so all six use it.
-const GALLOP_DISABLED:=[ ]
+const GALLOP_DISABLED:=[0, 1, 2, 3]   # dogs walk on their own clips; only the cats gallop
 const GAIT_OVERRIDES:={
    0: {"amp":0.50, "spine":0.80},
    1: {"amp":0.50, "spine":0.80},
@@ -215,8 +215,11 @@ func _animate(delta: float) -> void:
 	if anim:
 		var idle := _first_clip(anim, ["Dog_Idle", "Lion_Idle", "Tiger_Idle", "Idle", "idle"])
 		if breed in GALLOP_DISABLED:
-			var own_run := _first_clip(anim, ["Dog_Run", "Lion_Run", "Tiger_Run", "Run"])
-			var own_idle := "" if is_moving else idle
+			# the dogs keep their baked cycle; "moving" has to include the scrolling road,
+			# otherwise a dog that has caught up plays its idle while the ground races past
+			var dog_moving: bool = is_moving or (game != null and (float(game.get("world_speed")) > 0.05 or String(game.get("state")) in ["playing", "intro"]))
+			var own_run := _first_clip(anim, ["Dog_Run", "Dog_Run_001", "Run"])
+			var own_idle := "" if dog_moving else idle
 			var pick := own_idle if own_idle != "" else own_run
 			if pick != "":
 				if anim.current_animation != pick or not anim.is_playing():
