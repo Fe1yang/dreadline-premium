@@ -96,6 +96,8 @@ func setup(index: int, slot:=0) -> void:
 		if m != null:
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	yaw_offset=float(LobbyScene.PETS[breed].get("yaw",0.0))
+	if breed==LION_BREED:
+		yaw_offset += PI   # rebuilt lion rig faces backwards against the run direction
 	# Some of these scans are authored nose-along-X and some nose-along-Z, so half the pack ran
 	# sideways. Measure the head against the body and turn the model onto the travel axis.
 	var sk_probe := model.find_child("Skeleton3D", true, false) as Skeleton3D
@@ -245,6 +247,8 @@ func _animate(delta: float) -> void:
 			spd=3.5*float(game.player.effective_move_mult())
 		var want:float=gallop.stride_for_speed(spd)
 		gallop.stride=want
+		if breed==LION_BREED:
+			gallop.stride=maxf(want*1.9,0.30)   # longer stride, unhurried cadence
 		gallop.step(delta,1.0)
 
 func _valid_target() -> bool:
