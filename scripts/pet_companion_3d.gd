@@ -23,6 +23,10 @@ const AHEAD_MARGIN:=0.3   # a new target must be at least this far in front of t
 const GIVE_UP_BEHIND:=0.6  # drop a target once it falls this far behind him
 const GALLOP_RATE:=1.25
 ## Per-breed gait overrides; breeds not listed use the dog tuning.
+## Breeds whose rigs do not survive the procedural gallop: they play their own
+## run clip instead (the czech wolfdog comes from a different import and its legs
+## folded into each other when the gallop drove them).
+const GALLOP_DISABLED:=[2]
 const GAIT_OVERRIDES:={
 	4: {"amp":0.92, "spine":1.10},   # white tiger: slightly gentler swing, springier spine
 	5: {"amp":0.88, "spine":1.18},   # lion: same, a touch more spring (stride is speed-derived)
@@ -165,6 +169,15 @@ func _animate(delta: float) -> void:
 	# gallop, the procedural version only wiggled the legs in place.
 	if anim:
 		var idle := _first_clip(anim, ["Dog_Idle", "Lion_Idle", "Tiger_Idle", "Idle", "idle"])
+		if breed in GALLOP_DISABLED:
+			var own_run := _first_clip(anim, ["Dog_Run_001", "Dog_Run", "Lion_Run", "Tiger_Run", "Run"])
+			var own_idle := "" if is_moving else idle
+			var pick := own_idle if own_idle != "" else own_run
+			if pick != "":
+				if anim.current_animation != pick or not anim.is_playing():
+					anim.play(pick, 0.15)
+				anim.speed_scale = 1.0
+				return
 		# The road scrolls under the animal, so a pet that has caught up sits still in world space
 		# while the ground races past: that still counts as running.
 		var scrolling: bool = game != null and float(game.get("world_speed")) > 0.05

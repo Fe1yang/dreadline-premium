@@ -1154,19 +1154,10 @@ func tick(delta: float) -> void:
 	flash_time = maxf(0,flash_time-delta)
 	hurt_flash = maxf(0,hurt_flash-delta)
 	light.light_energy = 0.75 if flash_time>0 else 0.0
-	# Muzzle flash: a small warm quad at the nozzle, never for the flamethrower (its fire is
-	# the particle jet).
-	_build_flash_quad()
-	if is_instance_valid(flash_quad):
-		flash_quad.top_level = true
-		var on: bool = flash_time > 0.0 and weapon != "FLAME"
-		flash_quad.visible = on
-		if on:
-			flash_quad.global_position = muzzle_position() + aim_direction.normalized() * 0.12
-			var k: float = 0.7 + randf() * 0.5
-			flash_quad.scale = Vector3.ONE * k
-			flash_quad.rotate_y(randf_range(-0.6, 0.6))
-		if flash.visible: flash.scale = Vector3.ONE*float(FLASH_SCALES.get(weapon,0.20))*(0.92+randf()*0.16)
+	# No muzzle flash at all: both the stock VFX sprite and the additive quad read as a glowing
+	# ball floating at the nozzle.
+	if is_instance_valid(flash):
+		flash.visible = false
 
 ## The pistol is the fallback sidearm: it never runs out of spare magazines.
 ## Swap between the gun from the crates and the pistol (which never runs out).
@@ -1199,7 +1190,6 @@ func fire() -> void:
 	ammo -= 1
 	flash_time = 0.070 if weapon!="SNIPER" else 0.10
 	flash_time = maxf(flash_time, 0.05)
-	_build_flash_quad()
 
 func request_reload() -> bool:
 	if reloading or ammo>=magazine_size or (reserve_ammo<=0 and not infinite_ammo()): return false
