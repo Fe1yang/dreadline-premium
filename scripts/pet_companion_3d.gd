@@ -233,7 +233,7 @@ func _animate(delta: float) -> void:
 			# standing: the baked idle reads well on every breed
 			if anim.current_animation != idle or not anim.is_playing():
 				anim.play(idle, 0.15)
-			anim.speed_scale = 1.0 if want == idle else 0.75
+			anim.speed_scale = 1.0
 			return
 	if anim and anim.is_playing():
 		anim.stop(); (gallop.sk as Skeleton3D).reset_bone_poses()
