@@ -3004,6 +3004,24 @@ func set_lobby_tab(t: int) -> void:
 ## A finger lifted without sliding picks the card under it; a slide only scrolls the list.
 ## Wears whatever the open dropdown points at, on whichever tab opened it.
 ## Lobby card -> shop pack id, so a locked card can be bought right there with coins or silver.
+## "1200 金币" / "4000 银币" for a lobby card, empty when there is nothing to buy.
+func card_price_text(tab: int, index: int) -> String:
+	var pid := _pack_id_for_card(tab, index)
+	if pid == "":
+		return ""
+	var p: Dictionary = pack_by_id(pid)
+	if p.is_empty():
+		return ""
+	var zh := String(language_code).begins_with("zh")
+	var coins := int(p.get("coins", 0))
+	var silver := int(p.get("silver", 0))
+	if coins > 0:
+		return "%d %s" % [coins, "金币" if zh else "coins"]
+	if silver > 0:
+		return "%d %s" % [silver, "银币" if zh else "silver"]
+	return ""
+
+
 func _pack_id_for_card(tab: int, index: int) -> String:
 	match tab:
 		0:
@@ -3019,6 +3037,7 @@ func _pack_id_for_card(tab: int, index: int) -> String:
 
 
 func _equip_from_menu() -> void:
+	var stay_tab := equip_menu_tab   # equipping must never move the player to another tab
 	match equip_menu_tab:
 		1:
 			if equip_menu_index < lobby.PETS.size():
@@ -3036,6 +3055,10 @@ func _equip_from_menu() -> void:
 			_save()
 		_:
 			select_character(equip_menu_index)
+	if lobby_tab != stay_tab:
+		lobby_tab = stay_tab
+		lobby.focus_pets = stay_tab == 1
+		lobby.focus_vehicle = stay_tab == 3
 
 
 func _lobby_release(pos: Vector2) -> void:

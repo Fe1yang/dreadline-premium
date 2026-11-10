@@ -696,7 +696,8 @@ func _draw_character_select() -> void:
 		_side_button(game.SIDE_SHOP,"shop",game.localize("shop"),false)
 		if not game.premium_build():
 			_side_button(game.SIDE_STORE,"store",StoreCatalog.text(lang,"store"),false)
-		_side_button(game.SIDE_MAIL,"mail",ExtraText.text(lang,"mail"),game.mail_unclaimed()>0)
+		# no store in this build: the mail button takes its place in the rail
+		_side_button(game.SIDE_STORE if game.premium_build() else game.SIDE_MAIL,"mail",ExtraText.text(lang,"mail"),game.mail_unclaimed()>0)
 		_side_button(game.SIDE_BAG,"bag",ExtraText.text(lang,"bag"),false)
 		_side_button(game.SIDE_MAP,"map",ExtraText.text(lang,"map"),false)
 		_airdrop_button(lang)
@@ -743,12 +744,15 @@ func _draw_character_select() -> void:
 					_info_tip(mpl,RunText.text(String(sk4.get("name","")),lang),game.character_name(int(sk4.get("char",-1))),
 						ExtraText.text(lang,"skin_locked"))
 				elif game.lobby_tab==1 and ci<game.lobby.PETS.size():
-					_info_tip(mpl,game.pet_name(ci),ShopText.text(lang,"pets"),ExtraText.text(lang,"pet_locked"))
+					_info_tip(mpl,game.pet_name(ci),ShopText.text(lang,"pets"),
+						game.card_price_text(1, ci) if game.premium_build() else ExtraText.text(lang,"pet_locked"))
 				elif game.lobby_tab==0 and ci<game.lobby.CHARACTERS.size():
 					var ch: Dictionary=game.lobby.CHARACTERS[ci]
 					var perk2: String=String(ch.get("perk",""))
-					_info_tip(mpl,game.character_name(ci),ShopText.text(lang,"chars"),
-						RunText.text(perk2,lang) if perk2!="" else ExtraText.text(lang,"char_locked"))
+					var sub: String = RunText.text(perk2,lang) if perk2!="" else ExtraText.text(lang,"char_locked")
+					if game.premium_build():
+						sub = game.card_price_text(0, ci)
+					_info_tip(mpl,game.character_name(ci),ShopText.text(lang,"chars"), sub)
 				break
 	for side in [-1,1]:
 		if not game.lobby_page_visible(side): continue
@@ -899,6 +903,22 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 		var menu_open: bool = int(game.equip_menu_index)==i
 		if not menu_open:
 			_text_center(label,Vector2(card.get_center().x,card.end.y-9),11 if pets else 12,WHITE if on else MUTED)
+		if game.premium_build():
+			# a buy row under the name: "已拥有" when owned, price otherwise
+			var row := Rect2(card.position.x - 4.0, card.end.y + 2.0, card.size.x + 8.0, 22.0)
+			var owned_now := false
+			match game.lobby_tab:
+				0: owned_now = game.character_owned(i)
+				1: owned_now = game.pet_owned(i)
+				2: owned_now = game.skin_owned(i)
+				3: owned_now = game.vehicle_is_owned(String(["vehicle_bike","vehicle_sport","vehicle_car","vehicle_gold","vehicle_tank","vehicle_sedan","vehicle_gold_car"][clampi(i,0,6)]))
+				4: owned_now = game.flame_owned()
+			if owned_now:
+				_panel(row, Color(0.10,0.16,0.12,0.95), Color(0.32,0.55,0.40,0.9), 0)
+				_text_center("已拥有" if String(lang).begins_with("zh") else "OWNED", row.get_center()+Vector2(0,5), 11, Color(0.62,0.90,0.70))
+			else:
+				_panel(row, Color(0.22,0.16,0.06,0.95), Color(0.72,0.55,0.20,0.95), 0)
+				_text_center(game.card_price_text(game.lobby_tab, i), row.get_center()+Vector2(0,5), 11, Color(1.0,0.86,0.45))
 		if on: draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),Color("b94a43"))
 
 func _locked_slot(rect: Rect2,pet:=false,skin:=false) -> void:
