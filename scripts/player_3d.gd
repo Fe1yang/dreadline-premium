@@ -595,16 +595,16 @@ func _build_flame_jet() -> void:
 	ramp.set_color(3, Color(0.85, 0.34, 0.06, 0.0))
 	var jet := CPUParticles3D.new()
 	jet.amount = 520
-	jet.lifetime = 0.55
+	jet.lifetime = 0.75
 	jet.preprocess = 0.12
 	jet.local_coords = false
 	jet.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	jet.emission_sphere_radius = 0.07
 	jet.direction = Vector3(0, 0, -1)
-	jet.spread = 4.0
-	jet.gravity = Vector3(0, 1.0, 0)
-	jet.initial_velocity_min = 11.0
-	jet.initial_velocity_max = 17.0
+	jet.spread = 3.0
+	jet.gravity = Vector3(0, 0.6, 0)
+	jet.initial_velocity_min = 15.0
+	jet.initial_velocity_max = 24.0
 	jet.angular_velocity_min = -60.0
 	jet.angular_velocity_max = 60.0
 	jet.scale_amount_min = 0.75

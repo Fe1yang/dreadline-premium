@@ -64,7 +64,8 @@ var breed:=0
 var slot_index:=0
 var base_y:=0.0
 var gallop: RefCounted
-var is_moving := false   # drives idle vs run clip selection
+var is_moving := false
+var last_pos := Vector3.ZERO   # drives idle vs run clip selection
 var yaw_offset := 0.0   # the model's own forward axis, per breed
 var anim: AnimationPlayer
 var bark_player: AudioStreamPlayer
@@ -143,6 +144,11 @@ func _first_clip(player: AnimationPlayer, names: Array) -> String:
 
 
 func _animate(delta: float) -> void:
+	# The clip follows the body: whatever path moved the pet this frame, standing still plays the
+	# idle and any real displacement plays the run. Absolute ground speed, not intent.
+	var moved: float = position.distance_to(last_pos)
+	last_pos = position
+	is_moving = moved > 0.0015
 	if bite_time>0.0:
 		ModelFix.play_animation(model,"Dog_Bite",false)
 		if gallop!=null and gallop.has_method("bite"): gallop.bite()
