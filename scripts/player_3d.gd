@@ -611,8 +611,8 @@ func _build_flame_jet() -> void:
 	jet.scale_amount_max = 1.25
 	# flame grows as it leaves the nozzle, then thins out while it cools
 	var grow := Curve.new()
-	grow.add_point(Vector2(0.0, 0.55))
-	grow.add_point(Vector2(0.35, 1.0))
+	grow.add_point(Vector2(0.0, 0.10))
+	grow.add_point(Vector2(0.45, 1.0))
 	grow.add_point(Vector2(1.0, 0.85))
 	jet.scale_amount_curve = grow
 	jet.color_ramp = ramp
@@ -653,7 +653,9 @@ func pulse_flame() -> void:
 		flame_glow.light_energy = 0.35
 	var from := muzzle_position()
 	var dir := aim_direction if aim_direction.length() > 0.01 else Vector3.FORWARD
-	flame_jet.global_position = from
+	# Born 0.45 m down the stream: a particle that pops on the nozzle fills the screen with one
+	# bright disc, which is the white dot the player kept seeing.
+	flame_jet.global_position = from + dir.normalized() * 0.45
 	flame_jet.look_at(from + dir * 6.0, Vector3.UP)
 
 
