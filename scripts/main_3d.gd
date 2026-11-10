@@ -2432,6 +2432,7 @@ static func now_unix() -> int:
 	return int(Time.get_unix_time_from_system())
 
 func offer_active() -> bool:
+	if PREMIUM_BUILD: return false
 	return not offer_id.is_empty() and now_unix()<offer_expires
 
 func offer_seconds_left() -> int:
@@ -2568,7 +2569,7 @@ func share_result() -> String:
 	DisplayServer.clipboard_set(text); share_toast=2.2
 	return "clipboard"
 const SIDE_BAG:=Rect2(470,198,70,76)    # backpack
-const SIDE_SIGNIN:=Rect2(462,278,70,76)
+const SIDE_SIGNIN:=Rect2(470,278,70,76)   # same x as the rest of the rail
 const SIDE_TASKS:=Rect2(470,358,70,76)
 const SIDE_SHOP:=Rect2(470,438,70,76)   # supply truck (upgrades)
 const SIDE_STORE:=Rect2(470,518,70,76)  # real-money store
@@ -2941,7 +2942,7 @@ func close_tasks() -> void:
 ## Tile rectangles of the 7 check-in days (4 on top, then 3 with a wide day 7).
 ## Week / month switch at the top of the check-in panel.
 func signin_tab_rect(t: int) -> Rect2:
-	return Rect2(56 + t * 220, 210, 208, 40)
+	return Rect2(56 + t * 220, 214, 208, 46)
 
 
 func signin_tile(i: int) -> Rect2:

@@ -689,7 +689,7 @@ func _draw_character_select() -> void:
 	draw_rect(Rect2(0,game.LOBBY_BAND_TOP,540,game.ui_h-game.LOBBY_BAND_TOP),Color(0.015,0.018,0.019,0.82))
 	_wallet(game.WALLET_LOBBY,true,game.LOBBY_WALLET_SCALE)
 	_energy_refill_timer(game.WALLET_LOBBY,game.LOBBY_WALLET_SCALE)
-	if game.offer_active() and game.state=="character_select": _offer_badge(game.OFFER_BADGE)
+	if game.offer_active() and game.state=="character_select" and not game.premium_build(): _offer_badge(game.OFFER_BADGE)
 	if game.state=="character_select":
 		_side_button(game.SIDE_SIGNIN,"signin",ProgressCatalog.text(lang,"signin"),game.signin_available())
 		_side_button(game.SIDE_TASKS,"tasks",ProgressCatalog.text(lang,"tasks"),game.missions_ready_count()>0)
@@ -2216,9 +2216,7 @@ func _draw_signin() -> void:
 		if on: _box(tr, Color(0.55,0.10,0.10,0.95))
 		else: _frame(tr.grow(-2), Color(1,1,1,0.22), 1.0)
 		var tab_label: String = ("月签到" if ti==1 else "周签到") if String(lang).begins_with("zh") else ("MONTHLY" if ti==1 else "WEEKLY")
-		_clean_center(bold, tr.get_center()+Vector2(0,6), tab_label, 17, WHITE if on else MUTED)
-	_clean_center(font,Vector2(270,p.position.y+66),
-		"SUPPLY CACHE · 30 DAYS" if game.signin_monthly else "SUPPLY CACHE · 7 DAYS",11,MUTED)
+		_clean_center(bold, tr.get_center()+Vector2(0,7), tab_label, 16, WHITE if on else MUTED)
 	var c: Vector2=game.SIGNIN_CLOSE.get_center()
 	clean_ops.append(["line",PackedVector2Array([c+Vector2(-11,-11),c+Vector2(11,11)]),WHITE,4.0])
 	clean_ops.append(["line",PackedVector2Array([c+Vector2(11,-11),c+Vector2(-11,11)]),WHITE,4.0])
@@ -2247,8 +2245,9 @@ func _draw_signin() -> void:
 			_clean_text(bold,r.position+Vector2(10,24),ProgressCatalog.text(lang,"day").replace("%d",str(i+1)).to_upper(),13,WHITE if current else MUTED)
 			if jackpot:
 				var half: float = r.size.x * 0.5
-				clean_ops.append(["texture",coin_tex,Rect2(r.position+Vector2(half*0.5-24,r.position.y+38),Vector2(48,48))])
-				clean_ops.append(["texture",voucher_tex,Rect2(r.position+Vector2(half*1.5-26,r.position.y+40),Vector2(52,44))])
+				var cy2: float = r.get_center().y - 4.0
+				clean_ops.append(["texture",coin_tex,Rect2(Vector2(r.position.x+half*0.5-26,cy2-26),Vector2(52,52))])
+				clean_ops.append(["texture",voucher_tex,Rect2(Vector2(r.position.x+half*1.5-26,cy2-22),Vector2(52,44))])
 				_clean_center(bold,Vector2(r.position.x+half*0.5,r.end.y-14),"%d"%int(reward.coins),17,BRASS_LIGHT)
 				_clean_center(bold,Vector2(r.position.x+half*1.5,r.end.y-14),"×%d"%int(reward.vouchers),17,BRASS_LIGHT)
 			else:
