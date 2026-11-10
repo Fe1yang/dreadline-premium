@@ -153,7 +153,7 @@ var equip_menu_tab:=0     # ...and which tab it belongs to
 var loadout_on:=true
 var vehicle_equipped:=true
 ## Whether the owned special weapon (the flamethrower) is carried into a run.
-var weapon_equipped:=true         # "" = none, "BIKE" = bought motorcycle (auto-rides every run's first 1000m)
+var weapon_equipped:=false   # nothing equipped until the player chooses it         # "" = none, "BIKE" = bought motorcycle (auto-rides every run's first 1000m)
 const VEHICLE_AUTO_RANGE:=1000.0 # bought bike auto-rides every run until this distance (or durability runs out)
 var vehicle_auto_active:=false
 ## Road scroll speed for this frame; barrels and crates ride the same number.
