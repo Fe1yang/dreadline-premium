@@ -594,21 +594,21 @@ func _build_flame_jet() -> void:
 	ramp.add_point(0.72, Color(1.0, 0.50, 0.10, 0.45))
 	ramp.set_color(3, Color(0.85, 0.34, 0.06, 0.0))
 	var jet := CPUParticles3D.new()
-	jet.amount = 260
-	jet.lifetime = 0.62
+	jet.amount = 520
+	jet.lifetime = 0.55
 	jet.preprocess = 0.12
 	jet.local_coords = false
 	jet.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	jet.emission_sphere_radius = 0.07
 	jet.direction = Vector3(0, 0, -1)
-	jet.spread = 5.0
+	jet.spread = 4.0
 	jet.gravity = Vector3(0, 1.0, 0)
 	jet.initial_velocity_min = 11.0
 	jet.initial_velocity_max = 17.0
 	jet.angular_velocity_min = -60.0
 	jet.angular_velocity_max = 60.0
-	jet.scale_amount_min = 0.55
-	jet.scale_amount_max = 1.25
+	jet.scale_amount_min = 0.75
+	jet.scale_amount_max = 1.55
 	# flame grows as it leaves the nozzle, then thins out while it cools
 	var grow := Curve.new()
 	grow.add_point(Vector2(0.0, 0.10))
