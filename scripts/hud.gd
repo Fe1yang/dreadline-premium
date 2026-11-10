@@ -730,7 +730,8 @@ func _draw_character_select() -> void:
 		_side_button(game.SIDE_STORE if game.premium_build() else game.SIDE_MAIL,"mail",ExtraText.text(lang,"mail"),game.mail_unclaimed()>0)
 		_side_button(game.SIDE_BAG,"bag",ExtraText.text(lang,"bag"),false)
 		_side_button(game.SIDE_MAP,"map",ExtraText.text(lang,"map"),false)
-		_airdrop_button(lang)
+		if not game.premium_build():
+			_airdrop_button(lang)
 	for t in [0, 1, 3, 4]:
 		var tab: Rect2=game.lobby_tab_rect(t); var tab_on: bool=game.lobby_tab==t
 		if tab_on: _blood_banner(tab)
