@@ -145,6 +145,7 @@ var light: OmniLight3D
 var torch: SpotLight3D
 var torch_spill: OmniLight3D
 var flash: Node3D
+var flash_quad: MeshInstance3D
 
 const GRIP_OFFSETS := {
 	"PISTOL": Vector3(0.0,0.20,0.18),  # pushed forward: the grip was clipping into the palm
@@ -1085,6 +1086,28 @@ func _update_weapon_transform() -> void:
 		flash.position=muzzle
 		flash.quaternion=Quaternion(Vector3.LEFT,aim_direction)
 
+## Small warm muzzle flash drawn as a billboard quad. The stock VFX scene renders as a white
+## ball on this renderer, so the guns get this instead of nothing.
+func _build_flash_quad() -> void:
+	if is_instance_valid(flash_quad):
+		return
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.30, 0.30)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = load("res://assets/vfx/flame_particle.png")
+	mat.albedo_color = Color(1.0, 0.82, 0.42, 1.0)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	quad.material = mat
+	flash_quad = MeshInstance3D.new()
+	flash_quad.mesh = quad
+	flash_quad.visible = false
+	flash_quad.top_level = true
+	add_child(flash_quad)
+
+
 func tick(delta: float) -> void:
 	if is_instance_valid(flame_jet) and flame_jet.emitting:
 		flame_jet_timer = maxf(0.0, flame_jet_timer - delta)
@@ -1120,10 +1143,18 @@ func tick(delta: float) -> void:
 	flash_time = maxf(0,flash_time-delta)
 	hurt_flash = maxf(0,hurt_flash-delta)
 	light.light_energy = 0.75 if flash_time>0 else 0.0
-	# The flamethrower has no muzzle flash: the particle jet is the fire, and the flash
-	# sprite showed up as a white blob floating in front of the nozzle.
-	if is_instance_valid(flash):
-		flash.visible = flash_time>0 and weapon!="FLAME"
+	# Muzzle flash: a small warm quad at the nozzle, never for the flamethrower (its fire is
+	# the particle jet).
+	_build_flash_quad()
+	if is_instance_valid(flash_quad):
+		flash_quad.top_level = true
+		var on: bool = flash_time > 0.0 and weapon != "FLAME"
+		flash_quad.visible = on
+		if on:
+			flash_quad.global_position = muzzle_position() + aim_direction.normalized() * 0.12
+			var k: float = 0.7 + randf() * 0.5
+			flash_quad.scale = Vector3.ONE * k
+			flash_quad.rotate_y(randf_range(-0.6, 0.6))
 		if flash.visible: flash.scale = Vector3.ONE*float(FLASH_SCALES.get(weapon,0.20))*(0.92+randf()*0.16)
 
 ## The pistol is the fallback sidearm: it never runs out of spare magazines.
@@ -1156,7 +1187,8 @@ func fire() -> void:
 	if not can_fire(): return
 	ammo -= 1
 	flash_time = 0.070 if weapon!="SNIPER" else 0.10
-	# No muzzle flash: on this renderer the sprite reads as a white ball.
+	flash_time = maxf(flash_time, 0.05)
+	_build_flash_quad()
 
 func request_reload() -> bool:
 	if reloading or ammo>=magazine_size or (reserve_ammo<=0 and not infinite_ammo()): return false
