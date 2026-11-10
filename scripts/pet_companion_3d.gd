@@ -69,6 +69,7 @@ var slot_index:=0
 var base_y:=0.0
 var gallop: RefCounted
 var is_moving := false
+var held_yaw := 0.0   # smoothed heading, kept between frames
 var last_pos := Vector3.ZERO   # drives idle vs run clip selection
 var yaw_offset := 0.0   # the model's own forward axis, per breed
 var anim: AnimationPlayer
@@ -92,6 +93,8 @@ func setup(index: int, slot:=0) -> void:
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
 	model.position.y=base_y
 	anim=model.find_child("AnimationPlayer",true,false) as AnimationPlayer
+	if anim != null:
+		_strip_root_motion(anim)
 	if anim: anim.stop()
 	# find the skeleton by TYPE: generated rigs name it after the armature (TigerArm),
 	# so the old name lookup silently skipped the gallop and the pet slid along.
@@ -145,6 +148,30 @@ func _first_clip(player: AnimationPlayer, names: Array) -> String:
 		if player.has_animation(String(n)):
 			return String(n)
 	return ""
+
+
+## Some pet clips carry the walk cycle as root translation. Played in place that reads as the
+## animal sliding forward while its skin stretches, so the horizontal part of every root track is
+## flattened and only the vertical bob is kept.
+func _strip_root_motion(player: AnimationPlayer) -> void:
+	for name in player.get_animation_list():
+		var clip := player.get_animation(String(name))
+		if clip == null:
+			continue
+		for track in range(clip.get_track_count()):
+			if clip.track_get_type(track) != Animation.TYPE_POSITION_3D:
+				continue
+			var path := String(clip.track_get_path(track))
+			var lower := path.to_lower()
+			if lower.find("root") < 0 and lower.find("hips") < 0 and lower.find("pelvis") < 0:
+				continue
+			var keys := clip.track_get_key_count(track)
+			var base_y := 0.0
+			if keys > 0:
+				base_y = (clip.track_get_key_value(track, 0) as Vector3).y
+			for k in range(keys):
+				var v: Vector3 = clip.track_get_key_value(track, k)
+				clip.track_set_key_value(track, k, Vector3(0.0, v.y - base_y, 0.0))
 
 
 func _animate(delta: float) -> void:
@@ -247,13 +274,15 @@ func tick(delta: float) -> void:
 		position.y=0.0
 	# Facing: turn toward the target when attacking or when catching up from behind
 	# (recruited far ahead/behind on the road). Otherwise nose down the road.
-	var facing: Vector3
-	if flat_delta.length()>0.05 and (attacking or distance>2.0):
-		facing=flat_delta
-	else:
-		facing=Vector3.FORWARD
-	var yaw: float=atan2(facing.x,facing.z)
-	rotation.y=lerp_angle(rotation.y,yaw+yaw_offset,1.0-exp(-delta*12.0))
+	var want_yaw: float = held_yaw
+	if flat_delta.length() > 0.30 and (attacking or distance > 2.4):
+		want_yaw = atan2(flat_delta.x, flat_delta.z)
+	elif distance <= 1.6 and not attacking:
+		want_yaw = 0.0
+	# deadband: ignore small swings so the model cannot twitch between two headings
+	if absf(angle_difference(held_yaw, want_yaw)) > 0.35:
+		held_yaw = want_yaw
+	rotation.y = lerp_angle(rotation.y, held_yaw + yaw_offset, 1.0-exp(-delta*6.0))
 	model.position.y=base_y
 	# The run is always moving forward, so the dog gallops except during a bite.
 	_animate(delta)
