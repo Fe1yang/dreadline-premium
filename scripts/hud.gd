@@ -2241,24 +2241,52 @@ func _draw_signin() -> void:
 		_box(r.grow(-3),Color(0.085,0.09,0.092,0.96) if not done else Color(0.05,0.052,0.055,0.92))
 		_frame(r.grow(-3),Color(BRASS,0.9) if jackpot else Color(1,1,1,0.14),1.5 if jackpot else 1.0)
 		if compact:
-			# 30 tiles on one screen: number, icon, amount
+			# 30 tiles on one screen: the day, then whatever that day actually pays
 			_clean_text(font,r.position+Vector2(5,13),str(i+1),11,MUTED)
-			clean_ops.append(["texture",coin_tex,Rect2(r.position+Vector2(20,14),Vector2(28,28))])
-			_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),str(int(reward.coins)),12,WHITE)
-			if int(reward.vouchers) > 0:
+			var sv: int = int(reward.get("silver", 0))
+			var cv: int = int(reward.get("coins", 0))
+			var vv: int = int(reward.get("vouchers", 0))
+			var icx: float = r.position.x + 20.0
+			if sv > 0:
+				clean_ops.append(["texture",silver_tex,Rect2(Vector2(icx, r.position.y+14),Vector2(28,28))])
+				_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),str(sv),12,Color(0.85,0.90,1.0))
+			elif cv > 0:
+				clean_ops.append(["texture",coin_tex,Rect2(Vector2(icx, r.position.y+14),Vector2(28,28))])
+				_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),str(cv),12,GOLD)
+			elif vv > 0:
+				clean_ops.append(["texture",voucher_tex,Rect2(Vector2(icx, r.position.y+16),Vector2(28,24))])
+				_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),"×%d"%vv,12,VOUCHER_COL)
+			if vv > 0 and (sv > 0 or cv > 0):
 				clean_ops.append(["texture",voucher_tex,Rect2(r.position+Vector2(42,2),Vector2(24,20))])
 		else:
 			_clean_text(bold,r.position+Vector2(10,24),ProgressCatalog.text(lang,"day").replace("%d",str(i+1)).to_upper(),13,WHITE if current else MUTED)
 			if jackpot:
 				var half: float = r.size.x * 0.5
 				var cy2: float = r.get_center().y - 4.0
-				clean_ops.append(["texture",coin_tex,Rect2(Vector2(r.position.x+half*0.5-26,cy2-26),Vector2(52,52))])
-				clean_ops.append(["texture",voucher_tex,Rect2(Vector2(r.position.x+half*1.5-26,cy2-22),Vector2(52,44))])
-				_clean_center(bold,Vector2(r.position.x+half*0.5,r.end.y-14),"%d"%int(reward.coins),17,BRASS_LIGHT)
-				_clean_center(bold,Vector2(r.position.x+half*1.5,r.end.y-14),"×%d"%int(reward.vouchers),17,BRASS_LIGHT)
+				var js: int = int(reward.get("silver", 0))
+				var jc: int = int(reward.get("coins", 0))
+				var jv: int = int(reward.get("vouchers", 0))
+				clean_ops.append(["texture",silver_tex,Rect2(Vector2(r.position.x+half*0.5-26,cy2-26),Vector2(52,52))])
+				_clean_center(bold,Vector2(r.position.x+half*0.5,r.end.y-14),_grouped(js),17,BRASS_LIGHT)
+				if jc > 0:
+					clean_ops.append(["texture",coin_tex,Rect2(Vector2(r.position.x+half*1.5-26,cy2-26),Vector2(52,52))])
+					_clean_center(bold,Vector2(r.position.x+half*1.5,r.end.y-14),_grouped(jc),17,BRASS_LIGHT)
+				elif jv > 0:
+					clean_ops.append(["texture",voucher_tex,Rect2(Vector2(r.position.x+half*1.5-26,cy2-22),Vector2(52,44))])
+					_clean_center(bold,Vector2(r.position.x+half*1.5,r.end.y-14),"×%d"%jv,17,BRASS_LIGHT)
 			else:
-				clean_ops.append(["texture",coin_tex,Rect2(r.get_center()+Vector2(-26,-28),Vector2(52,52))])
-				_clean_center(bold,Vector2(r.get_center().x,r.end.y-14),_grouped(int(reward.coins)),20,WHITE)
+				var s2: int = int(reward.get("silver", 0))
+				var c2: int = int(reward.get("coins", 0))
+				var v2: int = int(reward.get("vouchers", 0))
+				if s2 > 0:
+					clean_ops.append(["texture",silver_tex,Rect2(r.get_center()+Vector2(-26,-28),Vector2(52,52))])
+					_clean_center(bold,Vector2(r.get_center().x,r.end.y-14),_grouped(s2),20,Color(0.85,0.90,1.0))
+				elif c2 > 0:
+					clean_ops.append(["texture",coin_tex,Rect2(r.get_center()+Vector2(-26,-28),Vector2(52,52))])
+					_clean_center(bold,Vector2(r.get_center().x,r.end.y-14),_grouped(c2),20,GOLD)
+				elif v2 > 0:
+					clean_ops.append(["texture",voucher_tex,Rect2(r.get_center()+Vector2(-26,-20),Vector2(52,44))])
+					_clean_center(bold,Vector2(r.get_center().x,r.end.y-14),"×%d"%v2,20,VOUCHER_COL)
 		if current:
 			var pulse:=0.5+0.5*sin(t*4.0)
 			_frame(r,Color(1,1,1,0.7+0.3*pulse),2.0)
