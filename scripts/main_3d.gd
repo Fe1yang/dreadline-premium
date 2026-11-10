@@ -2007,8 +2007,8 @@ func open_language() -> void:
 ## DF-07 case opening: 100 gold or 1 voucher for one permanent upgrade. Purchases commit
 ## immediately, so leaving during the animation can never duplicate or lose a reward.
 ## Two payment buttons: gold (LOOTBOX_COST) or a single voucher (1 per draw).
-const LOOTBOX_COST:=1000
-const LOOTBOX_VOUCHER_COST:=1
+const LOOTBOX_COST:=500        # silver per case (buy-once build)
+const LOOTBOX_VOUCHER_COST:=1   # or a single voucher
 const LOOTBOX_GOLD_RECT:=Rect2(30,790,230,66) # gold payment
 const LOOTBOX_VOUCHER_RECT:=Rect2(280,790,230,66) # 1-voucher payment
 var lootbox_return_state:="cover"
@@ -2072,10 +2072,10 @@ func buy_lootbox(use_voucher:=false) -> bool:
 			open_resource_pack("vouchers"); return false
 		bank_vouchers-=LOOTBOX_VOUCHER_COST
 	else:
-		if bank_coins<LOOTBOX_COST:
+		if bank_silver<LOOTBOX_COST:
 			lootbox_message=ShopText.text(language_code,"case_no_coins")
-			open_resource_pack("coins"); return false
-		bank_coins-=LOOTBOX_COST
+			open_resource_pack("silver"); return false
+		bank_silver-=LOOTBOX_COST
 	# Dogs and paid characters are the jackpot: a case almost always pays an upgrade — a dog or
 	# a paid character is separate. When every upgrade is maxed the case pays one of those.
 	# Paid content can also drop out of a case, on two tiers of luck:
