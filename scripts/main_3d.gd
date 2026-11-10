@@ -2927,6 +2927,10 @@ func gameover_double_rect() -> Rect2:
 	return Rect2(262,y+30,196,58)
 
 func open_signin() -> void:
+	if PREMIUM_BUILD:
+		lobby_toast = 1.6
+		lobby_toast_key = "coming"
+		return
 	if state=="signin": return
 	signin_return_state=state; state="signin"; _release_touches()
 
@@ -5512,6 +5516,14 @@ func _pointer_down(pos: Vector2) -> bool:
 		if offer_active() and OFFER_BADGE.has_point(pos): open_offer(); return true
 		# Main screen (see hud._draw_character_select): one scrolling column on the left with
 		# 角色 / 宠物 tabs; the survivor and the pet stand together on the platform.
+		# EQUIP dropdown wins over the tab row: it is drawn on top of the tabs, so a press
+		# there must equip (or just close) and never reach the tab underneath.
+		if equip_menu_index >= 0:
+			if equip_menu_rect().has_point(pos):
+				_equip_from_menu()
+				sound.play("equip")
+			equip_menu_index = -1
+			return true
 		for tab_i in [0, 1, 3, 4]:
 			if lobby_tab_rect(tab_i).has_point(pos): set_lobby_tab(tab_i); return true
 		for side in [-1,1]:

@@ -691,7 +691,9 @@ func _draw_character_select() -> void:
 	_energy_refill_timer(game.WALLET_LOBBY,game.LOBBY_WALLET_SCALE)
 	if game.offer_active() and game.state=="character_select" and not game.premium_build(): _offer_badge(game.OFFER_BADGE)
 	if game.state=="character_select":
-		_side_button(game.SIDE_SIGNIN,"signin",ProgressCatalog.text(lang,"signin"),game.signin_available())
+		# no daily handout in the buy-once build: coins come from playing
+		if not game.premium_build():
+			_side_button(game.SIDE_SIGNIN,"signin",ProgressCatalog.text(lang,"signin"),game.signin_available())
 		_side_button(game.SIDE_TASKS,"tasks",ProgressCatalog.text(lang,"tasks"),game.missions_ready_count()>0)
 		_side_button(game.SIDE_SHOP,"shop",game.localize("shop"),false)
 		if not game.premium_build():
