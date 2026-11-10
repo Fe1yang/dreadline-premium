@@ -588,8 +588,8 @@ func _build_flame_jet() -> void:
 		return
 	var ramp := Gradient.new()
 	ramp.set_color(0, Color(1.0, 1.0, 1.0, 0.0))
-	ramp.add_point(0.05, Color(1.0, 1.0, 0.92, 0.95))
-	ramp.add_point(0.20, Color(1.0, 0.93, 0.50, 0.90))
+	ramp.add_point(0.05, Color(1.0, 0.84, 0.38, 0.35))
+	ramp.add_point(0.20, Color(1.0, 0.72, 0.22, 0.80))
 	ramp.add_point(0.45, Color(1.0, 0.72, 0.22, 0.80))
 	ramp.add_point(0.72, Color(1.0, 0.50, 0.10, 0.45))
 	ramp.set_color(3, Color(0.85, 0.34, 0.06, 0.0))
