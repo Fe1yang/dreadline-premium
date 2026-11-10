@@ -112,8 +112,8 @@ func _ready() -> void:
 	pet_portraits=[load("res://assets/ui/pets/doberman.png"),load("res://assets/ui/pets/german_shepherd.png"),load("res://assets/ui/pets/czech_wolfdog.png"),load("res://assets/ui/pets/tibetan_mastiff.png"),load("res://assets/ui/pets/white_tiger.png"),load("res://assets/ui/pets/lion.png")]
 	airdrop_tex=load("res://assets/ui/airdrop.png") if ResourceLoader.exists("res://assets/ui/airdrop.png") else null
 	can_tex=load("res://assets/ui/currency/can.png")
-	coin_tex=load("res://assets/ui/currency/coin.png"); voucher_tex=load("res://assets/ui/currency/voucher.png")
-	silver_tex=load("res://assets/ui/currency/silver_coin.png") if ResourceLoader.exists("res://assets/ui/currency/silver_coin.png") else coin_tex
+	coin_tex=load("res://assets/ui/currency/coin_bone.png"); voucher_tex=load("res://assets/ui/currency/voucher_bone.png")
+	silver_tex=load("res://assets/ui/currency/silver_bone.png") if ResourceLoader.exists("res://assets/ui/currency/silver_bone.png") else coin_tex
 	for p in StoreCatalog.PACKS+StoreCatalog.OFFERS:
 		var path: String="res://assets/ui/store/%s.png"%p.id
 		pack_art[p.id]=load(path) if ResourceLoader.exists(path) else null
