@@ -197,7 +197,7 @@ func _animate(delta: float) -> void:
 	if anim:
 		var idle := _first_clip(anim, ["Dog_Idle", "Lion_Idle", "Tiger_Idle", "Idle", "idle"])
 		if breed in GALLOP_DISABLED:
-			var own_run := _first_clip(anim, ["Dog_Run_001", "Dog_Run", "Lion_Run", "Tiger_Run", "Run"])
+			var own_run := _first_clip(anim, ["Dog_Run", "Lion_Run", "Tiger_Run", "Run"])
 			var own_idle := "" if is_moving else idle
 			var pick := own_idle if own_idle != "" else own_run
 			if pick != "":
