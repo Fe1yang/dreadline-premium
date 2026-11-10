@@ -822,6 +822,8 @@ func _card_buy_row(card: Rect2, tab: int, index: int, lang: String) -> void:
 	if not game.premium_build():
 		return
 	var row := Rect2(card.position.x - 4.0, card.end.y + 2.0, card.size.x + 8.0, 16.0)
+	if tab == 4:
+		row = Rect2(card.position.x - 4.0, card.end.y - 22.0, card.size.x + 8.0, 16.0)
 	var owned_now := false
 	match tab:
 		0: owned_now = game.character_owned(index)
@@ -858,7 +860,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 		if not owned and wvis.size.y>1.0:
 			_box(wvis,Color(0,0,0,0.55))
 		if whole:
-			_text_center("火焰喷射器" if String(lang).begins_with("zh") else "FLAMETHROWER",Vector2(card.get_center().x,card.end.y-9),13,gold)
+			_text_center("火焰喷射器" if String(lang).begins_with("zh") else "FLAMETHROWER",Vector2(card.get_center().x,card.end.y-34),13,gold)
 			if owned:
 				draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),gold)
 		_card_buy_row(card, 4, i, lang)

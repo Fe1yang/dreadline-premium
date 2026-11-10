@@ -15,7 +15,7 @@ general/ios/app_id="ca-app-pub-3341507214983966~4803691884"
 
 [application]
 
-config/name="Dreadline:Zombie Apocalypse"
+config/name="Dreadline: Zombie Apocalypse"
 config/description="A 3D zombie runner with manual aiming, collectible weapons and supplies."
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
