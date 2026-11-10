@@ -816,6 +816,28 @@ func _draw_character_select() -> void:
 	_draw_equip_menu()
 	_debug_fps()
 
+## The little status row under a card: the price while it is locked, "owned" once bought.
+func _card_buy_row(card: Rect2, tab: int, index: int, lang: String) -> void:
+	if not game.premium_build():
+		return
+	var row := Rect2(card.position.x - 4.0, card.end.y - 18.0, card.size.x + 8.0, 18.0)
+	var owned_now := false
+	match tab:
+		0: owned_now = game.character_owned(index)
+		1: owned_now = game.pet_owned(index)
+		3: owned_now = game.vehicle_is_owned(String(["vehicle_bike","vehicle_sport","vehicle_car","vehicle_gold","vehicle_tank","vehicle_sedan","vehicle_gold_car"][clampi(index,0,6)]))
+		4: owned_now = game.flame_owned()
+	if owned_now:
+		_panel(row, Color(0.10,0.16,0.12,0.95), Color(0.32,0.55,0.40,0.9), 0)
+		_text_center("已拥有" if String(lang).begins_with("zh") else "OWNED", row.get_center()+Vector2(0,4), 10, Color(0.62,0.90,0.70))
+	else:
+		var price: String = String(game.card_price_text(tab, index))
+		if price == "":
+			return
+		_panel(row, Color(0.22,0.16,0.06,0.95), Color(0.72,0.55,0.20,0.95), 0)
+		_text_center(price, row.get_center()+Vector2(0,4), 10, Color(1.0,0.86,0.45))
+
+
 func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 	var vis:=card.intersection(view)
 	if vis.size.y<4.0 or vis.size.x<4.0: return
@@ -837,6 +859,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 			_text_center("火焰喷射器" if String(lang).begins_with("zh") else "FLAMETHROWER",Vector2(card.get_center().x,card.end.y-9),13,gold)
 			if owned:
 				draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),gold)
+		_card_buy_row(card, 4, i, lang)
 		return
 
 	if game.lobby_tab==3:
@@ -866,6 +889,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 		if whole:
 			_text_center(StoreCatalog.text(lang,String(["bike","sport","cruiser","gold","tank","sedan","gold_car"][vi])),Vector2(card.get_center().x,card.end.y-9),12,WHITE if von else MUTED)
 			if von: draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),Color("b94a43"))
+		_card_buy_row(card, 3, i, lang)
 		return
 	var pets: bool=game.lobby_tab==1
 	if game.lobby_tab==2:
