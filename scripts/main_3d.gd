@@ -424,6 +424,8 @@ const PAUSE_BUTTON:=Rect2(476,8,58,58)
 ## every control the player is dragging underneath.
 const CTRL_RESET:=Rect2(66,152,196,58)
 const SETTINGS_QUALITY:=Rect2(66,700,408,70)
+const SETTINGS_DEV_TAP:=Rect2(0,60,540,70)   # the heading itself
+var settings_dev_taps:=0
 const CTRL_SAVE:=Rect2(278,152,196,58)
 const CTRL_KEYS:=["stick_left","stick_right","btn_reload","btn_swap","btn_frag","btn_flash","btn_fire","pause"]
 ## Saved position of every movable control, in real viewport coordinates.
@@ -5582,6 +5584,17 @@ func _pointer_down(pos: Vector2) -> bool:
 			return true
 		return true
 	elif state=="settings":
+		# dev tap: five taps on the heading add 10000 coins for testing
+		if SETTINGS_DEV_TAP.has_point(pos):
+			settings_dev_taps += 1
+			if settings_dev_taps >= 5:
+				settings_dev_taps = 0
+				bank_coins += 10000
+				store_toast_text = "+10000"
+				store_toast = 1.6
+				sound.play("coin_get")
+				_save()
+			return true
 		if SLIDER_MUSIC.grow(8).has_point(pos): volume_drag="music"; _set_volume_from(pos.x); return true
 		if SLIDER_SFX.grow(8).has_point(pos): volume_drag="sfx"; _set_volume_from(pos.x); return true
 		if Rect2(66,348,408,70).has_point(pos): auto_reload=not auto_reload; _save(); return true
