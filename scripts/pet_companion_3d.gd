@@ -228,8 +228,9 @@ func _animate(delta: float) -> void:
 			if pick != "":
 				if anim.current_animation != pick or not anim.is_playing():
 					anim.play(pick, 0.15)
-				# 0.75 while running: the dog gallop at full rate floats on a cat rig
-				anim.speed_scale = 1.0 if own_idle != "" else 1.1
+				# The baked dog cycle is a trot: played at 1.0 it reads as walking. Speed it up so
+				# the legs match the ground scrolling past.
+				anim.speed_scale = 1.0 if own_idle != "" else 1.75
 				return
 		# The road scrolls under the animal, so a pet that has caught up sits still in world space
 		# while the ground races past: that still counts as running.
