@@ -1479,15 +1479,35 @@ func _brackets(r: Rect2, arm := 10.0, col := C_BONE, w := 2.0) -> void:
 	clean_ops.append(["line", PackedVector2Array([r.end, r.end - Vector2(0, a)]), c, w])
 
 
+## Draws a label with extra letter spacing. Godot has no tracking property, so each glyph is
+## placed by hand: that wide condensed look is most of the reference UI's character.
+func _tracked_text(fnt: Font, pos: Vector2, text: String, size: int, col: Color, spacing := 1.0) -> void:
+	var x := pos.x
+	var sc := _scaled(size)
+	for i in range(text.length()):
+		var ch := text.substr(i, 1)
+		clean_ops.append(["text", fnt, Vector2(x, pos.y), ch, sc, col])
+		x += fnt.get_string_size(ch, HORIZONTAL_ALIGNMENT_LEFT, -1, sc).x + spacing
+
+
+func _tracked_width(fnt: Font, text: String, size: int, spacing := 1.0) -> float:
+	var w := 0.0
+	var sc := _scaled(size)
+	for i in range(text.length()):
+		w += fnt.get_string_size(text.substr(i, 1), HORIZONTAL_ALIGNMENT_LEFT, -1, sc).x + spacing
+	return w
+
+
 func _section(pos: Vector2,label: String,size:=22) -> void:
 	var t:=label.to_upper()
-	var w:=bold.get_string_size(t,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(size)).x
+	var spacing:=1.2
+	var w:=_tracked_width(bold,t,size,spacing)
 	if pos.x<0: pos.x=270.0-w/2.0
 	# red band behind the title, the way the reference labels its panels
 	var band := Rect2(pos.x - 12.0, pos.y - size + 4.0, w + 24.0, size + 6.0)
 	_box(band, C_BLOOD)
 	_box(Rect2(band.position, Vector2(band.size.x, 2.0)), Color(0.98, 0.30, 0.26))
-	_clean_text(bold,pos,t,size,WHITE,false)
+	_tracked_text(bold,pos,t,size,WHITE,spacing)
 
 func _ghost_button(rect: Rect2,label: String,col:=WHITE) -> void:
 	_box(rect,Color("111516",0.82))
