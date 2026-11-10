@@ -30,6 +30,7 @@ const GALLOP_RATE:=1.25
 # swings them 45 deg per stride against the baked clip's 28, so all six use it.
 const GALLOP_DISABLED:=[ ]
 const GAIT_OVERRIDES:={
+	2: {"amp":0.70, "spine":0.85},   # wolfdog: hind quarter tucked too deep at full swing
 	4: {"amp":0.92, "spine":1.10},   # white tiger: slightly gentler swing, springier spine
 	5: {"amp":0.88, "spine":1.18},   # lion: same, a touch more spring (stride is speed-derived)
 }  # stride speed matched to how fast the street scrolls past (Kimi's tuning)

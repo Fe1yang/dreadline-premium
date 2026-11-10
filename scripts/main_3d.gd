@@ -4149,11 +4149,14 @@ func _bomber_blast(zp: Vector3) -> void:
 			_hit_zombie(z,120.0,"torso",z.position+Vector3(0,1.1,0),Color("ff8a5c"))
 
 func _damage_number(z: Node3D,amount: float,_color: Color,crit:=false) -> void:
-	# A crit prints in acid yellow and a size up; a normal hit stays red and smaller.
+	# A crit prints in acid yellow, a size up, and spells out the word: "?? -100".
 	var col := Color("ffd63a") if crit else DAMAGE_RED
 	var big := crit
+	var zh := String(language_code).begins_with("zh")
+	var body := "-%d" % maxi(1, roundi(amount))
+	var text := (("?? " if zh else "CRIT ") + body) if crit else body
 	_fx_label_at(z.global_position+Vector3(rng.randf_range(-0.24,0.24),2.78,rng.randf_range(-0.12,0.12)),
-		"-%d"%maxi(1,roundi(amount)),col,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,big)
+		text,col,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,big)
 
 ## Blood thrown away from the shooter: one directional splash (random shape out of eight,
 ## random size, angle jittered around the shot) plus flung droplets landing further along.
