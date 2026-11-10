@@ -279,7 +279,11 @@ func show_pet(path: String) -> void:
 	pet.position=STAND+Vector3(0,ModelFix.fit_pet(pet,length*ACTOR_SCALE),0)
 	var pet_span := length * ACTOR_SCALE
 	pet_shadow = _blob_shadow(Vector2(pet_span * 0.92, pet_span * 0.62), STAND + Vector3(0, 0.021, 0.02))
-	ModelFix.play_animation(pet,"Dog_Idle")
+	var _pa := pet.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _pa != null and _pa.has_animation("Idle"):
+		_pa.play("Idle")
+	else:
+		ModelFix.play_animation(pet,"Dog_Idle")
 
 func drag(dx: float) -> void:
 	spin+=dx*0.012; spin_velocity=dx*0.012*60.0
