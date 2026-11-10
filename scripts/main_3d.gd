@@ -3686,7 +3686,9 @@ func _spawn_zombie(at_z:=-85.0,forced_kind:="") -> void:
 	# Health steps up per wave and stops at 2.1 (see _wave_difficulty): the late game gets
 	# harder through numbers and specials, not through bullet sponges.
 	var difficulty:=_wave_difficulty()
+	var _st0 := Time.get_ticks_usec()
 	var z:=ZombieScript.new(); var roll:=rng.randf(); var kind:=forced_kind
+	var _st1 := Time.get_ticks_usec()
 	if kind.is_empty():
 		# Unlock order: walker -> runner(female) -> jockey -> brute(juggernaut) -> banshee -> bomber.
 		# Each tier only appears after the previous one has been introduced.
@@ -3732,6 +3734,11 @@ func _spawn_zombie(at_z:=-85.0,forced_kind:="") -> void:
 	for other in zombies:
 		if is_instance_valid(other) and absf(other.position.x-lane)<1.1 and absf(other.position.z-at_z)<2.3: at_z-=2.8
 	add_child(z); z.configure(kind,difficulty); z.position=Vector3(lane,0,at_z); zombies.append(z)
+	if OS.has_environment("PERF_TRACE"):
+		var _st2 := Time.get_ticks_usec()
+		var _total: float = (_st2 - _st0) / 1000.0
+		if _total > 15.0:
+			print("SPAWN %s %.0f ms (new %.1f, configure %.1f)" % [kind, _total, (_st1 - _st0) / 1000.0, (_st2 - _st1) / 1000.0])
 
 # ---- Banshee keep-out: she is slow and wide, so roadblocks, cars and barrels coming from the
 # distance must never be spawned into her lane (they would drive straight through her).
