@@ -1005,7 +1005,30 @@ func _freeze_visuals(frozen: bool) -> void:
 		var embers_node: CPUParticles3D=a.get("embers")
 		if is_instance_valid(embers_node): embers_node.speed_scale=0.0 if frozen else 1.0
 
+## Frame-time watchdog. Off unless PERF_TRACE is set, then any frame over 50 ms prints the run
+## state and the live object counts, so a hitch can be tied to what just happened.
+var _probe_last_us := 0
+var _probe_gap_us := 0
+
+func _frame_probe(_delta: float) -> void:
+	if not OS.has_environment("PERF_TRACE"):
+		return
+	var now := Time.get_ticks_usec()
+	if _probe_last_us == 0:
+		_probe_last_us = now
+		return
+	var frame_ms := (now - _probe_last_us) / 1000.0
+	_probe_gap_us = now - _probe_last_us
+	_probe_last_us = now
+	if frame_ms < 50.0:
+		return
+	print("HITCH %.0f ms  state=%s  dist=%.0f  z=%d  p=%d  fx=%d  c=%d  b=%d" % [
+		frame_ms, String(state), float(distance), zombies.size(), pickups.size(),
+		effects.size(), crates.size(), barrels.size()])
+
+
 func _process(delta: float) -> void:
+	_frame_probe(delta)
 	elapsed+=delta
 	lobby_swallow_tap=maxf(0.0,lobby_swallow_tap-delta)
 	# Before the run starts, compile one of everything in the hidden warm-up viewport:
