@@ -843,6 +843,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 	var vis:=card.intersection(view)
 	if vis.size.y<4.0 or vis.size.x<4.0: return
 	var whole: bool=vis.size.y>=card.size.y-0.5 and vis.size.x>=card.size.x-0.5
+	if whole: _brackets(card.grow(-1.0), 9.0, C_BONE, 2.0)
 	if game.lobby_tab==4:
 		# Flamethrower: a gold-framed card, because it is the one high-value weapon in the game.
 		var owned: bool=game.flame_owned()
@@ -1463,12 +1464,29 @@ func _tag(pos: Vector2,label: String,bg:=PAINT_RED,fg:=WHITE,size:=15) -> Rect2:
 	_clean_text(bold,r.position+Vector2(12,r.size.y-7),label,size,fg,false)
 	return r
 
+## Four L-shaped corner ticks. The cheapest way to make a plain rectangle read as game UI.
+func _brackets(r: Rect2, arm := 10.0, col := C_BONE, w := 2.0) -> void:
+	var a := arm
+	var c := Color(col.r, col.g, col.b, 0.85)
+	clean_ops.append(["line", PackedVector2Array([r.position, r.position + Vector2(a, 0)]), c, w])
+	clean_ops.append(["line", PackedVector2Array([r.position, r.position + Vector2(0, a)]), c, w])
+	clean_ops.append(["line", PackedVector2Array([Vector2(r.end.x, r.position.y), Vector2(r.end.x - a, r.position.y)]), c, w])
+	clean_ops.append(["line", PackedVector2Array([Vector2(r.end.x, r.position.y), Vector2(r.end.x, r.position.y + a)]), c, w])
+	clean_ops.append(["line", PackedVector2Array([Vector2(r.position.x, r.end.y), Vector2(r.position.x + a, r.end.y)]), c, w])
+	clean_ops.append(["line", PackedVector2Array([Vector2(r.position.x, r.end.y), Vector2(r.position.x, r.end.y - a)]), c, w])
+	clean_ops.append(["line", PackedVector2Array([r.end, r.end - Vector2(a, 0)]), c, w])
+	clean_ops.append(["line", PackedVector2Array([r.end, r.end - Vector2(0, a)]), c, w])
+
+
 func _section(pos: Vector2,label: String,size:=22) -> void:
 	var t:=label.to_upper()
 	var w:=bold.get_string_size(t,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(size)).x
 	if pos.x<0: pos.x=270.0-w/2.0
+	# red band behind the title, the way the reference labels its panels
+	var band := Rect2(pos.x - 12.0, pos.y - size + 4.0, w + 24.0, size + 6.0)
+	_box(band, C_BLOOD)
+	_box(Rect2(band.position, Vector2(band.size.x, 2.0)), Color(0.98, 0.30, 0.26))
 	_clean_text(bold,pos,t,size,WHITE,false)
-	_box(Rect2(pos.x,pos.y+8,w,3),PAINT_RED)
 
 func _ghost_button(rect: Rect2,label: String,col:=WHITE) -> void:
 	_box(rect,Color("111516",0.82))
