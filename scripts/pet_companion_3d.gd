@@ -165,17 +165,14 @@ func _animate(delta: float) -> void:
 	# gallop, the procedural version only wiggled the legs in place.
 	if anim:
 		var idle := _first_clip(anim, ["Dog_Idle", "Lion_Idle", "Tiger_Idle", "Idle", "idle"])
-		var run := _first_clip(anim, ["Dog_Run", "Lion_Run", "Tiger_Run", "Run", "run"])
 		# The road scrolls under the animal, so a pet that has caught up sits still in world space
-		# while the ground races past: that still has to play the run cycle, or it slides.
+		# while the ground races past: that still counts as running.
 		var scrolling: bool = game != null and float(game.get("world_speed")) > 0.05
 		var moving_now: bool = is_moving or scrolling
-		var want := "" if moving_now else idle
-		if want == "":
-			want = run
-		if want != "":
-			if anim.current_animation != want or not anim.is_playing():
-				anim.play(want, 0.15)
+		if not moving_now and idle != "":
+			# standing: the baked idle reads well on every breed
+			if anim.current_animation != idle or not anim.is_playing():
+				anim.play(idle, 0.15)
 			anim.speed_scale = 1.0
 			return
 	if anim and anim.is_playing():

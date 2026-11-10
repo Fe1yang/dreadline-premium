@@ -3031,8 +3031,8 @@ func lobby_max_scroll() -> float:
 ## The EQUIP dropdown sits just above the survivor card it belongs to.
 func equip_menu_rect() -> Rect2:
 	var c:=lobby_card_rect(clampi(equip_menu_index,0,maxi(0,lobby_item_count()-1)))
-	# Above the card. Below it the popup landed on the start button and was unclickable.
-	return Rect2(c.position.x-6.0,c.position.y-52.0,c.size.x+12.0,46.0)
+	# Two rows (equip on top, unequip below), lifted clear of the card.
+	return Rect2(c.position.x-6.0,c.position.y-96.0,c.size.x+12.0,40.0)
 
 func lobby_card_rect(i: int) -> Rect2:
 	return Rect2(LOBBY_LEFT_X+i*LOBBY_STEP-lobby_scroll,LOBBY_STRIP_Y,LOBBY_CARD.x,LOBBY_CARD.y)
@@ -3077,6 +3077,27 @@ func _pack_id_for_card(tab: int, index: int) -> String:
 		4:
 			return "weapon_flame"
 	return ""
+
+
+## The "take it off" row directly under the equip row.
+func equip_menu_unequip_rect() -> Rect2:
+	var r := equip_menu_rect()
+	return Rect2(r.position.x, r.end.y + 4.0, r.size.x, 36.0)
+
+
+## Strips whatever the dropdown points at, so a run can start with nothing equipped.
+func _unequip_from_menu() -> void:
+	match equip_menu_tab:
+		1:
+			pet_equipped = false
+		2:
+			skin_choice.erase(character_choice)
+		3:
+			owned_vehicle = ""
+			vehicle_choice = 0
+		4:
+			weapon_equipped = false
+	_save()
 
 
 func _equip_from_menu() -> void:
@@ -5534,6 +5555,9 @@ func _pointer_down(pos: Vector2) -> bool:
 		if equip_menu_index >= 0:
 			if equip_menu_rect().has_point(pos):
 				_equip_from_menu()
+				sound.play("equip")
+			elif equip_menu_unequip_rect().has_point(pos):
+				_unequip_from_menu()
 				sound.play("equip")
 			equip_menu_index = -1
 			return true

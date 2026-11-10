@@ -676,7 +676,11 @@ func _draw_equip_menu() -> void:
 		var equipped_now: bool = int(game.equip_menu_index) == (game.character_choice if int(game.equip_menu_tab)==0 else -1)
 		_panel(er, Color(0.03,0.034,0.038,1.0), RED if equipped_now else Color(0.72,0.74,0.75,1.0), 2)
 		var etxt: String = ShopText.text(game.language_code, "char_equipped" if equipped_now else "btn_equip")
-		_clean_center(bold,Vector2(er.get_center().x,er.position.y+34),etxt,20,WHITE)
+		_clean_center(bold,Vector2(er.get_center().x,er.position.y+26),etxt,18,WHITE)
+		# second row: take it off entirely
+		var ur: Rect2 = game.equip_menu_unequip_rect()
+		_panel(ur, Color(0.10,0.10,0.11,1.0), Color(0.55,0.55,0.58,0.9), 1)
+		_clean_center(bold, Vector2(ur.get_center().x, ur.position.y + 24), "卸下" if String(game.language_code).begins_with("zh") else "REMOVE", 16, Color(0.88,0.88,0.9))
 
 
 ## F3 overlay: frames per second, the worst frame of the last second, and the live object counts.

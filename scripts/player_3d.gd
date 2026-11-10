@@ -971,6 +971,13 @@ func base_damage(id: String) -> float:
 		_: return 20.0*damage_scale
 
 func set_weapon(id: String) -> void:
+	# A gun swap must also stop the nozzle: the flame jet kept burning out of whatever
+	# was picked up, so fire and bullets came out at the same time.
+	if is_instance_valid(flame_jet):
+		flame_jet.emitting = false
+		flame_jet.restart()
+	flame_jet_timer = 0.0
+
 	weapon = id
 	reloading = false
 	reload_timer = 0.0
@@ -1149,7 +1156,7 @@ func fire() -> void:
 	if not can_fire(): return
 	ammo -= 1
 	flash_time = 0.070 if weapon!="SNIPER" else 0.10
-	if is_instance_valid(flash) and weapon != "FLAME": flash.call("play")
+	# No muzzle flash: on this renderer the sprite reads as a white ball.
 
 func request_reload() -> bool:
 	if reloading or ammo>=magazine_size or (reserve_ammo<=0 and not infinite_ammo()): return false
