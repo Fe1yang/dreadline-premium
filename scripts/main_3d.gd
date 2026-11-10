@@ -1046,9 +1046,17 @@ func _process(delta: float) -> void:
 	for road in roads:
 		road.position.z+=world_speed*delta
 		if road.position.z>ROAD_BEHIND+ROAD_SEGMENT:
+			var _t0 := Time.get_ticks_usec()
 			road.position.z-=ROAD_LOOP
 			_refresh_watcher(road)
+			var _t1 := Time.get_ticks_usec()
 			_randomize_zebra(road)
+			var _t2 := Time.get_ticks_usec()
+			if OS.has_environment("PERF_TRACE"):
+				var _a: float = (_t1 - _t0) / 1000.0
+				var _b: float = (_t2 - _t1) / 1000.0
+				if _a + _b > 20.0:
+					print("RECYCLE watcher=%.0f ms zebra=%.0f ms" % [_a, _b])
 	_tick_lightning(delta)
 	_apply_day_night()
 	if state=="loading":
