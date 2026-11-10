@@ -92,6 +92,16 @@ func setup(index: int, slot:=0) -> void:
 		if m != null:
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	yaw_offset=float(LobbyScene.PETS[breed].get("yaw",0.0))
+	# Some of these scans are authored nose-along-X and some nose-along-Z, so half the pack ran
+	# sideways. Measure the head against the body and turn the model onto the travel axis.
+	var sk_probe := model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if sk_probe != null:
+		var hb := sk_probe.find_bone("head")
+		var bb := sk_probe.find_bone("body")
+		if hb >= 0 and bb >= 0:
+			var d := sk_probe.get_bone_global_rest(hb).origin - sk_probe.get_bone_global_rest(bb).origin
+			if absf(d.x) > absf(d.z) * 1.2:
+				model.rotation.y = -signf(d.x) * PI * 0.5
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
 	model.position.y=base_y
 	anim=model.find_child("AnimationPlayer",true,false) as AnimationPlayer
