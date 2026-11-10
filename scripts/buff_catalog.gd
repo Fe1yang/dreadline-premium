@@ -18,8 +18,8 @@ const BUFFS:={
 	"damage":      {"values":[8,16,28,50],    "unit":"%",  "min":0, "group":"gun"},
 	"rate":        {"values":[6,12,20,35],    "unit":"%",  "min":0, "group":"gun"},
 	"bullet_speed":{"values":[10,20,35,60],   "unit":"%",  "min":0, "group":"gun"},
-	"crit_chance": {"values":[5,10,15,25],    "unit":"%",  "min":0, "group":"gun"},   # cap 60%
-	"crit_damage": {"values":[20,40,70,120],  "unit":"%",  "min":0, "group":"gun"},   # only once crit chance > 0
+	"crit_chance": {"values":[1,3,6,12],       "unit":"%",  "min":0, "group":"gun"},   # common 1%, cap 100%
+	"crit_damage": {"values":[8,15,30,60],    "unit":"%",  "min":0, "group":"gun"},   # only once crit chance > 0
 	"magazine":    {"values":[15,30,50,100],  "unit":"%",  "min":0, "group":"gun"},
 	"reserve":     {"values":[1,2,4,8],       "unit":"",   "min":0, "group":"gun"},   # spare magazines; only with a non-pistol gun
 	"reload":      {"values":[8,15,25,40],    "unit":"%",  "min":0, "group":"gun"},   # faster reload (cap 70%)

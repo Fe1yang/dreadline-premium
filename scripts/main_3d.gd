@@ -3795,7 +3795,7 @@ func _tick_bullets(delta: float) -> void:
 			if not z.dead and not b.hit_targets.has(z) and b.position.y<2.30 and _swept_2d(prev,b.position,zp,z.radius+0.24):
 				b.hit_targets.append(z); var hit_at: Vector3=b.position
 				if b.has_meta("crit"): _popup(hit_at+Vector3(0,0.9,0),RunText.text("crit"),Color("ffd84a"))
-				_hit_zombie(z,b.damage,_body_part(z,b.position),b.position)
+				_hit_zombie(z,b.damage,_body_part(z,b.position),b.position,Color("f4f0df"),b.has_meta("crit"))
 				_on_bullet_hit(z,b,hit_at)
 				if b.pierce>0: b.pierce-=1
 				else: consumed=true
@@ -4087,12 +4087,12 @@ func _body_part(z: Node3D,hit_position: Vector3) -> String:
 
 const DAMAGE_RED:=Color("ff3030")
 
-func _hit_zombie(z: Node3D,amount: float,part:="torso",hit_position:=Vector3.ZERO,_damage_color:=Color("f4f0df")) -> void:
+func _hit_zombie(z: Node3D,amount: float,part:="torso",hit_position:=Vector3.ZERO,_damage_color:=Color("f4f0df"),crit_hit:=false) -> void:
 	if hit_position==Vector3.ZERO: hit_position=z.global_position+Vector3(0,1.2,0)
 	var multiplier: float=1.55 if part=="head" else (0.88 if part.begins_with("leg") else 1.0)
 	var actual_damage: float=minf(maxf(0.0,z.health),amount*multiplier)
 	if actual_damage>0.0:
-		_damage_number(z,actual_damage,DAMAGE_RED)
+		_damage_number(z,actual_damage,DAMAGE_RED,crit_hit)
 	if z.take_hit(amount*multiplier):
 		# The kill creates a physical coin pile; coins are earned only on contact pickup.
 		var reward: int=int(round(float(z.reward)*player.coin_mult))
@@ -4148,9 +4148,12 @@ func _bomber_blast(zp: Vector3) -> void:
 		if is_instance_valid(z) and not z.dead and _flat_distance(z.position,zp)<3.2:
 			_hit_zombie(z,120.0,"torso",z.position+Vector3(0,1.1,0),Color("ff8a5c"))
 
-func _damage_number(z: Node3D,amount: float,_color: Color) -> void:
+func _damage_number(z: Node3D,amount: float,_color: Color,crit:=false) -> void:
+	# A crit prints in acid yellow and a size up; a normal hit stays red and smaller.
+	var col := Color("ffd63a") if crit else DAMAGE_RED
+	var big := crit
 	_fx_label_at(z.global_position+Vector3(rng.randf_range(-0.24,0.24),2.78,rng.randf_range(-0.12,0.12)),
-		"-%d"%maxi(1,roundi(amount)),DAMAGE_RED,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,true)
+		"-%d"%maxi(1,roundi(amount)),col,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,big)
 
 ## Blood thrown away from the shooter: one directional splash (random shape out of eight,
 ## random size, angle jittered around the shot) plus flung droplets landing further along.
@@ -4413,7 +4416,7 @@ func _buff_useful(id: String,rarity: int) -> bool:
 	match id:
 		"heal": return player.health<player.max_health*0.9
 		"crit_damage": return player.crit_chance>0.0
-		"crit_chance": return player.crit_chance<0.6
+		"crit_chance": return player.crit_chance<1.0
 		"reserve": return player.can_use_reserve()
 		"dmg_reduce": return player.dmg_reduce<0.6
 		"move": return player.move_mult<1.4

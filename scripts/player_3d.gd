@@ -36,7 +36,11 @@ var kill_heal := 0.0          # HP per kill
 var dmg_reduce := 0.0         # 0..0.6 of incoming damage removed
 var move_mult := 1.0          # forward run and side-step speed, up to 1.4
 var bullet_speed_scale := 1.0
-var crit_chance := 0.0        # 0..0.6
+var crit_chance := 0.0        # total 0..1.0: weapon base + gate buffs
+var crit_bonus := 0.0         # the part that comes from gates
+## Every weapon crits a little on its own; precision guns a lot more.
+const BASE_CRIT := {"PISTOL":0.05, "SMG":0.04, "SHOTGUN":0.08, "SNIPER":0.25,
+    "RIFLE":0.10, "MAKAROV":0.06, "SUOMI":0.05, "FLAME":0.0, "LAUNCHER":0.0}
 var crit_mult := 1.5          # damage x on a crit
 var mag_scale := 1.0
 var reload_scale := 1.0       # reload time multiplier, down to 0.3
@@ -850,7 +854,7 @@ func reset() -> void:
 	gun_level = 1
 	split_bonus = 0
 	shield = 0.0; regen = 0.0; kill_heal = 0.0; dmg_reduce = 0.0; move_mult = 1.0
-	bullet_speed_scale = 1.0; crit_chance = 0.0; crit_mult = 1.5; mag_scale = 1.0; reload_scale = 1.0
+	bullet_speed_scale = 1.0; crit_chance = 0.0; crit_bonus = 0.0; crit_mult = 1.5; mag_scale = 1.0; reload_scale = 1.0
 	pierce_bonus = 0; bullet_split = 0; explode_chance = 0.0; burn_dps = 0.0; poison_dps = 0.0
 	shock_chance = 0.0; coin_mult = 1.0; drop_chance = 0.0; ammo_return = 0.0; pickup_bonus = 0.0
 	stowed = {}
@@ -978,6 +982,7 @@ func set_weapon(id: String) -> void:
 	flame_jet_timer = 0.0
 
 	weapon = id
+	_refresh_crit()
 	reloading = false
 	reload_timer = 0.0
 	projectile_count = 1
@@ -1227,6 +1232,12 @@ func take_damage(amount: float) -> void:
 
 ## `value` comes from the gate's rarity roll (percent for damage / rate, HP for heal, bullets for
 ## split); -1 keeps the original common-gate amounts.
+## Total crit chance = the weapon's own base plus whatever the gates added.
+func _refresh_crit() -> void:
+	var base: float = float(BASE_CRIT.get(weapon, 0.05))
+	crit_chance = clampf(base + crit_bonus, 0.0, 1.0)
+
+
 func apply_upgrade(id: String,value:=-1.0) -> void:
 	match id:
 		# Small steps per gate (many gates per run), so a run builds up gradually.
@@ -1249,7 +1260,7 @@ func apply_upgrade(id: String,value:=-1.0) -> void:
 		"bullet_speed":
 			var f:=1.0+value/100.0
 			bullet_speed_scale *= f; bullet_speed *= f
-		"crit_chance": crit_chance = minf(0.6,crit_chance+value/100.0)
+		"crit_chance": crit_bonus += value/100.0; _refresh_crit()
 		"crit_damage": crit_mult += value/100.0
 		"magazine":
 			var f:=1.0+value/100.0
