@@ -213,7 +213,7 @@ func _animate(delta: float) -> void:
 	# Every four legged pet runs on the rig's own run cycle: the baked clip reads as a real
 	# gallop, the procedural version only wiggled the legs in place.
 	if anim:
-		var idle := _first_clip(anim, ["Dog_Idle", "Lion_Idle", "Tiger_Idle", "Idle", "idle"])
+		var idle := _first_clip(anim, ["Idle", "Dog_Idle", "Lion_Idle", "Tiger_Idle", "idle"])
 		if breed in GALLOP_DISABLED:
 			# the dogs keep their baked cycle; "moving" has to include the scrolling road,
 			# otherwise a dog that has caught up plays its idle while the ground races past
