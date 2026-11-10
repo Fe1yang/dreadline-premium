@@ -725,13 +725,9 @@ func _draw_character_select() -> void:
 		var tab: Rect2=game.lobby_tab_rect(t); var tab_on: bool=game.lobby_tab==t
 		var tlabel: String = "载具" if t==3 else ("武器" if t==4 else ShopText.text(lang,"chars" if t==0 else "pets"))
 		_text_center(tlabel,Vector2(tab.get_center().x,tab.end.y-12),14,WHITE if tab_on else MUTED)
-	# Equip toggle per tab: survivor loadout, pet and vehicle each get their own switch.
-	if game.lobby_tab==0:
-		_lobby_settings_gear(game.LOBBY_GEAR)
-	elif game.lobby_tab==1:
-		_gear_button(game.LOBBY_GEAR_PET, game.pet_equipped)
-	elif game.lobby_tab==3:
-		_gear_button(game.LOBBY_GEAR_VEHICLE, game.vehicle_equipped)
+	# The settings gear lives in the same corner on every tab, always white. Equipping happens
+	# on the cards themselves, so the per-tab gear toggles are gone.
+	_lobby_settings_gear(game.LOBBY_GEAR)
 	# Perk tag for the selected survivor, right of the tabs (only Darius has one for now).
 	if game.lobby_tab==0 and game.character_choice<game.lobby.CHARACTERS.size():
 		var perk_key: String=String(game.lobby.CHARACTERS[game.character_choice].get("perk",""))
