@@ -2034,6 +2034,11 @@ func _red_dot(pos: Vector2) -> void:
 
 ## Lobby side buttons: just a white line icon and a small label, no frame, no shadow.
 func _side_button(r: Rect2,icon: String,label: String,dot: bool) -> void:
+	# Dark chip behind every rail button: on the pale safehouse wall the white line icons were
+	# unreadable, and the reference UI always sits icons on a plate.
+	_box(r.grow(-1), Color(0.020, 0.022, 0.025, 0.72))
+	_frame(r.grow(-1), Color(C_BONE, 0.12), 1.0)
+	_box(Rect2(r.position.x, r.position.y, r.size.x, 2), C_BLOOD)
 	var c:=r.position+Vector2(r.size.x/2,30)
 	var ic: Color=WHITE
 	var ac: Color=HILITE if dot else WHITE
