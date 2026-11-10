@@ -1107,8 +1107,9 @@ func tick(delta: float) -> void:
 	light.light_energy = 0.75 if flash_time>0 else 0.0
 	# The flamethrower has no muzzle flash: the particle jet is the fire, and the flash
 	# sprite showed up as a white blob floating in front of the nozzle.
-	flash.visible = flash_time>0 and weapon!="FLAME"
-	if flash.visible: flash.scale = Vector3.ONE*float(FLASH_SCALES.get(weapon,0.20))*(0.92+randf()*0.16)
+	if is_instance_valid(flash):
+		flash.visible = flash_time>0 and weapon!="FLAME"
+		if flash.visible: flash.scale = Vector3.ONE*float(FLASH_SCALES.get(weapon,0.20))*(0.92+randf()*0.16)
 
 ## The pistol is the fallback sidearm: it never runs out of spare magazines.
 ## Swap between the gun from the crates and the pistol (which never runs out).
