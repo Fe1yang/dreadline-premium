@@ -10,6 +10,10 @@ const SIGNIN:=[
 	{"coins":50,"vouchers":0},{"coins":60,"vouchers":0},{"coins":80,"vouchers":0},{"coins":100,"vouchers":0},
 	{"coins":120,"vouchers":0},{"coins":150,"vouchers":0},{"coins":200,"vouchers":1}]
 
+## Monthly check-in: same idea as the week, 30 days, richer rewards, resets each month.
+const SIGNIN_MONTH:=[
+	{"coins":60,"vouchers":0},{"coins":72,"vouchers":0},{"coins":83,"vouchers":0},{"coins":95,"vouchers":0},{"coins":107,"vouchers":0},{"coins":119,"vouchers":0},{"coins":130,"vouchers":1},{"coins":142,"vouchers":0},{"coins":154,"vouchers":0},{"coins":166,"vouchers":0},{"coins":177,"vouchers":0},{"coins":189,"vouchers":0},{"coins":201,"vouchers":0},{"coins":212,"vouchers":1},{"coins":224,"vouchers":0},{"coins":236,"vouchers":0},{"coins":248,"vouchers":0},{"coins":259,"vouchers":0},{"coins":271,"vouchers":0},{"coins":283,"vouchers":0},{"coins":294,"vouchers":1},{"coins":306,"vouchers":0},{"coins":318,"vouchers":0},{"coins":330,"vouchers":0},{"coins":341,"vouchers":0},{"coins":353,"vouchers":0},{"coins":365,"vouchers":0},{"coins":377,"vouchers":0},{"coins":388,"vouchers":0},{"coins":500,"vouchers":3}]
+
 ## Daily missions: three are picked from this pool each day. stat names are what main_3d counts:
 ## kills, brute_kills, banshee_kills, distance (metres), runs, bites (dog bites).
 const DAILY_POOL:=[

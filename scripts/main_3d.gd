@@ -252,6 +252,9 @@ var resource_pack_return_state:="character_select"
 ## Check-in and missions (see "Check-in and missions" below).
 var signin_last:=""          # date of the last check-in claim
 var signin_index:=0          # next day of the 7-day cycle (0-6)
+var signin_monthly:=false     # true: the 30-day track is on screen
+var signin_month_index:=0    # next day of the 30-day track
+var signin_month_key:=""    # YYYY-MM it belongs to
 var signin_shown_day:=""     # the check-in pops up by itself once a day
 var signin_return_state:="character_select"
 var daily_day:=""
@@ -2817,13 +2820,38 @@ func event_seconds_left() -> int:
 	_roll_progress()
 	return maxi(0,(event_window+1)*ProgressCatalog.EVENT_DAYS*86400-now_unix())
 
+## Which reward list the panel is showing right now.
+func signin_rewards() -> Array:
+	return ProgressCatalog.SIGNIN_MONTH if signin_monthly else ProgressCatalog.SIGNIN
+
+
+## Day index inside the active track.
+func signin_day_index() -> int:
+	return signin_month_index if signin_monthly else signin_index
+
+
 func signin_available() -> bool:
 	return signin_last!=today()
 
+
+## A new month wipes the 30-day track back to day one.
+func _signin_roll_month() -> void:
+	var key := Time.get_date_string_from_system().substr(0, 7)
+	if signin_month_key != key:
+		signin_month_key = key
+		signin_month_index = 0
+
 func claim_signin(times:=1) -> bool:
 	if not signin_available(): return false
-	var r: Dictionary=ProgressCatalog.SIGNIN[signin_index]
-	signin_last=today(); signin_index=(signin_index+1)%ProgressCatalog.SIGNIN.size()
+	var list: Array = signin_rewards()
+	var idx: int = signin_day_index()
+	if idx < 0 or idx >= list.size(): return false
+	var r: Dictionary = list[idx]
+	signin_last = today()
+	if signin_monthly:
+		signin_month_index = (signin_month_index + 1) % list.size()
+	else:
+		signin_index = (signin_index + 1) % list.size()
 	_grant(int(r.coins)*times,int(r.vouchers)*times); return true
 
 func can_ads_left() -> int:
@@ -2911,7 +2939,17 @@ func close_tasks() -> void:
 	state=tasks_return_state
 
 ## Tile rectangles of the 7 check-in days (4 on top, then 3 with a wide day 7).
+## Week / month switch at the top of the check-in panel.
+func signin_tab_rect(t: int) -> Rect2:
+	return Rect2(56 + t * 220, 210, 208, 40)
+
+
 func signin_tile(i: int) -> Rect2:
+	if signin_monthly:
+		# 6 columns x 5 rows inside the same panel: 30 days on one screen
+		var col: int = i % 6
+		var row: int = i / 6
+		return Rect2(40 + col * 77, 258 + row * 62, 71, 56)
 	if i<4: return Rect2(46+i*114,262,106,150)
 	if i<6: return Rect2(46+(i-4)*114,424,106,150)
 	return Rect2(274,424,220,150)

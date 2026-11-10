@@ -2206,47 +2206,67 @@ func _draw_signin() -> void:
 	var t: float=Time.get_ticks_msec()/1000.0
 	_box(Rect2(0,0,540,game.ui_h),Color(0,0,0,0.60))
 	var p: Rect2=game.SIGNIN_PANEL
-	# A military supply drop, not a casino card: one dark plate, stencil day numbers, and a
-	# brass frame on the day-7 crate — the only tile allowed to look special.
 	_box(p,Color(0.045,0.05,0.052,0.95))
 	_frame(p,Color(1,1,1,0.12),1.0)
 	_section(Vector2(-1,p.position.y+16),ProgressCatalog.text(lang,"signin"),24)
-	_clean_center(font,Vector2(270,p.position.y+66),"SUPPLY CACHE · 7 DAYS",11,MUTED)
+	# week / month switch, centred under the title
+	for ti in range(2):
+		var tr: Rect2 = game.signin_tab_rect(ti)
+		var on: bool = (game.signin_monthly == (ti == 1))
+		if on: _box(tr, Color(0.55,0.10,0.10,0.95))
+		else: _frame(tr.grow(-2), Color(1,1,1,0.22), 1.0)
+		var tab_label: String = ("月签到" if ti==1 else "周签到") if String(lang).begins_with("zh") else ("MONTHLY" if ti==1 else "WEEKLY")
+		_clean_center(bold, tr.get_center()+Vector2(0,6), tab_label, 17, WHITE if on else MUTED)
+	_clean_center(font,Vector2(270,p.position.y+66),
+		"SUPPLY CACHE · 30 DAYS" if game.signin_monthly else "SUPPLY CACHE · 7 DAYS",11,MUTED)
 	var c: Vector2=game.SIGNIN_CLOSE.get_center()
 	clean_ops.append(["line",PackedVector2Array([c+Vector2(-11,-11),c+Vector2(11,11)]),WHITE,4.0])
 	clean_ops.append(["line",PackedVector2Array([c+Vector2(11,-11),c+Vector2(-11,11)]),WHITE,4.0])
-	var avail: bool=game.signin_available()
-	for i in range(ProgressCatalog.SIGNIN.size()):
-		var r: Rect2=game.signin_tile(i)
-		var reward: Dictionary=ProgressCatalog.SIGNIN[i]
-		var done: bool=i<game.signin_index
-		var current: bool=avail and i==game.signin_index
-		var jackpot: bool=i==6
-		_box(r.grow(-4),Color(0.085,0.09,0.092,0.96) if not done else Color(0.05,0.052,0.055,0.92))
-		_frame(r.grow(-4),Color(BRASS,0.9) if jackpot else Color(1,1,1,0.14),1.5 if jackpot else 1.0)
-		_clean_text(bold,r.position+Vector2(10,24),ProgressCatalog.text(lang,"day").replace("%d",str(i+1)).to_upper(),13,WHITE if current else MUTED,false)
-		if jackpot:
-			# two rewards side by side, each with its own number under the icon: nothing overflows
-			var half: float = r.size.x * 0.5
-			clean_ops.append(["texture",coin_tex,Rect2(r.position+Vector2(half*0.5-24,r.position.y+38),Vector2(48,48))])
-			clean_ops.append(["texture",voucher_tex,Rect2(r.position+Vector2(half*1.5-26,r.position.y+40),Vector2(52,44))])
-			_clean_center(bold,Vector2(r.position.x+half*0.5,r.end.y-14),"%d"%int(reward.coins),17,BRASS_LIGHT)
-			_clean_center(bold,Vector2(r.position.x+half*1.5,r.end.y-14),"×%d"%int(reward.vouchers),17,BRASS_LIGHT)
+
+	var avail: bool = game.signin_available()
+	var track: Array = game.signin_rewards()
+	var day_idx: int = game.signin_day_index()
+	var compact: bool = game.signin_monthly
+
+	for i in range(track.size()):
+		var r: Rect2 = game.signin_tile(i)
+		var reward: Dictionary = track[i]
+		var done: bool = i < day_idx
+		var current: bool = avail and i == day_idx
+		var jackpot: bool = (i == 6 and not compact)
+		_box(r.grow(-3),Color(0.085,0.09,0.092,0.96) if not done else Color(0.05,0.052,0.055,0.92))
+		_frame(r.grow(-3),Color(BRASS,0.9) if jackpot else Color(1,1,1,0.14),1.5 if jackpot else 1.0)
+		if compact:
+			# 30 tiles on one screen: number, icon, amount
+			_clean_text(font,r.position+Vector2(5,13),str(i+1),11,MUTED)
+			clean_ops.append(["texture",coin_tex,Rect2(r.position+Vector2(20,14),Vector2(28,28))])
+			_clean_center(bold,Vector2(r.get_center().x,r.end.y-7),str(int(reward.coins)),12,WHITE)
+			if int(reward.vouchers) > 0:
+				clean_ops.append(["texture",voucher_tex,Rect2(r.position+Vector2(42,2),Vector2(24,20))])
 		else:
-			clean_ops.append(["texture",coin_tex,Rect2(r.get_center()+Vector2(-26,-28),Vector2(52,52))])
-			_clean_center(bold,Vector2(r.get_center().x,r.end.y-14),_grouped(int(reward.coins)),20,WHITE)
+			_clean_text(bold,r.position+Vector2(10,24),ProgressCatalog.text(lang,"day").replace("%d",str(i+1)).to_upper(),13,WHITE if current else MUTED)
+			if jackpot:
+				var half: float = r.size.x * 0.5
+				clean_ops.append(["texture",coin_tex,Rect2(r.position+Vector2(half*0.5-24,r.position.y+38),Vector2(48,48))])
+				clean_ops.append(["texture",voucher_tex,Rect2(r.position+Vector2(half*1.5-26,r.position.y+40),Vector2(52,44))])
+				_clean_center(bold,Vector2(r.position.x+half*0.5,r.end.y-14),"%d"%int(reward.coins),17,BRASS_LIGHT)
+				_clean_center(bold,Vector2(r.position.x+half*1.5,r.end.y-14),"×%d"%int(reward.vouchers),17,BRASS_LIGHT)
+			else:
+				clean_ops.append(["texture",coin_tex,Rect2(r.get_center()+Vector2(-26,-28),Vector2(52,52))])
+				_clean_center(bold,Vector2(r.get_center().x,r.end.y-14),_grouped(int(reward.coins)),20,WHITE)
 		if current:
 			var pulse:=0.5+0.5*sin(t*4.0)
 			_frame(r,Color(1,1,1,0.7+0.3*pulse),2.0)
-			_box(Rect2(r.end.x-18,r.position.y+2,14,5),PAINT_RED) # small red issue-mark, no casino glow
+			if not compact: _box(Rect2(r.end.x-18,r.position.y+2,14,5),PAINT_RED)
 		if done:
-			_box(r.grow(-4),Color(0,0,0,0.55))
+			_box(r.grow(-3),Color(0,0,0,0.55))
 			var cc:=r.get_center()
 			clean_ops.append(["line",PackedVector2Array([cc+Vector2(-18,0),cc+Vector2(-5,13),cc+Vector2(20,-14)]),WHITE,6.0])
+
 	if avail:
 		_plain_button(game.SIGNIN_CLAIM,ProgressCatalog.text(lang,"claim"))
 		_ad_x2_button(game.SIGNIN_DOUBLE,"busy" if game.ad_pending=="signin_double" else "ready")
-	else: _ghost_button(Rect2(game.SIGNIN_CLAIM.position,Vector2(game.SIGNIN_DOUBLE.end.x-game.SIGNIN_CLAIM.position.x,game.SIGNIN_CLAIM.size.y)),ProgressCatalog.text(lang,"come_back"),MUTED)
+	else: _ghost_button(Rect2(game.SIGNIN_CLAIM.position,Vector2(game.SIGNIN_DOUBLE.end.x-game.SIGNIN_CLAIM.position.x,game.SIGNIN_CLAIM.size.y)),ProgressCatalog.text(lang,"claim"))
 	_toast(712)
 
 func _draw_tasks() -> void:
