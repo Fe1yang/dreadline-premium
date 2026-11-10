@@ -203,7 +203,8 @@ func _animate(delta: float) -> void:
 			if pick != "":
 				if anim.current_animation != pick or not anim.is_playing():
 					anim.play(pick, 0.15)
-				anim.speed_scale = 1.0
+				# 0.75 while running: the dog gallop at full rate floats on a cat rig
+				anim.speed_scale = 1.0 if own_idle != "" else 0.75
 				return
 		# The road scrolls under the animal, so a pet that has caught up sits still in world space
 		# while the ground races past: that still counts as running.
@@ -213,7 +214,7 @@ func _animate(delta: float) -> void:
 			# standing: the baked idle reads well on every breed
 			if anim.current_animation != idle or not anim.is_playing():
 				anim.play(idle, 0.15)
-			anim.speed_scale = 1.0
+			anim.speed_scale = 1.0 if want == idle else 0.75
 			return
 	if anim and anim.is_playing():
 		anim.stop(); (gallop.sk as Skeleton3D).reset_bone_poses()
