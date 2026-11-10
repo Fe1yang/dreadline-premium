@@ -102,6 +102,7 @@ var skin_choice:={} # char index -> index into lobby.SKINS (outfit override, sta
 var pet_choice:=0
 var language_code:="zh_CN"
 var player: Node3D
+var debug_hide_pickups := false
 var companion_pet: Node3D  # first dog; kept as an alias of companion_pets[0] for HUD/tests
 var companion_pets: Array=[]  # up to MAX_COMPANION_PETS dogs, duplicates allowed
 var sound: Node
@@ -5269,6 +5270,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if (event is InputEventScreenTouch and not event.pressed) or (event is InputEventMouseButton and not event.pressed):
 			armory_drag = false
+	# F9 hides every ground pickup: one keypress tells us whether the stray white dot is a
+	# pickup or something else.
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F9:
+		debug_hide_pickups = not debug_hide_pickups
+		for q in pickups:
+			if is_instance_valid(q):
+				q.visible = not debug_hide_pickups
+		print("pickups visible: ", not debug_hide_pickups)
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode in [KEY_ENTER,KEY_SPACE,KEY_ESCAPE] and state=="intro":
 			_finish_intro()
