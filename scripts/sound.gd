@@ -162,7 +162,7 @@ func music_state(state: String) -> void:
 		if title_on and not title_music.playing: title_music.play()
 		elif not title_on and title_music.playing: title_music.stop()
 	if is_instance_valid(lobby_music):
-		var lobby_on:=not muted and (state in LOBBY_STATES or state in ["map","bag"])
+		var lobby_on:=not muted and (state in LOBBY_STATES or state in ["map","bag","mail","signin","tasks","lootbox","airdrop"])
 		if lobby_on and not lobby_music.playing: _next_lobby_track()
 		elif not lobby_on and lobby_music.playing: lobby_music.stop()
 	if is_instance_valid(shop_music):

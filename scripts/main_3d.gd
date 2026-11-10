@@ -3423,6 +3423,16 @@ func _tick_pass() -> void:
 	store_toast=2.2
 	_save()
 
+## Build the lobby stage while the title poster is still up: the first tap used to pay ~460 ms
+## for meshes, portraits and materials that nobody is looking at yet.
+func _prebuild_lobby() -> void:
+	if not is_instance_valid(lobby):
+		return
+	lobby.visible = true
+	lobby.show_character(character_choice, character_asset(character_choice))
+	lobby.visible = false
+
+
 func enter_lobby() -> void:
 	# Swallow the tap that brought us here: iOS sends an emulated mouse event for the
 	# same finger, and that second press landed on the lobby Start button underneath.
@@ -5856,7 +5866,8 @@ func _capture() -> void:
 	get_viewport().get_texture().get_image().save_png("res://lobby-mason.png")
 	select_character(1); await get_tree().create_timer(0.4).timeout; await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png("res://lobby-riley.png")
-	state="cover"; character_choice=1; player.set_character(1); start_run()
+	state="cover"
+	call_deferred("_prebuild_lobby"); character_choice=1; player.set_character(1); start_run()
 	for i in range(4): _spawn_zombie(-7-i*6)
 	_spawn_gate(); gates[0].position.z=-12
 	_spawn_pickup("ammo",-5); pickups[0].position.x=-2.0
