@@ -26,7 +26,7 @@ const GALLOP_RATE:=1.25
 ## Breeds whose rigs do not survive the procedural gallop: they play their own
 ## run clip instead (the czech wolfdog comes from a different import and its legs
 ## folded into each other when the gallop drove them).
-const GALLOP_DISABLED:=[2]
+const GALLOP_DISABLED:=[2, 4, 5]   # wolfdog, tiger, lion: their rigs need the baked clips
 const GAIT_OVERRIDES:={
 	4: {"amp":0.92, "spine":1.10},   # white tiger: slightly gentler swing, springier spine
 	5: {"amp":0.88, "spine":1.18},   # lion: same, a touch more spring (stride is speed-derived)
@@ -204,7 +204,7 @@ func _animate(delta: float) -> void:
 				if anim.current_animation != pick or not anim.is_playing():
 					anim.play(pick, 0.15)
 				# 0.75 while running: the dog gallop at full rate floats on a cat rig
-				anim.speed_scale = 1.0 if own_idle != "" else 0.75
+				anim.speed_scale = 1.0 if own_idle != "" else 1.1
 				return
 		# The road scrolls under the animal, so a pet that has caught up sits still in world space
 		# while the ground races past: that still counts as running.
