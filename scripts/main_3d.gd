@@ -1364,6 +1364,26 @@ func _teardown_warmup() -> void:
 ## the loading screen instead of when the horde appears.
 ## Crates, barrels, sparks and shockwaves each pay a first-use cost. Build one of each behind the
 ## loading screen so the road never stutters when they first appear.
+## Every crate id carries its own floating item model. Loading one mid-run costs 30-90 ms, and
+## two crates in the same frame is what stalled the road, so build one of each behind the loader.
+func _warm_crate_ids() -> void:
+	var ids: Array = ["SMG", "SHOTGUN", "SNIPER", "LAUNCHER", "PISTOL", "ARMOR", "HELMET",
+		"BIKE", "SPORT", "CRUISER", "SEDAN", "FUEL", "PET_0"]
+	var warm: Array = []
+	var x := -40.0
+	for id in ids:
+		var c = WeaponCrateScript.new()
+		c.setup(String(id), 1)
+		c.position = Vector3(x, -80.0, -600.0)
+		x += 4.0
+		add_child(c)
+		warm.append(c)
+	await get_tree().process_frame
+	for c in warm:
+		if is_instance_valid(c):
+			c.queue_free()
+
+
 func _warm_props() -> void:
 	var warm: Array = []
 	var c = WeaponCrateScript.new()
@@ -1413,6 +1433,7 @@ func _finish_loading() -> void:
 	_teardown_warmup()
 	_warm_zombie()
 	_warm_props()
+	_warm_crate_ids()
 	var target:=loading_target
 	if target=="run" and roads.size()<ROAD_COUNT:
 		_build_road()
