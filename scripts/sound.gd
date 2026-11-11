@@ -22,7 +22,9 @@ var lobby_music: AudioStreamPlayer
 var lobby_streams: Array = []
 ## Supply shop (è¡¥ç»™å•†åº—) rotates randomly through these too; the theme copy is duplicated so
 ## its loop can stay off here while the shared `music` player keeps looping it elsewhere.
-const SHOP_TRACKS := ["res://assets/audio/dead_run_theme.wav","res://assets/audio/shop_disco.mp3"]
+## The old quiet theme (dead_run_theme.wav, -21 dBFS, 24 s) is gone: the user asked for it to be
+## removed from the supply shop. The file stays on disk so it can be brought back in one line.
+const SHOP_TRACKS := ["res://assets/audio/shop_disco.mp3"]
 var shop_music: AudioStreamPlayer
 var shop_streams: Array = []
 ## States that are the main screen, including the popups shown over it.
