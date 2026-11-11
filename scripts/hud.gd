@@ -953,7 +953,21 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 	var vr:=r.intersection(view)
 	if tex and vr.size.y>1.0:
 		var ts:=tex.get_size()
-		clean_ops.append(["region",tex,vr,Rect2((vr.position-r.position)/r.size*ts,vr.size/r.size*ts)])
+		# The dog portraits were shot with more air around the animal than the wolfdog, so they
+		# read smaller. Zoom each one until its subject fills the same share of the card; the
+		# factors come from measuring each PNG's subject bounding box.
+		var zoom: float = 1.0
+		if pets:
+			match i:
+				0: zoom = 1.09   # doberman
+				1: zoom = 1.02   # german shepherd
+				3: zoom = 1.07   # tibetan mastiff
+				6: zoom = 1.19   # labrador
+		var src := Rect2((vr.position-r.position)/r.size*ts, vr.size/r.size*ts)
+		if zoom > 1.0:
+			var c := src.get_center()
+			src = Rect2(c - src.size*0.5/zoom, src.size/zoom)
+		clean_ops.append(["region",tex,vr,src])
 	var locked_card: bool=(not game.pet_owned(i)) if pets else (not game.character_owned(i))
 	if locked_card and vr.size.y>1.0:
 		_box(vr,Color(0,0,0,0.58))
