@@ -121,10 +121,10 @@ func setup(index: int, slot:=0) -> void:
 		if nf > 0 and nh > 0:
 			var d := (front / float(nf)) - (hind / float(nh))
 			if absf(d.x) > 0.01 or absf(d.z) > 0.01:
-				nose_yaw = atan2(d.x, d.z)
-	# Godot's Y rotation maps (dx,dz) to (dx cos + dz sin, -dx sin + dz cos); solving for the
-	# angle that turns the nose onto -Z (the travel direction) gives atan2(dx, -dz).
-	yaw_offset += atan2(d.x, -d.z)
+				# Godot's Y rotation maps (dx,dz) to (dx cos + dz sin, -dx sin + dz cos); solving
+				# for the angle that turns the nose onto -Z gives atan2(dx, -dz).
+				nose_yaw = atan2(d.x, -d.z)
+	yaw_offset += nose_yaw
 
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
 	model.position.y=base_y
