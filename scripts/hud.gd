@@ -959,10 +959,10 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 		var zoom: float = 1.0
 		if pets:
 			match i:
-				0: zoom = 1.09   # doberman
-				1: zoom = 1.02   # german shepherd
-				3: zoom = 1.07   # tibetan mastiff
-				6: zoom = 1.19   # labrador
+				0: zoom = 1.38   # doberman
+				1: zoom = 1.26   # german shepherd
+				3: zoom = 1.32   # tibetan mastiff
+				6: zoom = 1.45   # labrador
 		var src := Rect2((vr.position-r.position)/r.size*ts, vr.size/r.size*ts)
 		if zoom > 1.0:
 			var c := src.get_center()
