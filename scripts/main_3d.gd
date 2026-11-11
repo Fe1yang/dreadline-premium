@@ -1503,7 +1503,8 @@ func _render_warmup() -> void:
 func _finish_loading() -> void:
 	if state!="loading": return
 	_teardown_warmup()
-	await _render_warmup()
+	# _render_warmup() measured no gain: the stalls are engine pipeline compiles that a
+	# two-frame draw does not avoid, and it added loading time. Kept for reference.
 	var target:=loading_target
 	if target=="run" and roads.size()<ROAD_COUNT:
 		_build_road()
