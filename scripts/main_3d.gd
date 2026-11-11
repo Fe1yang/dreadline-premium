@@ -4441,13 +4441,25 @@ func _bomber_blast(zp: Vector3) -> void:
 		if is_instance_valid(z) and not z.dead and _flat_distance(z.position,zp)<3.2:
 			_hit_zombie(z,120.0,"torso",z.position+Vector3(0,1.1,0),Color("ff8a5c"))
 
+## The crit word, per language. The old code printed a literal "??" placeholder.
+func _crit_word() -> String:
+	var lc := String(language_code).to_lower()
+	if lc.begins_with("zh_tw") or lc.begins_with("zh_hk"):
+		return "??"
+	if lc.begins_with("zh"):
+		return "??"
+	if lc.begins_with("ja"):
+		return "??"
+	if lc.begins_with("ko"):
+		return "???"
+	return "CRIT"
+
 func _damage_number(z: Node3D,amount: float,_color: Color,crit:=false) -> void:
 	# A crit prints in acid yellow, a size up, and spells out the word: "?? -100".
 	var col := Color("ffd63a") if crit else DAMAGE_RED
 	var big := crit
-	var zh := String(language_code).begins_with("zh")
 	var body := "-%d" % maxi(1, roundi(amount))
-	var text := (("?? " if zh else "CRIT ") + body) if crit else body
+	var text := (_crit_word() + " " + body) if crit else body
 	_fx_label_at(z.global_position+Vector3(rng.randf_range(-0.24,0.24),2.78,rng.randf_range(-0.12,0.12)),
 		text,col,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,big)
 
