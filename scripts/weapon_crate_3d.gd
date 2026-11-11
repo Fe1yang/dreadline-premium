@@ -15,6 +15,9 @@ const USE_FULL_TRUCK := false
 const CRATE_SCALE := 2.9
 ## The item floating over a crate/barrel reads too small on a phone: scale it up.
 const ITEM_BOOST := 1.75
+## Every ride in the game, and the length it is drawn at on a crate.
+const VEHICLE_IDS := ["BIKE", "SPORT", "CRUISER", "SEDAN", "GOLDCAR"]
+const VEHICLE_LENGTH := 2.0
 const CRATE_ITEM_SCALE := 1.5   # helmets keep their size
 ## Height of the concrete platform the drop stands on (the two platforms the crates
 ## have always been placed on, left and right of the lane).
@@ -41,6 +44,7 @@ var dead := false # aim code treats targets uniformly
 var arrived := false
 var flight := 0.0
 var spin := 0.0
+var scroll_speed := 3.5
 var punch := 0.0
 var flight_start := Vector3.ZERO
 
@@ -125,12 +129,15 @@ func _ready() -> void:
 	if weapon_id=="BIKE": path = "res://assets/models/vehicles/bike_paid.glb"
 	if weapon_id=="SPORT": path = "res://assets/models/vehicles/bike_paid2.glb"
 	if weapon_id=="CRUISER": path = "res://assets/models/vehicles/bike_paid3.glb"
+	if weapon_id=="SEDAN": path = "res://assets/models/vehicles/black_car.glb"
+	if weapon_id=="GOLDCAR": path = "res://assets/models/vehicles/gold_car.glb"
 	if is_pet():
 		var pi := pet_index()
 		weapon_model = (load(LobbyScene.PETS[pi].asset) as PackedScene).instantiate() as Node3D
 		weapon_pivot.add_child(weapon_model)
 		var lion_fix := 0.8 if String(LobbyScene.PETS[pi].asset).contains("lion") else 1.0
-		var lift := ModelFix.fit_pet(weapon_model,float(LobbyScene.PETS[pi].get("length",1.1))*1.3*ITEM_BOOST*lion_fix)
+		# The pet display on a crate/barrel was oversized in play: two thirds of the old size.
+		var lift := ModelFix.fit_pet(weapon_model,float(LobbyScene.PETS[pi].get("length",1.1))*1.3*ITEM_BOOST*lion_fix*0.667)
 		weapon_model.position.y = lift-0.75
 		ModelFix.play_animation(weapon_model,"Dog_Idle")
 		path = ""
@@ -150,9 +157,15 @@ func _ready() -> void:
 		if raw_span > 2.0:
 			# authored in centimetres or metres: bring it to ~1 m before the table scale
 			weapon_model.scale = Vector3.ONE * (1.0 / raw_span)
-		# every drop is half again bigger than before, except the helmet which already reads well
-		var boost: float = 1.0 if weapon_id=="HELMET" else CRATE_ITEM_SCALE
-		weapon_model.scale *= Vector3.ONE*(float(WEAPON_SCALES.get(weapon_id,0.6))*boost)
+		if weapon_id in VEHICLE_IDS:
+			# Vehicles are sized by real length: the bikes came out toy-sized on the platform.
+			var lane_span := _model_span(weapon_model) * weapon_model.scale.x
+			if lane_span > 0.01:
+				weapon_model.scale *= VEHICLE_LENGTH / lane_span
+		else:
+			# every drop is half again bigger than before, except the helmet which already reads well
+			var boost: float = 1.0 if weapon_id=="HELMET" else CRATE_ITEM_SCALE
+			weapon_model.scale *= Vector3.ONE*(float(WEAPON_SCALES.get(weapon_id,0.6))*boost)
 		if weapon_id!="HELMET":
 			# a small prop (a vest, a can) otherwise reads as an empty barrel from a few metres away
 			var shown := _model_span(weapon_model) * weapon_model.scale.x
@@ -303,7 +316,7 @@ func take_hit(amount: int=1) -> bool:
 func tick(delta: float,player_target: Vector3) -> void:
 	spin += delta
 	if not broken:
-		position.z += 3.5*delta
+		position.z += scroll_speed*delta
 		punch = maxf(0.0,punch-delta*7.0)
 		body.scale = Vector3.ONE*(1.0+0.08*punch)
 		counter.modulate = Color("fbfbf6").lerp(Color("ff4a3a"),punch)
@@ -314,7 +327,7 @@ func tick(delta: float,player_target: Vector3) -> void:
 		return
 	# Broken: the weapon arcs into the player's hands, but the wreck itself still rides the
 	# scrolling road - freezing it made the road slide past and read as rolling backwards.
-	position.z += 3.5*delta
+	position.z += scroll_speed*delta
 	flight += delta
 	var t := clampf(flight/FLIGHT_TIME,0.0,1.0)
 	var e := t*t*(3.0-2.0*t)

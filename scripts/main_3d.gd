@@ -685,6 +685,11 @@ func _apply_quality() -> void:
 	view_cull_end=VIEW_CULL_END_HIGH if quality_high else VIEW_CULL_END_FAST
 	var vp:=get_viewport()
 	if vp: vp.msaa_3d=Viewport.MSAA_2X if quality_high else Viewport.MSAA_DISABLED
+	# FXAA in both presets: the buildings' thin pale window frames and rails shrink below one pixel
+	# with distance and flicker as stray white dots. Measured on a frozen street frame: 53 isolated
+	# bright pixels with no AA, 32 with 2x MSAA, 7 with 4x, 0 with FXAA. It only filters the 3D
+	# image, so the HUD text stays sharp.
+	if vp: vp.screen_space_aa=Viewport.SCREEN_SPACE_AA_FXAA
 	if is_instance_valid(sun_light):
 		sun_light.directional_shadow_max_distance=180.0 if quality_high else 90.0
 		sun_light.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if quality_high else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
@@ -3332,7 +3337,7 @@ func _equip_from_menu() -> void:
 	match equip_menu_tab:
 		1:
 			if equip_menu_index < lobby.PETS.size():
-				select_pet(equip_menu_index)
+				select_pet(pet_for_card(equip_menu_index))
 		2:
 			if equip_menu_index < lobby.SKINS.size():
 				select_skin(equip_menu_index)
@@ -3410,10 +3415,11 @@ func _lobby_release(pos: Vector2) -> void:
 				else: lobby_toast=1.6; lobby_toast_key="coming"
 			elif lobby_tab==1:
 				if i<lobby.PETS.size():
-					if pet_choice == i and pet_equipped:
+					var pet_i:=pet_for_card(i)   # card slot -> pet index
+					if pet_choice == pet_i and pet_equipped:
 						lobby_toast=1.6; lobby_toast_key="char_equipped"
-					elif PREMIUM_BUILD and not pet_owned(i):
-						buy_pack(_pack_id_for_card(1, i))
+					elif PREMIUM_BUILD and not pet_owned(pet_i):
+						buy_pack(_pack_id_for_card(1, pet_i))
 					else:
 						equip_menu_index=i; equip_menu_tab=1
 				else: lobby_toast=1.6; lobby_toast_key="coming"
@@ -3496,6 +3502,13 @@ func character_name(i: int) -> String:
 
 func pet_name(i: int) -> String:
 	return RunText.text("dog_%d"%i,language_code)
+
+## Order of the pet cards in the lobby strip. Values are indexes into lobby.PETS, which never
+## change (saves, store packs and names are keyed by them); only the card order is shuffled
+## here. The Labrador (4) sits between the German shepherd (1) and the Czech wolfdog (2).
+const PET_CARD_ORDER:=[0,1,4,2,3,5,6]
+func pet_for_card(slot: int) -> int:
+	return int(PET_CARD_ORDER[slot]) if slot>=0 and slot<PET_CARD_ORDER.size() else slot
 
 func pet_owned(index: int) -> bool:
 	if all_access: return true
@@ -4388,9 +4401,11 @@ func _hit_zombie(z: Node3D,amount: float,part:="torso",hit_position:=Vector3.ZER
 		var roadside: bool=watchers.has(z)
 		zombies.erase(z); watchers.erase(z)
 		if roadside:
-			# The watchers never move, so a fall reads perfectly and cannot slide.
+			# A watcher is a child of its road block, so it already rides the scrolling street.
+			# It must NOT also go into dying_zombies: that list pushes bodies along at road speed
+			# (meant for bodies parented to the world), which moved a shot watcher at twice the
+			# speed of the pavement under it -- the corpse skated down the sidewalk.
 			z.die()
-			dying_zombies.append(z)
 			get_tree().create_timer(1.15).timeout.connect(func():
 				if is_instance_valid(z): z.queue_free())
 		else:
@@ -4764,7 +4779,7 @@ func _on_bullet_hit(z: Node3D,b: Node3D,at: Vector3) -> void:
 ## Movement-speed buff: everything on the road also slides toward the survivor faster, by the
 ## amount the run speed exceeds the normal 3.5 m/s (zombies included, so they keep pace).
 func _scroll_extra(delta: float) -> void:
-	var extra: float=(player.effective_move_mult()-1.0)*3.5*delta
+	var extra: float=(player.effective_move_mult()-1.0)*world_speed*delta
 	if extra<=0.0: return
 	for list in [zombies,barrels,crates,gates,pickups,obstacles,blood_pools]:
 		for n in list:
@@ -5029,7 +5044,7 @@ func _tick_dying_zombies(delta: float) -> void:
 func _tick_crates(delta: float) -> void:
 	var hand: Vector3=player.position+Vector3(0,1.25,0.1)
 	for i in range(crates.size()-1,-1,-1):
-		var c=crates[i]; c.tick(delta,hand)
+		var c=crates[i]; c.scroll_speed=world_speed; c.tick(delta,hand)
 		# A rolling barrel is solid: it hurts like a wreck or a crater, then rolls on.
 		if c.has_method("is_roller") and not c.broken:
 			c.contact_tick(delta)
@@ -6430,7 +6445,7 @@ func _smoke_test() -> void:
 	pet_equipped=false; owned_pets={}
 	for i in range(lobby.PETS.size()): owned_pets[i]=true
 	for i in range(lobby.PETS.size()):
-		_lobby_tap(lobby_card_rect(i).get_center()); assert(pet_equipped and pet_choice==i and lobby.pet_path==lobby.PETS[i].asset)
+		_lobby_tap(lobby_card_rect(i).get_center()); assert(pet_equipped and pet_choice==pet_for_card(i) and lobby.pet_path==lobby.PETS[pet_for_card(i)].asset)
 		await get_tree().process_frame; assert(is_instance_valid(lobby.pet))
 	# tapping the equipped dog again sends it home: no dog in the intro or the run
 	var last_pet:=lobby_card_rect(lobby.PETS.size()-1).get_center()
@@ -6835,7 +6850,7 @@ func _smoke_test() -> void:
 	assert(automatic_banshee.kind=="banshee" and automatic_banshee.position.z>=-30.0 and banshee_warning>0.0)
 	zombies.erase(automatic_banshee); automatic_banshee.queue_free()
 	_spawn_zombie(-16,"jockey"); var jockey=zombies[-1]
-	assert(jockey.animation_player.current_animation=="Jockey_Quad_Run" and jockey.speed>7.0)
+	assert(jockey.animation_player.current_animation=="Gallop" and jockey.speed>7.0)
 	_spawn_zombie(-18,"banshee"); var banshee=zombies[-1]
 	assert(banshee.animation_player.current_animation=="Banshee_Walk" and banshee.flames.emitting)
 	_spawn_zombie(-14,"walker"); var frenzy=zombies[-1]; frenzy.position.x=banshee.position.x
