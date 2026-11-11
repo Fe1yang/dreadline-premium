@@ -1056,9 +1056,12 @@ func _frame_probe(_delta: float) -> void:
 	_probe_last_us = now
 	if frame_ms < 50.0:
 		return
-	print("HITCH %.0f ms  state=%s  dist=%.0f  z=%d  p=%d  fx=%d  c=%d  b=%d" % [
+	var dc := int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME))
+	var ob := int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME))
+	var pr := int(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME))
+	print("HITCH %.0f ms  state=%s  dist=%.0f  z=%d  p=%d  fx=%d  c=%d  b=%d  draw=%d  obj=%d  prims=%d" % [
 		frame_ms, String(state), float(distance), zombies.size(), pickups.size(),
-		effects.size(), crates.size(), barrels.size()])
+		effects.size(), crates.size(), barrels.size(), dc, ob, pr])
 
 
 func _process(delta: float) -> void:
