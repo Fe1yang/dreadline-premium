@@ -76,6 +76,8 @@ var base_y:=0.0
 var gallop: RefCounted
 var is_moving := false
 var held_yaw := 0.0   # smoothed heading, kept between frames
+var move_speed := 0.0 # metres per second this frame, drives the clip rate
+const GALLOP_CLIP_SPEED := 4.14   # the Labrador pack's Gallop covers 4.14 m/s
 var last_pos := Vector3.ZERO   # drives idle vs run clip selection
 var yaw_offset := 0.0   # the model's own forward axis, per breed
 var anim: AnimationPlayer
@@ -248,8 +250,9 @@ func _animate(delta: float) -> void:
 			if pick != "":
 				if anim.current_animation != pick or not anim.is_playing():
 					anim.play(pick, 0.15)
-				# Gallop at its authored rate: it is already the fast cycle, no need to over-clock it
-				anim.speed_scale = 1.0
+				# Match the stride to the ground speed: the clip covers GALLOP_CLIP_SPEED, the
+				# pet runs 7-9.5 m/s, so a fixed 1.0 left the feet skating behind the body.
+				anim.speed_scale = clampf(move_speed / GALLOP_CLIP_SPEED, 0.9, 2.6)
 				return
 		# The road scrolls under the animal, so a pet that has caught up sits still in world space
 		# while the ground races past: that still counts as running.
@@ -320,14 +323,17 @@ func tick(delta: float) -> void:
 		var speed: float=ATTACK_SPEED if attacking else FOLLOW_SPEED
 		# Catch up smoothly after a lunge without overtaking the survivor when no target exists.
 		is_moving = distance > 0.12
-		position+=flat_delta.normalized()*minf(distance,speed*delta)
+		var step: float = minf(distance, speed*delta)
+		position+=flat_delta.normalized()*step
+		move_speed = step / maxf(delta, 0.0001)
 		position.x=clampf(position.x,-3.25,3.25)
 		position.y=0.0
 	# Facing: turn toward the target when attacking or when catching up from behind
 	# (recruited far ahead/behind on the road). Otherwise nose down the road.
 	var want_yaw: float = held_yaw
 	if flat_delta.length() > 0.30 and (attacking or distance > 2.4):
-		want_yaw = atan2(flat_delta.x, flat_delta.z)
+		# the nose points along the model's -Z, so the aim angle needs the half turn
+		want_yaw = atan2(-flat_delta.x, -flat_delta.z)
 	elif distance <= 1.6 and not attacking:
 		want_yaw = 0.0
 	# deadband: ignore small swings so the model cannot twitch between two headings
