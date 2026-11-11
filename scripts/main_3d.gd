@@ -98,7 +98,7 @@ const CHASE_STUMBLE:=2.6     # metres lost per hit taken during the chase
 const CHASE_MAUL_DPS:=11.0
 const CHASE_REWARD:=25
 var character_choice:=0
-var skin_choice:={} # char index -> index into lobby.SKINS (outfit override, stats unchanged)
+var skin_choice = {} # char index -> index into lobby.SKINS (outfit override, stats unchanged)
 var pet_choice:=0
 var language_code:="zh_CN"
 var player: Node3D
@@ -142,10 +142,10 @@ var stamina: Node
 var pet_equipped:=false
 ## Dogs are locked until won from a case (then owned for good). In a run a locked dog can still
 ## turn up on a platform: shoot it free and it runs with you for that run only.
-var owned_pets:={}            # pet index -> true
+var owned_pets = {}            # pet index -> true
 ## Mason and Riley are free; Darius, Maya and the outfit skins are one-time store purchases.
-var owned_characters:={}      # char index -> true
-var owned_skins:={}           # lobby.SKINS index -> true
+var owned_characters = {}      # char index -> true
+var owned_skins = {}           # lobby.SKINS index -> true
 var owned_vehicle:=""
 ## Lobby loadout switch. false = no vehicle and no pet in the run (testing).
 var equip_menu_index:=-1  # card whose EQUIP dropdown is open
@@ -5864,6 +5864,11 @@ func _pointer_down(pos: Vector2) -> bool:
 const SAVE_PATH:="user://deadfrontier.cfg"
 const SAVE_PATH_LEGACY:="user://dead_run.cfg"
 
+## Old saves stored some of these as arrays. Anything that is not a Dictionary falls back to {}.
+static func _dict_or_empty(v) -> Dictionary:
+	return v if v is Dictionary else {}
+
+
 func _load_save() -> void:
 	var c:=ConfigFile.new()
 	# Test and capture runs must not inherit the player's real save: a purchased remove-ads
@@ -5872,9 +5877,9 @@ func _load_save() -> void:
 	for f in ["--smoke-test","--soak-test","--lootbox-test","--stamina-test","--capture","--capture-medic","--capture-bike"]:
 		if f in OS.get_cmdline_user_args(): isolated=true; break
 	if not isolated and (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK):
-		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=c.get_value("run","skins",{}); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=c.get_value("pets","owned",{}) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=c.get_value("mail","claimed",{}); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v3",true)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
+		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v3",true)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
 		if owned_vehicle=="CAR": owned_vehicle="CRUISER" # old save name for the third bike
-		owned_characters=c.get_value("chars","owned",{}); owned_skins=c.get_value("chars","skins",{})
+		owned_characters=_dict_or_empty(c.get_value("chars","owned",{})); owned_skins=_dict_or_empty(c.get_value("chars","skins",{}))
 		terms_accepted=bool(c.get_value("legal","terms_v1",false))
 		for mk in c.get_value("mail","claimed",[]): mail_claimed[String(mk)]=true
 		airdrop_day=String(c.get_value("crates","day",""))
