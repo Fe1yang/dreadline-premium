@@ -52,8 +52,8 @@ var flash_material: StandardMaterial3D
 var flames: CPUParticles3D
 var embers: CPUParticles3D
 
-func configure(type: String, difficulty: float) -> void:
-	kind = type
+## Stats only. Split out so a pooled zombie can come back without rebuilding the model.
+func _apply_stats(type: String, difficulty: float) -> void:
 	match kind:
 		"runner","runner_b": health=26*difficulty; speed=5.2+difficulty*0.15; damage=14; reward=2; radius=0.36
 		"brute": health=150*difficulty; speed=5.6+difficulty*0.10; damage=32; reward=5; radius=0.80
@@ -69,6 +69,58 @@ func configure(type: String, difficulty: float) -> void:
 	max_health = health
 	age = randf()*4
 	banshee_pulse_timer = 2.8 if kind=="banshee" else 0.0
+
+
+## Pooled zombie: park() hides it and stops it ticking, reuse() brings it back with fresh numbers
+## and a stopped model, so no new mesh, material or skeleton is built.
+func park() -> void:
+	dead = true
+	visible = false
+	process_mode = Node.PROCESS_MODE_DISABLED
+	if animation_player != null:
+		animation_player.stop()
+
+func reuse(type: String, difficulty: float) -> void:
+	visible = true
+	process_mode = Node.PROCESS_MODE_INHERIT
+	dead = false
+	death_played = false
+	hit_flash = 0.0
+	stun_timer = 0.0
+	burn_timer = 0.0
+	burn_dps = 0.0
+	burn_damage_accumulated = 0.0
+	frenzy_timer = 0.0
+	banshee_pulse_timer = 0.0
+	banshee_pulse_ready = false
+	banshee_time = 0.0
+	spit_timer = 2.4
+	spit_ready = false
+	kind = type
+	_apply_stats(type, difficulty)
+	age = randf() * 4.0
+	rotation = Vector3.ZERO
+	scale = Vector3.ONE
+	if model != null:
+		model.rotation = Vector3.ZERO
+		if kind == "jockey":
+			model.rotation.y = 0.0
+		elif kind == "brute":
+			model.scale *= BRUTE_SCALE
+	if bar != null:
+		bar.visible = true
+	if bar_fill != null:
+		bar_fill.visible = true
+		bar_fill.scale = Vector3(1.0, 1.0, 1.0)
+	if animation_player != null:
+		var list := animation_player.get_animation_list()
+		if list.size() > 0:
+			var pick: String = "Idle" if animation_player.has_animation("Idle") else String(list[0])
+			animation_player.play(pick)
+
+func configure(type: String, difficulty: float) -> void:
+	kind = type
+	_apply_stats(type, difficulty)
 	var assets := {
 		"walker": "zombie_walker_universal.glb",
 		"runner": "zombie_female_universal.glb",
