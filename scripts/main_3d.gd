@@ -4259,6 +4259,7 @@ func _body_part(z: Node3D,hit_position: Vector3) -> String:
 const DAMAGE_RED:=Color("ff3030")
 
 func _hit_zombie(z: Node3D,amount: float,part:="torso",hit_position:=Vector3.ZERO,_damage_color:=Color("f4f0df"),crit_hit:=false) -> void:
+	var _kt0 := Time.get_ticks_usec()
 	if hit_position==Vector3.ZERO: hit_position=z.global_position+Vector3(0,1.2,0)
 	var multiplier: float=1.55 if part=="head" else (0.88 if part.begins_with("leg") else 1.0)
 	var actual_damage: float=minf(maxf(0.0,z.health),amount*multiplier)
@@ -4294,6 +4295,10 @@ func _hit_zombie(z: Node3D,amount: float,part:="torso",hit_position:=Vector3.ZER
 			# Road zombies burst away: a body lying on the scrolling road either slides or
 			# sinks into the tarmac, and the user asked for the blast look instead.
 			z.queue_free()
+	if OS.has_environment("PERF_TRACE"):
+		var _kms: float = (Time.get_ticks_usec() - _kt0) / 1000.0
+		if _kms > 12.0:
+			print("KILL %s %.0f ms" % [String(z.kind), _kms])
 	else:
 		sound.play("hit"); _blood_spray(hit_position,7)
 		if rng.randf()<0.5: _blood_splatter(Vector3(z.global_position.x,0.0,z.global_position.z),rng.randf_range(0.7,1.2),false)
