@@ -142,7 +142,10 @@ func setup(index: int, slot:=0) -> void:
 			break
 		if anim == null:
 			anim = player
-	if anim != null:
+	# The Labrador pack is authored in place already, and its rig stores bone offsets on
+	# pelvis/cog: rewriting those tracks folded the legs into each other. Only older packs
+	# (which carry real root motion) get the strip.
+	if anim != null and not String(LobbyScene.PETS[breed].asset).contains("labrador"):
 		_strip_root_motion(anim)
 	if anim: anim.stop()
 	# find the skeleton by TYPE: generated rigs name it after the armature (TigerArm),
