@@ -96,22 +96,33 @@ func setup(index: int, slot:=0) -> void:
 		if m != null:
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	yaw_offset=float(LobbyScene.PETS[breed].get("yaw",0.0))
-	if breed==LION_BREED:
-		yaw_offset += PI   # rebuilt lion rig faces backwards against the run direction
-	elif breed in GALLOP_DISABLED:
-		# the dog scans are authored nose-towards-camera: the NODE turns, not the mesh, so the
-		# bite still happens at the head and the pack runs away from the player
-		yaw_offset += PI
-	# Some of these scans are authored nose-along-X and some nose-along-Z, so half the pack ran
-	# sideways. Measure the head against the body and turn the model onto the travel axis.
+	# Where does this model point its nose? Measured from the FEET: front paws minus hind paws.
+	# The animal then gets one half turn on top, because the road runs towards -Z while every
+	# one of these packs is authored nose-along +Z (the Labrador pack says so explicitly).
+	# Doing it on the NODE keeps head, bite and facing in agreement.
 	var sk_probe := model.find_child("Skeleton3D", true, false) as Skeleton3D
+	var nose_yaw := 0.0
 	if sk_probe != null:
-		var hb := sk_probe.find_bone("head")
-		var bb := sk_probe.find_bone("body")
-		if hb >= 0 and bb >= 0:
-			var d := sk_probe.get_bone_global_rest(hb).origin - sk_probe.get_bone_global_rest(bb).origin
-			if absf(d.x) > absf(d.z) * 1.2:
-				model.rotation.y = -signf(d.x) * PI * 0.5
+		var front := Vector3.ZERO
+		var hind := Vector3.ZERO
+		var nf := 0
+		var nh := 0
+		for bi in range(sk_probe.get_bone_count()):
+			var bn := sk_probe.get_bone_name(bi).to_lower()
+			var o := sk_probe.get_bone_global_rest(bi).origin
+			if bn.begins_with("f_") and bn.ends_with("_paw"):
+				front += o; nf += 1                      # tiger / lion / mastiff rigs
+			elif bn.begins_with("h_") and bn.ends_with("_paw"):
+				hind += o; nh += 1
+			elif bn == "frontpaw.l" or bn == "frontpaw.r":
+				front += o; nf += 1                      # labrador pack rig
+			elif bn == "hindpaw.l" or bn == "hindpaw.r":
+				hind += o; nh += 1
+		if nf > 0 and nh > 0:
+			var d := (front / float(nf)) - (hind / float(nh))
+			if absf(d.x) > 0.01 or absf(d.z) > 0.01:
+				nose_yaw = atan2(d.x, d.z)
+	yaw_offset += nose_yaw + PI
 
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
 	model.position.y=base_y
