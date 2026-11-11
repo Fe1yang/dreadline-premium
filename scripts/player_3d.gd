@@ -432,6 +432,8 @@ func _build_vehicle_mirror() -> void:
 	vehicle_mirror.visible=false
 
 ## Rear exhaust: dust and heat sparks trailing the car while it is at speed.
+## Off: the continuous exhaust read as tail lights that never went out. Flip to true to bring it back.
+const BOOST_FX_ENABLED := false
 func _build_boost() -> void:
 	if is_instance_valid(boost_fx):
 		return
@@ -473,7 +475,7 @@ func _tick_vehicle_visual(delta: float) -> void:
 	if not is_instance_valid(vehicle_model): return
 	# Exhaust sits at the tail of the car and only fires while the run is moving fast.
 	var vstat: Dictionary = VEHICLE_STATS.get(vehicle, {})
-	if float(vstat.get("speed", 0.0)) >= 3.4:
+	if BOOST_FX_ENABLED and float(vstat.get("speed", 0.0)) >= 3.4:
 		_build_boost()
 		if is_instance_valid(boost_fx):
 			boost_fx.global_position = vehicle_model.global_position + Vector3(0, 0.45, 1.15)
