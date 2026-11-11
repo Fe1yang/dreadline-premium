@@ -28,7 +28,7 @@ const GALLOP_RATE:=1.25
 ## folded into each other when the gallop drove them).
 # Every pet rig here carries the same leg bones (F_L/H_R ...), and the procedural gallop
 # swings them 45 deg per stride against the baked clip's 28, so all six use it.
-const GALLOP_DISABLED:=[0, 1, 2, 3]   # dogs walk on their own clips; only the cats gallop
+const GALLOP_DISABLED:=[0, 1, 2, 3, 4, 5, 6]   # every breed plays its own baked Gallop clip
 const GAIT_OVERRIDES:={
    0: {"amp":0.50, "spine":0.80},
    1: {"amp":0.50, "spine":0.80},
@@ -130,7 +130,18 @@ func setup(index: int, slot:=0) -> void:
 
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
 	model.position.y=base_y
-	anim=model.find_child("AnimationPlayer",true,false) as AnimationPlayer
+	# Pick the player that actually carries the cycle: some imports leave an empty
+	# AnimationPlayer ahead of the real one, and the first match then played nothing at all.
+	anim=null
+	for ap in model.find_children("*","AnimationPlayer",true,false):
+		var player := ap as AnimationPlayer
+		if player == null or player.get_animation_list().is_empty():
+			continue
+		if player.has_animation("Gallop") or player.has_animation("Dog_Run") or player.has_animation("Idle"):
+			anim = player
+			break
+		if anim == null:
+			anim = player
 	if anim != null:
 		_strip_root_motion(anim)
 	if anim: anim.stop()
@@ -197,7 +208,17 @@ func _strip_root_motion(player: AnimationPlayer) -> void:
 		if clip == null:
 			continue
 		for track in range(clip.get_track_count()):
-			if clip.track_get_type(track) != Animation.TYPE_POSITION_3D:
+			var ttype := clip.track_get_type(track)
+			if ttype == Animation.TYPE_ROTATION_3D:
+				# the pack ships a Turn layer that rotates the root: left in, the animal swings
+				# left and right on the spot
+				var rpath := String(clip.track_get_path(track)).to_lower()
+				if rpath.find("root") < 0 and rpath.find("hips") < 0 and rpath.find("pelvis") < 0 and rpath.find("cog") < 0:
+					continue
+				for k in range(clip.track_get_key_count(track)):
+					clip.track_set_key_value(track, k, Quaternion.IDENTITY)
+				continue
+			if ttype != Animation.TYPE_POSITION_3D:
 				continue
 			var path := String(clip.track_get_path(track))
 			var lower := path.to_lower()
