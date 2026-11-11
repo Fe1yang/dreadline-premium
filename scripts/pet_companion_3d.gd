@@ -28,12 +28,13 @@ const GALLOP_RATE:=1.25
 ## folded into each other when the gallop drove them).
 # Every pet rig here carries the same leg bones (F_L/H_R ...), and the procedural gallop
 # swings them 45 deg per stride against the baked clip's 28, so all six use it.
-const GALLOP_DISABLED:=[0, 1, 2, 3, 4, 5, 6]   # every breed plays its own baked Gallop clip
+const GALLOP_DISABLED:=[0, 1, 4, 5, 6]   # baked Gallop for these; the other two run the
+const PROC_GALLOP_BREEDS:=[2, 3]          # original procedural cycle (wolfdog, mastiff)
 const GAIT_OVERRIDES:={
    0: {"amp":0.50, "spine":0.80},
    1: {"amp":0.50, "spine":0.80},
    2: {"amp":0.45, "spine":0.75},
-   3: {"amp":0.50, "spine":0.80},
+   3: {"amp":0.50, "spine":0.80, "stride":0.62},   # mastiff: heavier, slower paw cycle
    5: {"amp":0.42, "spine":0.75, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
    6: {"amp":0.40, "spine":0.70, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
    }  # stride speed matched to how fast the street scrolls past (Kimi's tuning)
@@ -77,6 +78,7 @@ var gallop: RefCounted
 var is_moving := false
 var held_yaw := 0.0   # smoothed heading, kept between frames
 var move_speed := 0.0 # metres per second this frame, drives the clip rate
+var facing_wait := 3  # frames to wait before the one-shot facing check
 const GALLOP_CLIP_SPEED := 4.14   # the Labrador pack's Gallop covers 4.14 m/s
 var last_pos := Vector3.ZERO   # drives idle vs run clip selection
 var yaw_offset := 0.0   # the model's own forward axis, per breed
@@ -128,8 +130,6 @@ func setup(index: int, slot:=0) -> void:
 				nose_yaw = atan2(d.x, -d.z)
 	yaw_offset += nose_yaw
 	# some rigs name the front pair the other way round: the pet table can flip them
-	if bool(LobbyScene.PETS[breed].get("flip", false)):
-		yaw_offset += PI
 
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
 	model.position.y=base_y
@@ -322,6 +322,33 @@ func _acquire_target() -> void:
 		var d: float=z.position.distance_to(game.player.position)
 		if d<best:
 			best=d; target=z
+
+## Measures the posed skeleton and flips the pet if its nose ends up pointing back down the
+## road. Rigs differ in which way they were authored, so this is checked, not assumed.
+func _auto_fix_facing() -> void:
+	await get_tree().process_frame
+	if not is_instance_valid(model):
+		return
+	var sk := model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if sk == null:
+		return
+	var hi := -1
+	var ti := -1
+	for i in range(sk.get_bone_count()):
+		var bn := sk.get_bone_name(i).to_lower()
+		if bn == "head" and hi < 0:
+			hi = i
+		elif bn.begins_with("tail") and ti < 0:
+			ti = i
+	if hi < 0 or ti < 0:
+		return
+	var gw: Transform3D = sk.global_transform
+	var hp: Vector3 = gw * sk.get_bone_global_pose(hi).origin
+	var tp: Vector3 = gw * sk.get_bone_global_pose(ti).origin
+	if (hp - tp).z > 0.05:
+		yaw_offset += PI
+		rotation.y += PI
+
 
 func tick(delta: float) -> void:
 	if not is_instance_valid(model): return

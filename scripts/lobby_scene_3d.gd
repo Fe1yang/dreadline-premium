@@ -15,10 +15,10 @@ const CHARACTERS:=[
 	{"asset":"res://assets/models/actors/survivor_maya_universal.glb","name":"MAYA","palm_twist":90.0,"lobby_palm_twist":25.0,"lobby_out":0.06,"lobby_fwd":0.03,"lobby_clavicle":5.0,"lobby_bend":14.0,"perk":"perk_maya"}
 ]
 const PETS:=[
-	{"asset":"res://assets/models/pets/doberman.glb","name":"杜宾犬","length":1.34},
-	{"asset":"res://assets/models/pets/german_shepherd.glb","name":"德国牧羊犬","length":1.52},
-	{"asset":"res://assets/models/pets/czech_wolfdog.glb","name":"捷克狼犬","length":1.12},
-	{"asset":"res://assets/models/pets/tibetan_mastiff.glb","name":"藏獒","length":1.34,"flip":true},
+	{"asset":"res://assets/models/pets/doberman.glb","name":"杜宾犬","length":1.34,"yaw":3.14159},
+	{"asset":"res://assets/models/pets/german_shepherd.glb","name":"德国牧羊犬","length":1.52,"yaw":3.14159},
+	{"asset":"res://assets/models/pets/czech_wolfdog.glb","name":"捷克狼犬","length":1.12,"yaw":3.14159},
+	{"asset":"res://assets/models/pets/tibetan_mastiff.glb","name":"藏獒","length":1.34},
 	{"asset":"res://assets/models/pets/labrador.glb","name":"拉布拉多","length":1.50},
 	{"asset":"res://assets/models/pets/white_tiger.glb","name":"白虎","length":1.70},
 	{"asset":"res://assets/models/pets/lion.glb","name":"狮子","length":1.55}]
