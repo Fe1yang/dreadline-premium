@@ -4780,7 +4780,12 @@ func _spawn_crates() -> void:
 		elif player.vehicle=="" and rng.randf()<0.06: id="SPORT"
 		elif player.vehicle=="" and rng.randf()<0.06: id="CRUISER"
 		elif player.vehicle=="" and rng.randf()<0.06: id="SEDAN"
+		var _ct0 := Time.get_ticks_usec()
 		crate.setup(id,_crate_hits(id)); crate.position=Vector3(x,0,z); add_child(crate); crates.append(crate)
+		if OS.has_environment("PERF_TRACE"):
+			var _cms: float = (Time.get_ticks_usec() - _ct0) / 1000.0
+			if _cms > 10.0:
+				print("CRATE %s %.0f ms" % [id, _cms])
 
 ## ---- Rolling reward barrels --------------------------------------------------------------
 ## A wave of up to three barrels rolls down the road, each carrying a pet / weapon / vehicle
