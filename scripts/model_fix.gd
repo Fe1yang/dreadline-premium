@@ -47,12 +47,19 @@ static func fit_pet(model: Node3D,length: float) -> float:
 	model.scale=Vector3.ONE*s
 	return -box.position.y*s
 
-## The dogs are rigged with Dog_Idle / Dog_Run / Dog_Bite clips.
+## Every pet carries the Labrador pack clips (Idle, Gallop, Bite ...). Older call sites still ask
+## for the retired Dog_* names, so those map onto the pack clips.
+const CLIP_ALIASES:={"Dog_Idle":"Idle","Dog_Run":"Gallop","Dog_Bite":"Bite"}
 static func play_animation(model: Node3D,clip: String,loop:=true) -> void:
-	var player:=model.find_child("AnimationPlayer",true,false) as AnimationPlayer
-	if player==null or not player.has_animation(clip): return
-	if loop: player.get_animation(clip).loop_mode=Animation.LOOP_LINEAR
-	if player.current_animation!=clip or not player.is_playing(): player.play(clip,0.15)
+	for ap in model.find_children("*","AnimationPlayer",true,false):
+		var player:=ap as AnimationPlayer
+		if player==null: continue
+		var pick:=clip
+		if not player.has_animation(pick): pick=String(CLIP_ALIASES.get(clip,clip))
+		if not player.has_animation(pick): continue
+		if loop: player.get_animation(pick).loop_mode=Animation.LOOP_LINEAR
+		if player.current_animation!=pick or not player.is_playing(): player.play(pick,0.15)
+		return
 
 ## Paths that failed to load this session. Surfaced on the summary screen so a device
 ## without a console can still tell us WHICH asset is missing.
@@ -61,12 +68,33 @@ const LOG_PATH := "user://missing_models.log"
 
 
 ## Loads a scene and returns null instead of crashing when the asset is missing.
+## Scanned skin carries very high-frequency normal detail. Under a night-time point light that
+## detail throws isolated white specks that stick to the silhouette, which reads as dirt on the
+## model. Kill the specular lobe and flatten the normal slightly; the diffuse shading is untouched.
+static func kill_sparkle(root: Node) -> void:
+	if root==null or not is_instance_valid(root): return
+	for node in root.find_children("*","MeshInstance3D",true,false):
+		var mesh_node:=node as MeshInstance3D
+		if mesh_node.mesh==null: continue
+		for s in range(mesh_node.mesh.get_surface_count()):
+			var mat: Material=mesh_node.get_surface_override_material(s)
+			if mat==null: mat=mesh_node.mesh.surface_get_material(s)
+			if mat is BaseMaterial3D:
+				var b:=mat as BaseMaterial3D
+				b.specular_mode=BaseMaterial3D.SPECULAR_DISABLED
+				b.roughness=maxf(b.roughness,0.92)
+				b.metallic=0.0
+				if b.normal_enabled:
+					b.normal_scale=0.35
+
+
 static func spawn(path: String) -> Node3D:
 	var packed: Resource = load(path)
 	if packed == null:
 		note_missing(path)
 		return null
 	var node: Node3D = packed.instantiate() as Node3D
+	kill_sparkle(node)
 	if node == null:
 		note_missing(path)
 	return node

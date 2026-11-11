@@ -1,12 +1,16 @@
 extends Node3D
-## Dogs run in formation around the survivor — front-left, front-right, left side, right
-## side (road runs -Z) — and pounce on zombies in front of him. The legs are posed every
-## frame by dog_gallop.gd (the baked Dog_Run clip hardly moves them); Dog_Bite plays for
-## the bite. Scaled to real size. Duplicates of the same breed can fill different slots.
+## Pets run in formation around the survivor (front-left, front-right, left side, right side;
+## the road runs -Z) and pounce on zombies in front of him.
+##
+## Facing and animation rules, so nobody has to guess again:
+##  * Every pet GLB shares the Labrador pack skeleton and its hand-made clips (Idle, Walk, Trot,
+##    Gallop, Bite, Bite_Up, Attack, Bark), and every GLB is authored nose-along-+Z.
+##  * `model` is turned half a circle once in setup(), so this node's own -Z is the nose.
+##    rotation.y is therefore the heading: 0 runs down the road, +left / -right.
+##  * Nothing measures bones at runtime and nothing rewrites animation tracks.
 
 const LobbyScene=preload("res://scripts/lobby_scene_3d.gd")
 const ModelFix=preload("res://scripts/model_fix.gd")
-const DogGallop=preload("res://scripts/dog_gallop.gd")
 ## Bite damage climbs with the breed (doberman, shepherd, wolfdog, mastiff). Only the mastiff
 ## takes a fresh walker down in one bite, and no bite ever finishes a Juggernaut ("brute"):
 ## the dog wears it down and the survivor has to shoot it dead.
@@ -21,23 +25,19 @@ const ACQUIRE_RANGE:=10.0
 ## (behind him, sliding off the bottom of the screen) are left alone.
 const AHEAD_MARGIN:=0.3   # a new target must be at least this far in front of the survivor
 const GIVE_UP_BEHIND:=0.6  # drop a target once it falls this far behind him
-const GALLOP_RATE:=1.25
-## Per-breed gait overrides; breeds not listed use the dog tuning.
-## Breeds whose rigs do not survive the procedural gallop: they play their own
-## run clip instead (the czech wolfdog comes from a different import and its legs
-## folded into each other when the gallop drove them).
-# Every pet rig here carries the same leg bones (F_L/H_R ...), and the procedural gallop
-# swings them 45 deg per stride against the baked clip's 28, so all six use it.
-const GALLOP_DISABLED:=[0, 1, 4, 5, 6]   # baked Gallop for these; the other two run the
-const PROC_GALLOP_BREEDS:=[2, 3]          # original procedural cycle (wolfdog, mastiff)
-const GAIT_OVERRIDES:={
-   0: {"amp":0.50, "spine":0.80},
-   1: {"amp":0.50, "spine":0.80},
-   2: {"amp":0.45, "spine":0.75},
-   3: {"amp":0.50, "spine":0.80, "stride":0.62},   # mastiff: heavier, slower paw cycle
-   5: {"amp":0.42, "spine":0.75, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
-   6: {"amp":0.40, "spine":0.70, "leg_phases":{"H_L":0.00,"F_R":0.00,"H_R":0.50,"F_L":0.50}},
-   }  # stride speed matched to how fast the street scrolls past (Kimi's tuning)
+
+## All pet models are authored nose-along-+Z; the game runs toward -Z.
+const MODEL_YAW:=PI
+## The pack's Gallop covers 4.14 m/s on the Labrador at its authored size (1.94 units long).
+const GALLOP_CLIP_SPEED:=4.14
+const RUN_CLIP:="Gallop"
+const IDLE_CLIP:="Idle"
+const BITE_CLIPS:=["Bite","Attack"]
+const BITE_ANIM_TIME:=0.46   # how long the bite clip owns the body
+const BITE_ANIM_RATE:=2.6    # the clip is 1.46 s; the snap has to land inside the window
+const MAX_LEAN:=1.15         # radians: the pet never turns its nose back toward the camera
+const LOOPING:=["Idle","Walk","Trot","Gallop"]
+
 ## Barking: only now and then, so it never nags. Near the survivor the close bark plays (one or
 ## two barks cut from the clip); once the dog has run off after a zombie, the distant one.
 # Lazy paths: preloading imported audio also aborts the first import pass on a clean checkout.
@@ -47,20 +47,18 @@ const BARK_SEGMENTS:=[[0.0,0.78],[0.0,1.36],[2.19,2.95],[3.36,3.92],[4.38,4.98]]
 const BARK_GAP:=Vector2(10.0,18.0)
 ## The lion is a pet too, but it growls on its own slow clock.
 const LION_BREED:=6
-const LION_ROAR_PATH:="res://assets/audio/lion_roar.mp3"
-const LION_GROWL_PATH:="res://assets/audio/lion_growl.mp3"
 const LION_GAP:=Vector2(22.0,40.0)
-## The tiger and the lion share one voice pool: any of the four clips may play.
+## The tiger and the lion share one voice pool: any of the clips may play.
 const TIGER_BREED:=5
 ## ambience: roars and growls only
 const BIG_CAT_SOUNDS:=["res://assets/audio/lion_roar.mp3","res://assets/audio/lion_growl.mp3","res://assets/audio/tiger_roar.mp3"]
 ## the attack clip fires on the bite itself, not on the ambience timer
 const TIGER_ATTACK_PATH:="res://assets/audio/tiger_attack.mp3"
-const BITE_VOICE_CHANCE:=0.35  # random wait between barks
+const BITE_VOICE_CHANCE:=0.35
 const FAR_DISTANCE:=3.2  # further than this from the survivor counts as "far away"
 ## Formation slots around the survivor (the road runs -Z, so -Z is ahead): the two front
 ## slots first, then the two flanks. slot 0 = front-left, 1 = front-right, 2 = left side,
-## 3 = right side. Position no longer depends on the breed, so duplicate breeds can stack.
+## 3 = right side. Position does not depend on the breed, so duplicate breeds can stack.
 const FORMATION_OFFSETS:=[Vector3(-1.1,0,-1.6),Vector3(1.1,0,-1.6),Vector3(-1.5,0,-0.2),Vector3(1.5,0,-0.2)]
 static func follow_offset(slot_index: int) -> Vector3:
 	return FORMATION_OFFSETS[clampi(slot_index,0,FORMATION_OFFSETS.size()-1)]
@@ -74,14 +72,8 @@ var bite_time:=0.0
 var breed:=0
 var slot_index:=0
 var base_y:=0.0
-var gallop: RefCounted
-var is_moving := false
-var held_yaw := 0.0   # smoothed heading, kept between frames
-var move_speed := 0.0 # metres per second this frame, drives the clip rate
-var facing_wait := 3  # frames to wait before the one-shot facing check
-const GALLOP_CLIP_SPEED := 4.14   # the Labrador pack's Gallop covers 4.14 m/s
-var last_pos := Vector3.ZERO   # drives idle vs run clip selection
-var yaw_offset := 0.0   # the model's own forward axis, per breed
+var heading:=0.0       # where the nose points: 0 = down the road (-Z)
+var stride_rate:=1.0   # smoothed playback rate of the gallop
 var anim: AnimationPlayer
 var bark_player: AudioStreamPlayer
 var bark_wait:=0.0
@@ -93,75 +85,30 @@ func setup(index: int, slot:=0) -> void:
 	model=ModelFix.spawn(String(LobbyScene.PETS[breed].asset))
 	if model==null: return
 	add_child(model); ModelFix.double_sided(model)
-	# Generated pet GLBs import with shadows off (or the shadow never lands on the road):
-	# turn casting on for every surface so the animal has a shadow like the survivor does.
+	# Generated pet GLBs import with shadows off: turn casting on so the animal has a shadow.
 	for mi in model.find_children("*", "MeshInstance3D", true, false):
 		var m := mi as MeshInstance3D
 		if m != null:
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	yaw_offset=float(LobbyScene.PETS[breed].get("yaw",0.0))
-	# Where does this model point its nose? Measured from the FEET: front paws minus hind paws.
-	# The animal then gets one half turn on top, because the road runs towards -Z while every
-	# one of these packs is authored nose-along +Z (the Labrador pack says so explicitly).
-	# Doing it on the NODE keeps head, bite and facing in agreement.
-	var sk_probe := model.find_child("Skeleton3D", true, false) as Skeleton3D
-	var nose_yaw := 0.0
-	if sk_probe != null:
-		var front := Vector3.ZERO
-		var hind := Vector3.ZERO
-		var nf := 0
-		var nh := 0
-		for bi in range(sk_probe.get_bone_count()):
-			var bn := sk_probe.get_bone_name(bi).to_lower()
-			var o := sk_probe.get_bone_global_rest(bi).origin
-			if bn.begins_with("f_") and bn.ends_with("_paw"):
-				front += o; nf += 1                      # tiger / lion / mastiff rigs
-			elif bn.begins_with("h_") and bn.ends_with("_paw"):
-				hind += o; nh += 1
-			elif bn == "frontpaw.l" or bn == "frontpaw.r":
-				front += o; nf += 1                      # labrador pack rig
-			elif bn == "hindpaw.l" or bn == "hindpaw.r":
-				hind += o; nh += 1
-		if nf > 0 and nh > 0:
-			var d := (front / float(nf)) - (hind / float(nh))
-			if absf(d.x) > 0.01 or absf(d.z) > 0.01:
-				# Godot's Y rotation maps (dx,dz) to (dx cos + dz sin, -dx sin + dz cos); solving
-				# for the angle that turns the nose onto -Z gives atan2(dx, -dz).
-				nose_yaw = atan2(d.x, -d.z)
-	yaw_offset += nose_yaw
-	# some rigs name the front pair the other way round: the pet table can flip them
-
 	base_y=ModelFix.fit_pet(model,float(LobbyScene.PETS[breed].get("length",1.1)))
-	model.position.y=base_y
-	# Pick the player that actually carries the cycle: some imports leave an empty
-	# AnimationPlayer ahead of the real one, and the first match then played nothing at all.
+	model.position=Vector3(0,base_y,0)
+	model.rotation=Vector3(0,MODEL_YAW,0)
+	heading=0.0; rotation=Vector3.ZERO
+	# The player that carries the clips (some imports leave an empty one ahead of it).
 	anim=null
 	for ap in model.find_children("*","AnimationPlayer",true,false):
 		var player := ap as AnimationPlayer
-		if player == null or player.get_animation_list().is_empty():
-			continue
-		if player.has_animation("Gallop") or player.has_animation("Dog_Run") or player.has_animation("Idle"):
+		if player != null and player.has_animation(RUN_CLIP):
 			anim = player
 			break
-		if anim == null:
-			anim = player
-	# The Labrador pack is authored in place already, and its rig stores bone offsets on
-	# pelvis/cog: rewriting those tracks folded the legs into each other. Only older packs
-	# (which carry real root motion) get the strip.
-	if anim != null and not String(LobbyScene.PETS[breed].asset).contains("labrador"):
-		_strip_root_motion(anim)
-	if anim: anim.stop()
-	# find the skeleton by TYPE: generated rigs name it after the armature (TigerArm),
-	# so the old name lookup silently skipped the gallop and the pet slid along.
-	var skeleton:=model.find_child("Skeleton3D",true,false) as Skeleton3D
-	if skeleton==null:
-		for n in model.find_children("*","Skeleton3D",true,false):
-			skeleton=n as Skeleton3D
-			break
-	if skeleton:
-		# Big cats (white tiger 4, lion 5) get their own stride: longer legs, faster cadence,
-		# slightly shorter reach so the paws do not over-swing, and a springier spine.
-		gallop=DogGallop.new(skeleton,GAIT_OVERRIDES.get(breed,{}))
+	if anim!=null:
+		for clip_name in LOOPING:
+			if anim.has_animation(clip_name):
+				anim.get_animation(clip_name).loop_mode=Animation.LOOP_LINEAR
+		anim.play(RUN_CLIP)
+		anim.seek(randf()*anim.get_animation(RUN_CLIP).length,true)  # pack mates do not stride in sync
+	else:
+		push_error("pet has no %s clip: %s" % [RUN_CLIP, String(LobbyScene.PETS[breed].asset)])
 	bark_player=AudioStreamPlayer.new(); add_child(bark_player)
 	bark_wait=randf_range(LION_GAP.x,LION_GAP.y) if breed==LION_BREED else randf_range(4.0,8.0)  # first bark a few seconds into the run
 
@@ -191,122 +138,55 @@ func _tick_bark(delta: float) -> void:
 		bark_player.stream=near; bark_player.volume_db=-9.0 if is_lion else -7.0; bark_player.pitch_scale=randf_range(0.94,1.06)
 		bark_player.play(float(seg[0])); bark_stop=(float(seg[1])-float(seg[0]))/bark_player.pitch_scale
 
-## Gallop (or finish a bite) without any chasing logic; used while the opening intro plays.
+## Gallop without any chasing logic; used while the opening intro plays.
 func run_beside(target_position: Vector3,delta: float) -> void:
+	if not is_instance_valid(model): return
 	position=position.lerp(target_position,1.0-exp(-delta*4.0)); position.y=0.0
-	rotation.y=lerp_angle(rotation.y,atan2(Vector3.FORWARD.x,Vector3.FORWARD.z)+yaw_offset,1.0-exp(-delta*12.0))
-	_animate(delta)
+	_turn_to(0.0,delta)
+	_animate(delta,false)
 
-## First animation name from `names` that this model actually has.
-func _first_clip(player: AnimationPlayer, names: Array) -> String:
-	for n in names:
-		if player.has_animation(String(n)):
-			return String(n)
-	return ""
+## Heading for a ground direction: 0 = -Z (down the road), positive turns left (-X).
+static func heading_for(dir: Vector3) -> float:
+	return atan2(-dir.x,-dir.z)
 
+func _turn_to(want: float,delta: float) -> void:
+	heading=lerp_angle(heading,clampf(want,-MAX_LEAN,MAX_LEAN),1.0-exp(-delta*7.0))
+	rotation=Vector3(0,heading,0)
+	model.position=Vector3(0,base_y,0)
+	model.rotation=Vector3(0,MODEL_YAW,0)
 
-## Some pet clips carry the walk cycle as root translation. Played in place that reads as the
-## animal sliding forward while its skin stretches, so the horizontal part of every root track is
-## flattened and only the vertical bob is kept.
-func _strip_root_motion(player: AnimationPlayer) -> void:
-	for name in player.get_animation_list():
-		var clip := player.get_animation(String(name))
-		if clip == null:
-			continue
-		for track in range(clip.get_track_count()):
-			var ttype := clip.track_get_type(track)
-			if ttype == Animation.TYPE_ROTATION_3D:
-				# the pack ships a Turn layer that rotates the root: left in, the animal swings
-				# left and right on the spot
-				var rpath := String(clip.track_get_path(track)).to_lower()
-				if rpath.find("root") < 0 and rpath.find("hips") < 0 and rpath.find("pelvis") < 0 and rpath.find("cog") < 0:
-					continue
-				for k in range(clip.track_get_key_count(track)):
-					clip.track_set_key_value(track, k, Quaternion.IDENTITY)
-				continue
-			if ttype != Animation.TYPE_POSITION_3D:
-				continue
-			var path := String(clip.track_get_path(track))
-			var lower := path.to_lower()
-			if lower.find("root") < 0 and lower.find("hips") < 0 and lower.find("pelvis") < 0:
-				continue
-			var keys := clip.track_get_key_count(track)
-			var base_y := 0.0
-			if keys > 0:
-				base_y = (clip.track_get_key_value(track, 0) as Vector3).y
-			for k in range(keys):
-				var v: Vector3 = clip.track_get_key_value(track, k)
-				clip.track_set_key_value(track, k, Vector3(0.0, v.y - base_y, 0.0))
+## One driver only: the baked Gallop loops for the whole run, a bite clip takes over briefly.
+func _animate(delta: float,sprinting: bool) -> void:
+	if anim==null: return
+	if bite_time>0.0: return   # the bite clip started in _start_bite() is still playing
+	# Feet match the ground: the road passes at world_speed, the clip covers GALLOP_CLIP_SPEED
+	# at the model's authored size, and the model has been scaled by model.scale.
+	var ground:=3.5
+	if game!=null and game.get("world_speed")!=null: ground=maxf(float(game.get("world_speed")),3.5)
+	var want:=clampf(ground/(GALLOP_CLIP_SPEED*maxf(model.scale.x,0.05)),0.9,1.7)
+	if sprinting: want=minf(want*1.2,1.9)
+	stride_rate=lerpf(stride_rate,want,1.0-exp(-delta*5.0))
+	if anim.current_animation!=RUN_CLIP:
+		anim.play(RUN_CLIP,0.12)
+	anim.speed_scale=stride_rate
 
-
-func _animate(delta: float) -> void:
-	# The clip follows the body: whatever path moved the pet this frame, standing still plays the
-	# idle and any real displacement plays the run. Absolute ground speed, not intent.
-	var moved: float = position.distance_to(last_pos)
-	last_pos = position
-	is_moving = moved > 0.0015
-	if bite_time>0.0:
-		var bite_clip := ""
-		if anim != null:
-			bite_clip = _first_clip(anim, ["Bite", "Bite_Up", "Dog_Bite", "Attack"])
-		if bite_clip != "":
-			anim.play(bite_clip, 0.08)
-		else:
-			ModelFix.play_animation(model,"Dog_Bite",false)
-		if gallop!=null and gallop.has_method("bite"): gallop.bite()
-		# bite voice: occasional, and never layered over a roar that is still playing
-		if (breed==TIGER_BREED or breed==LION_BREED) and not bark_player.playing and randf()<BITE_VOICE_CHANCE:
-			var atk:=load(TIGER_ATTACK_PATH) as AudioStream
-			if atk!=null:
-				bark_player.stream=atk
-				bark_player.volume_db=-8.0
-				bark_player.pitch_scale=randf_range(0.96,1.06)
-				bark_player.play()
-		return
-	# Every four legged pet runs on the rig's own run cycle: the baked clip reads as a real
-	# gallop, the procedural version only wiggled the legs in place.
-	if anim:
-		var idle := _first_clip(anim, ["Idle", "Dog_Idle", "Lion_Idle", "Tiger_Idle", "idle"])
-		if breed in GALLOP_DISABLED:
-			# the dogs keep their baked cycle; "moving" has to include the scrolling road,
-			# otherwise a dog that has caught up plays its idle while the ground races past
-			var dog_moving: bool = is_moving or (game != null and (float(game.get("world_speed")) > 0.05 or String(game.get("state")) in ["playing", "intro"]))
-			var own_run := _first_clip(anim, ["Gallop", "Gallop_001", "Dog_Run", "Run"])
-			var own_idle := "" if dog_moving else idle
-			var pick := own_idle if own_idle != "" else own_run
-			if pick != "":
-				if anim.current_animation != pick or not anim.is_playing():
-					anim.play(pick, 0.15)
-				# Match the stride to the ground speed: the clip covers GALLOP_CLIP_SPEED, the
-				# pet runs 7-9.5 m/s, so a fixed 1.0 left the feet skating behind the body.
-				anim.speed_scale = clampf(move_speed / GALLOP_CLIP_SPEED, 0.9, 2.6)
-				return
-		# The road scrolls under the animal, so a pet that has caught up sits still in world space
-		# while the ground races past: that still counts as running.
-		# While a run is live the pet is always moving relative to the road, so it always needs the
-		# gallop: the lion used to catch up, read as "not moving" and play its idle instead.
-		var in_run: bool = game != null and String(game.get("state")) in ["playing", "intro"]
-		var scrolling: bool = game != null and float(game.get("world_speed")) > 0.05
-		var moving_now: bool = is_moving or scrolling or in_run
-		if not moving_now and idle != "":
-			# standing: the baked idle reads well on every breed
-			if anim.current_animation != idle or not anim.is_playing():
-				anim.play(idle, 0.15)
-			anim.speed_scale = 1.0
-			return
-	if anim and anim.is_playing():
-		anim.stop(); (gallop.sk as Skeleton3D).reset_bone_poses()
-	if gallop:
-		# Cadence follows the road: the planted paw must travel backwards exactly as fast as
-		# the ground moves under the animal, so the rate is speed-driven instead of a constant.
-		var spd:=3.5
-		if game!=null and is_instance_valid(game.get("player")):
-			spd=3.5*float(game.player.effective_move_mult())
-		var want:float=gallop.stride_for_speed(spd)
-		gallop.stride=want
-		if breed==LION_BREED:
-			gallop.stride=maxf(want*1.9,0.30)   # longer stride, unhurried cadence
-		gallop.step(delta,1.0)
+func _start_bite() -> void:
+	bite_time=BITE_ANIM_TIME
+	if anim!=null:
+		for clip_name in BITE_CLIPS:
+			if anim.has_animation(clip_name):
+				anim.speed_scale=1.0
+				anim.play(clip_name,0.06,BITE_ANIM_RATE)
+				anim.seek(0.18,true)   # skip the wind-up so the snap lands with the damage
+				break
+	# bite voice: occasional, and never layered over a roar that is still playing
+	if (breed==TIGER_BREED or breed==LION_BREED) and not bark_player.playing and randf()<BITE_VOICE_CHANCE:
+		var atk:=load(TIGER_ATTACK_PATH) as AudioStream
+		if atk!=null:
+			bark_player.stream=atk
+			bark_player.volume_db=-8.0
+			bark_player.pitch_scale=randf_range(0.96,1.06)
+			bark_player.play()
 
 func _valid_target() -> bool:
 	return is_instance_valid(target) and not target.dead and game.zombies.has(target) \
@@ -323,50 +203,20 @@ func _acquire_target() -> void:
 		if d<best:
 			best=d; target=z
 
-## Measures the posed skeleton and flips the pet if its nose ends up pointing back down the
-## road. Rigs differ in which way they were authored, so this is checked, not assumed.
-func _auto_fix_facing() -> void:
-	await get_tree().process_frame
-	if not is_instance_valid(model):
-		return
-	var sk := model.find_child("Skeleton3D", true, false) as Skeleton3D
-	if sk == null:
-		return
-	var hi := -1
-	var ti := -1
-	for i in range(sk.get_bone_count()):
-		var bn := sk.get_bone_name(i).to_lower()
-		if bn == "head" and hi < 0:
-			hi = i
-		elif bn.begins_with("tail") and ti < 0:
-			ti = i
-	if hi < 0 or ti < 0:
-		return
-	var gw: Transform3D = sk.global_transform
-	var hp: Vector3 = gw * sk.get_bone_global_pose(hi).origin
-	var tp: Vector3 = gw * sk.get_bone_global_pose(ti).origin
-	if (hp - tp).z > 0.05:
-		yaw_offset += PI
-		rotation.y += PI
-
-
 func tick(delta: float) -> void:
 	if not is_instance_valid(model): return
 	age+=delta; cooldown=maxf(0.0,cooldown-delta); bite_time=maxf(0.0,bite_time-delta)
 	if not _valid_target(): _acquire_target()
-	var follow: Vector3=game.player.position+follow_offset(slot_index)
-	var desired: Vector3=follow
-	var attacking: bool=false
-	if _valid_target():
-		desired=target.position
-		attacking=true
+	var desired: Vector3=game.player.position+follow_offset(slot_index)
+	var attacking: bool=_valid_target()
+	if attacking: desired=target.position
 	var flat_delta: Vector3=desired-position; flat_delta.y=0
 	var distance: float=flat_delta.length()
 	var bite_range: float=0.72+(float(target.radius) if attacking else 0.0)
 	if attacking and distance<=bite_range:
-		is_moving = false
 		if cooldown<=0.0:
-			cooldown=BITE_INTERVAL; bite_time=0.28
+			cooldown=BITE_INTERVAL
+			_start_bite()
 			var hit_at: Vector3=target.global_position+Vector3(0,0.82 if target.kind!="brute" else 1.35,0)
 			var dmg: float=bite_damage(breed)
 			if target.kind=="brute": dmg=minf(dmg,maxf(0.0,float(target.health)-1.0))
@@ -375,26 +225,16 @@ func tick(delta: float) -> void:
 			target=null
 	else:
 		var speed: float=ATTACK_SPEED if attacking else FOLLOW_SPEED
-		# Catch up smoothly after a lunge without overtaking the survivor when no target exists.
-		is_moving = distance > 0.12
-		var step: float = minf(distance, speed*delta)
-		position+=flat_delta.normalized()*step
-		move_speed = step / maxf(delta, 0.0001)
+		if distance>0.001:
+			position+=flat_delta/distance*minf(distance,speed*delta)
 		position.x=clampf(position.x,-3.25,3.25)
 		position.y=0.0
-	# Facing: turn toward the target when attacking or when catching up from behind
-	# (recruited far ahead/behind on the road). Otherwise nose down the road.
-	var want_yaw: float = held_yaw
-	if flat_delta.length() > 0.30 and (attacking or distance > 2.4):
-		# the nose points along the model's -Z, so the aim angle needs the half turn
-		want_yaw = atan2(-flat_delta.x, -flat_delta.z)
-	elif distance <= 1.6 and not attacking:
-		want_yaw = 0.0
-	# deadband: ignore small swings so the model cannot twitch between two headings
-	if absf(angle_difference(held_yaw, want_yaw)) > 0.35:
-		held_yaw = want_yaw
-	rotation.y = lerp_angle(rotation.y, held_yaw + yaw_offset, 1.0-exp(-delta*6.0))
-	model.position.y=base_y
-	# The run is always moving forward, so the dog gallops except during a bite.
-	_animate(delta)
+	# Heading: straight down the road in formation; lean toward a target or toward the slot
+	# when it is far off to one side. Dropping back never turns the pet around: the road is
+	# scrolling, so it keeps its nose forward and lets the ground carry it.
+	var want:=0.0
+	if distance>0.35 and (attacking or distance>1.2):
+		want=heading_for(Vector3(flat_delta.x,0,-absf(flat_delta.z)-0.6))
+	_turn_to(want,delta)
+	_animate(delta,attacking)
 	_tick_bark(delta)
