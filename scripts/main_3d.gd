@@ -361,6 +361,11 @@ var fx_labels: Array=[]
 # per hit, which is what stalled the frame when a crate burst.
 var fx_rings: Array=[]
 var blood_free: Array=[]
+## Pooled zombies: configure() rebuilds a whole GLB (35-80 ms measured), so the common bodies are
+## parked and reused instead of freed. Only the plain bodies take part.
+const ZOMBIE_POOL_KINDS:=["walker","walker_b","walker_c","runner","runner_b"]
+const ZOMBIE_POOL_MAX:=24
+var zombie_pool: Array=[]
 var roads: Array=[]
 var scenery: Array=[]
 var rng:=RandomNumberGenerator.new()
@@ -3620,7 +3625,7 @@ func _revive_after_reward() -> void:
 	for z in zombies.duplicate():
 		if is_instance_valid(z) and _flat_distance(z.position,player.position)<13.0:
 			_burst(z.position+Vector3(0,1.0,0),Color("ff9b55"),8)
-			zombies.erase(z); z.queue_free()
+			zombies.erase(z); _release_zombie(z)
 	state="playing"; damage_flash=0.0; spawn_timer=1.8; shot_timer=0.25; surge=false; wave_quota=0; wave_clear_banner=0.0; phase_timer=3.2
 	# Back on your feet: the beast loses your trail for a moment before the next ambush.
 	if is_instance_valid(chaser) and not chase_active: chaser.queue_free(); chaser=null
@@ -3682,6 +3687,29 @@ func _spawn_lobby_zombies() -> void:
 			z.position.x = clampf(-2.4 + float(lane), -2.4, 2.4)
 			lane += 1
 
+## Take a parked zombie of this kind, or null when the pool has none.
+func _take_pooled(kind: String) -> Node3D:
+	for i in range(zombie_pool.size() - 1, -1, -1):
+		var p = zombie_pool[i]
+		if not is_instance_valid(p):
+			zombie_pool.remove_at(i)
+			continue
+		if String(p.kind) == kind:
+			zombie_pool.remove_at(i)
+			return p
+	return null
+
+## Park a zombie for reuse, or free it when its kind is not pooled or the pool is full.
+func _release_zombie(z) -> void:
+	if z == null or not is_instance_valid(z):
+		return
+	var k := String(z.kind)
+	if k in ZOMBIE_POOL_KINDS and zombie_pool.size() < ZOMBIE_POOL_MAX and not bool(z.passive):
+		z.park()
+		zombie_pool.append(z)
+	else:
+		z.queue_free()
+
 func _spawn_zombie(at_z:=-85.0,forced_kind:="") -> void:
 	# Health steps up per wave and stops at 2.1 (see _wave_difficulty): the late game gets
 	# harder through numbers and specials, not through bullet sponges.
@@ -3733,7 +3761,15 @@ func _spawn_zombie(at_z:=-85.0,forced_kind:="") -> void:
 	if kind=="banshee": lane=_clear_lane_for_banshee(at_z,lane)
 	for other in zombies:
 		if is_instance_valid(other) and absf(other.position.x-lane)<1.1 and absf(other.position.z-at_z)<2.3: at_z-=2.8
-	add_child(z); z.configure(kind,difficulty); z.position=Vector3(lane,0,at_z); zombies.append(z)
+	var _pooled := _take_pooled(kind)
+	if _pooled != null:
+		z.free()                       # never added to the tree, so this is free
+		z = _pooled
+		add_child(z)
+		z.reuse(kind,difficulty)
+	else:
+		add_child(z); z.configure(kind,difficulty)
+	z.position=Vector3(lane,0,at_z); zombies.append(z)
 	if OS.has_environment("PERF_TRACE"):
 		var _st2 := Time.get_ticks_usec()
 		var _total: float = (_st2 - _st0) / 1000.0
@@ -4121,8 +4157,8 @@ func _tick_zombies(delta: float) -> void:
 				# lobby walker: it just shuffles past, no bite
 				continue
 			else:
-				_hurt_player(z.damage); _burst(z.position+Vector3(0,1,0),Color("91a85c"),8); zombies.remove_at(i); z.queue_free()
-		elif z.position.z>13: zombies.remove_at(i); z.queue_free()
+				_hurt_player(z.damage); _burst(z.position+Vector3(0,1,0),Color("91a85c"),8); zombies.remove_at(i); _release_zombie(z)
+		elif z.position.z>13: zombies.remove_at(i); _release_zombie(z)
 	_separate_zombies()
 
 ## Zombies only advance along +Z, so a fast one (jockey 7.4 m/s) used to walk
@@ -5840,6 +5876,7 @@ func _load_save() -> void:
 		if owned_vehicle=="CAR": owned_vehicle="CRUISER" # old save name for the third bike
 		owned_characters=c.get_value("chars","owned",{}); owned_skins=c.get_value("chars","skins",{})
 		terms_accepted=bool(c.get_value("legal","terms_v1",false))
+		for mk in c.get_value("mail","claimed",[]): mail_claimed[String(mk)]=true
 		airdrop_day=String(c.get_value("crates","day",""))
 		airdrop_count_today=int(c.get_value("crates","count",0))
 		runs_total=int(c.get_value("crates","runs",0))
@@ -5915,6 +5952,9 @@ func _save() -> void:
 	c.set_value("crates","runs",runs_total); c.set_value("crates","at_run",airdrop_at_run)
 	c.set_value("offer","id",offer_id); c.set_value("offer","expires",offer_expires); c.set_value("offer","next",next_offer_at); c.set_value("offer","play_day",play_day); c.set_value("offer","play_seconds",play_seconds_today)
 	c.set_value("signin","last",signin_last); c.set_value("signin","index",signin_index); c.set_value("signin","shown",signin_shown_day)
+	# Which letters were already opened. Without this the developer letter came back every
+	# time the game restarted, because the mailbox is rebuilt from code each launch.
+	c.set_value("mail","claimed", mail_claimed.keys())
 	c.set_value("missions","day",daily_day); c.set_value("missions","stats",daily_stats); c.set_value("missions","claimed",daily_claimed); c.set_value("missions","swaps",daily_swaps)
 	c.set_value("event","window",event_window); c.set_value("event","stats",event_stats); c.set_value("event","claimed",event_claimed); c.set_value("event","swaps",event_swaps)
 	for id in meta_upgrades.keys(): c.set_value("upgrades",id,meta_upgrades[id])
