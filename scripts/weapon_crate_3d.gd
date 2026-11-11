@@ -161,6 +161,12 @@ func _ready() -> void:
 		# Bike/Car models are already upright; no X tilt (that laid them on their side).
 		weapon_pivot.add_child(weapon_model)
 		_center_model(weapon_model)
+		# The cruiser ships in its own units, which left it about five centimetres wide on the
+		# platform: normalise every vehicle drop to a readable size.
+		if weapon_id in ["BIKE", "SPORT", "CRUISER", "SEDAN", "CAR"]:
+			var real := _world_span(weapon_model)
+			if real > 0.001:
+				weapon_model.scale *= 1.25 / real
 	glow_ring = MeshInstance3D.new(); var torus := TorusMesh.new()
 	torus.inner_radius = 0.56; torus.outer_radius = 0.68; torus.rings = 32; torus.ring_segments = 8; glow_ring.mesh = torus
 	var glow_mat := StandardMaterial3D.new(); glow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -171,6 +177,21 @@ func _ready() -> void:
 	light = OmniLight3D.new(); light.light_color = PET_GLOW if is_pet() else GLOW; light.light_energy = 1.6; light.omni_range = 2.6
 	light.position = Vector3(0,0.1,0.35); weapon_pivot.add_child(light)
 	_refresh_counter()
+
+## Largest axis of a model as it would appear in the world, scale included.
+func _world_span(node: Node3D) -> float:
+	var box := AABB()
+	var first := true
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		var m := mi as MeshInstance3D
+		if m == null or m.mesh == null:
+			continue
+		var a: AABB = m.global_transform * m.get_aabb()
+		box = a if first else box.merge(a)
+		first = false
+	if first:
+		return 0.0
+	return maxf(box.size.x, maxf(box.size.y, box.size.z))
 
 ## Largest axis of a freshly instantiated model, before any scaling.
 ## Something visible for a drop whose model is missing: a small glowing diamond.
