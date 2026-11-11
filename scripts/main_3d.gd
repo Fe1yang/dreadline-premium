@@ -366,6 +366,32 @@ var blood_free: Array=[]
 const ZOMBIE_POOL_KINDS:=["walker","walker_b","walker_c","runner","runner_b"]
 const ZOMBIE_POOL_MAX:=24
 var zombie_pool: Array=[]
+## Crates keyed by weapon id: reuse only keeps the model when the id matches, and the model is the
+## expensive part.
+var crate_pool: Dictionary={}
+
+## Take a parked crate with this exact id, or null.
+func _take_crate(id: String) -> Node3D:
+	var bag: Array = crate_pool.get(id, [])
+	while not bag.is_empty():
+		var c = bag.pop_back()
+		if is_instance_valid(c):
+			return c
+	crate_pool[id] = bag
+	return null
+
+## Park a crate for later, or free it when its pool is full.
+func _release_crate(c) -> void:
+	if c == null or not is_instance_valid(c):
+		return
+	var id := String(c.weapon_id)
+	var bag: Array = crate_pool.get(id, [])
+	if bag.size() < 4:
+		c.park()
+		bag.append(c)
+		crate_pool[id] = bag
+	else:
+		c.queue_free()
 var roads: Array=[]
 var scenery: Array=[]
 var rng:=RandomNumberGenerator.new()
@@ -4825,7 +4851,16 @@ func _spawn_crates() -> void:
 		elif player.vehicle=="" and rng.randf()<0.06: id="CRUISER"
 		elif player.vehicle=="" and rng.randf()<0.06: id="SEDAN"
 		var _ct0 := Time.get_ticks_usec()
-		crate.setup(id,_crate_hits(id)); crate.position=Vector3(x,0,z); add_child(crate); crates.append(crate)
+		var _pooled := _take_crate(id)
+		if _pooled != null:
+			crate.free()
+			crate = _pooled
+			crate.reuse(id,_crate_hits(id))
+		else:
+			crate.setup(id,_crate_hits(id))
+		crate.position=Vector3(x,0,z)
+		if crate.get_parent() == null: add_child(crate)
+		crates.append(crate)
 		if OS.has_environment("PERF_TRACE"):
 			var _cms: float = (Time.get_ticks_usec() - _ct0) / 1000.0
 			if _cms > 10.0:
@@ -4960,8 +4995,8 @@ func _tick_crates(delta: float) -> void:
 		if not c.broken: _rescale_crate(c)
 		# Crates are not solid: the runner can run straight through them.
 		if c.arrived or (c.broken and c.flight>1.5):
-			crates.remove_at(i); c.queue_free(); continue
-		if not c.broken and c.position.z>13: crates.remove_at(i); c.queue_free()
+			crates.remove_at(i); _release_crate(c); continue
+		if not c.broken and c.position.z>13: crates.remove_at(i); _release_crate(c)
 
 ## Wood splinters, dust and a short camera kick when a vehicle ploughs a crate or a barrel.
 ## Generic "it came apart": duplicate the prop's own body and throw it, so any model breaks
@@ -6600,7 +6635,7 @@ func _smoke_test() -> void:
 	while not bike_crate.take_hit(1): pass
 	_break_crate(bike_crate)
 	assert(player.vehicle=="BIKE" and player.vehicle_durability==player.BIKE_DURABILITY)
-	crates.erase(bike_crate); bike_crate.queue_free()
+	crates.erase(bike_crate); _release_crate(bike_crate)
 	var health_before_ride: float=player.health
 	_hurt_player(30.0); assert(player.health==health_before_ride and player.vehicle_durability==70.0)
 	_spawn_zombie(player.position.z-0.2,"walker"); var rammed=zombies[-1]; rammed.position.x=player.position.x
