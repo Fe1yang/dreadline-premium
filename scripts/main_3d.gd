@@ -929,8 +929,8 @@ func _place_street_props(road: Node3D, index: int) -> void:
 		# 10.9 .. 11.3 on whichever pavement this block uses
 		var mx: float = x + side * rng_d.randf_range(-0.1, 0.3)
 		# ring the crater mouth instead of dropping covers on the tarmac
-	if rng_d.randf() < 0.14:
-		_prop_node("hydrant", road, Vector3(x, PAVEMENT_Y, base_z + rng_d.randf_range(-6.5, 6.5)), 0.0)
+	# No hydrant on the tarmac: hydrants belong on the pavement (the block below places them
+	# at the kerb line). This one used to drop in the middle of the lane.
 
 	# litter: 1-4 cans in one spot, preferably where the block already has ground junk
 	if rng_d.randf() < 0.45:
