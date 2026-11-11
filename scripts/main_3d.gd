@@ -1462,12 +1462,48 @@ func _warm_zombie() -> void:
 			z3.queue_free()
 
 
+## Creating a model is not enough: Godot compiles a pipeline the first time a material is actually
+## drawn, which showed up as 150-300 ms stalls when a new zombie or crate entered the road. Put one
+## of everything in front of the camera for a single frame during loading so the compile happens
+## behind the progress bar.
+func _render_warmup() -> void:
+	var holders: Array = []
+	var base: Vector3 = camera.global_position
+	var fwd: Vector3 = -camera.global_transform.basis.z
+	var right: Vector3 = camera.global_transform.basis.x
+	var kinds := ["walker", "runner", "jockey", "brute", "banshee", "bomber", "spitter"]
+	var n := 0
+	for kind in kinds:
+		var z = ZombieScript.new()
+		add_child(z)
+		z.configure(kind, 1.0)
+		z.position = base + fwd * 2.2 + right * (float(n - 3) * 0.55)
+		holders.append(z)
+		n += 1
+	var ids: Array = CRATE_WEAPONS.duplicate()
+	for extra in ["ARMOR", "HELMET", "BIKE", "SPORT", "CRUISER", "SEDAN", "FUEL", "PET_0"]:
+		if not ids.has(extra):
+			ids.append(extra)
+	n = 0
+	for id in ids:
+		var c = WeaponCrateScript.new()
+		c.setup(String(id), 1)
+		add_child(c)
+		c.position = base + fwd * 3.4 + right * (float(n - 5) * 0.42)
+		holders.append(c)
+		n += 1
+	# two frames: one to register the nodes, one to actually draw them
+	await get_tree().process_frame
+	await get_tree().process_frame
+	for h in holders:
+		if is_instance_valid(h):
+			h.queue_free()
+
+
 func _finish_loading() -> void:
 	if state!="loading": return
 	_teardown_warmup()
-	_warm_zombie()
-	_warm_props()
-	_warm_crate_ids()
+	await _render_warmup()
 	var target:=loading_target
 	if target=="run" and roads.size()<ROAD_COUNT:
 		_build_road()
@@ -3024,6 +3060,7 @@ func _signin_roll_month() -> void:
 		signin_month_index = 0
 
 func claim_signin(times:=1) -> bool:
+	_signin_roll_month()
 	if not signin_available(): return false
 	var list: Array = signin_rewards()
 	var idx: int = signin_day_index()
@@ -3116,6 +3153,10 @@ func gameover_double_rect() -> Rect2:
 	return Rect2(262,y+30,196,58)
 
 func open_signin() -> void:
+	# A new calendar month restarts the 30-day track at day one.
+	var _mk := Time.get_date_string_from_system().substr(0, 7)
+	if signin_month_key != "" and signin_month_key != _mk:
+		_signin_roll_month(); _save()
 	if state=="signin": return
 	signin_return_state=state; state="signin"; _release_touches()
 
@@ -6014,6 +6055,7 @@ func _load_save() -> void:
 		offer_id=str(c.get_value("offer","id","")); offer_expires=int(c.get_value("offer","expires",0)); next_offer_at=int(c.get_value("offer","next",0))
 		play_day=str(c.get_value("offer","play_day","")); play_seconds_today=float(c.get_value("offer","play_seconds",0.0))
 		signin_last=str(c.get_value("signin","last","")); signin_index=int(c.get_value("signin","index",0)); signin_shown_day=str(c.get_value("signin","shown",""))
+		signin_month_key=str(c.get_value("signin","month_key","")); signin_month_index=int(c.get_value("signin","month_index",0))
 		daily_day=str(c.get_value("missions","day","")); daily_stats=c.get_value("missions","stats",{}); daily_claimed=c.get_value("missions","claimed",{}); daily_swaps=c.get_value("missions","swaps",{})
 		event_window=int(c.get_value("event","window",-1)); event_stats=c.get_value("event","stats",{}); event_claimed=c.get_value("event","claimed",{}); event_swaps=c.get_value("event","swaps",{})
 		for id in meta_upgrades.keys(): meta_upgrades[id]=int(c.get_value("upgrades",id,0))
@@ -6051,6 +6093,7 @@ func _save() -> void:
 	c.set_value("crates","runs",runs_total); c.set_value("crates","at_run",airdrop_at_run)
 	c.set_value("offer","id",offer_id); c.set_value("offer","expires",offer_expires); c.set_value("offer","next",next_offer_at); c.set_value("offer","play_day",play_day); c.set_value("offer","play_seconds",play_seconds_today)
 	c.set_value("signin","last",signin_last); c.set_value("signin","index",signin_index); c.set_value("signin","shown",signin_shown_day)
+	c.set_value("signin","month_key",signin_month_key); c.set_value("signin","month_index",signin_month_index)
 	# Which letters were already opened. Without this the developer letter came back every
 	# time the game restarted, because the mailbox is rebuilt from code each launch.
 	c.set_value("mail","claimed", mail_claimed.keys())
