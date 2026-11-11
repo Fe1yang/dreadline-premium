@@ -1367,8 +1367,12 @@ func _teardown_warmup() -> void:
 ## Every crate id carries its own floating item model. Loading one mid-run costs 30-90 ms, and
 ## two crates in the same frame is what stalled the road, so build one of each behind the loader.
 func _warm_crate_ids() -> void:
-	var ids: Array = ["SMG", "SHOTGUN", "SNIPER", "LAUNCHER", "PISTOL", "ARMOR", "HELMET",
-		"BIKE", "SPORT", "CRUISER", "SEDAN", "FUEL", "PET_0"]
+	# Read the real id list instead of a hand-written copy: MAKAROV/RIFLE/SUOMI were missing and
+	# each one still cost ~68 ms the first time a crate rolled in.
+	var ids: Array = CRATE_WEAPONS.duplicate()
+	for extra in ["ARMOR", "HELMET", "BIKE", "SPORT", "CRUISER", "SEDAN", "FUEL", "PET_0"]:
+		if not ids.has(extra):
+			ids.append(extra)
 	var warm: Array = []
 	var x := -40.0
 	for id in ids:
@@ -1470,6 +1474,7 @@ func _tick_loading(delta: float) -> void:
 		_finish_loading()
 
 func start_run(free_with_ad:=false,no_cost:=false) -> void:
+	var _sr0 := Time.get_ticks_usec()
 	var automated:="--smoke-test" in OS.get_cmdline_user_args() or "--soak-test" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_user_args() or "--capture-bike" in OS.get_cmdline_user_args()
 	if not automated and not free_with_ad and not no_cost and not stamina.consume():
 		store_toast_text=StoreCatalog.text(language_code,"no_cans"); store_toast=2.4
@@ -1526,6 +1531,10 @@ func start_run(free_with_ad:=false,no_cost:=false) -> void:
 		# Every run opens with the chase shot (the horde and the hunter behind the survivor),
 		# like Temple Run; it has a dog only if the player has equipped one (pet tab).
 		_begin_intro()
+	if OS.has_environment("PERF_TRACE"):
+		var _srms: float = (Time.get_ticks_usec() - _sr0) / 1000.0
+		if _srms > 30.0:
+			print("START_RUN %.0f ms" % _srms)
 
 func _spawn_companion() -> void:
 	_cleanup_companions()
