@@ -18,7 +18,7 @@ const PETS:=[
 	{"asset":"res://assets/models/pets/doberman.glb","name":"杜宾犬","length":1.34},
 	{"asset":"res://assets/models/pets/german_shepherd.glb","name":"德国牧羊犬","length":1.52},
 	{"asset":"res://assets/models/pets/czech_wolfdog.glb","name":"捷克狼犬","length":1.12},
-	{"asset":"res://assets/models/pets/tibetan_mastiff.glb","name":"藏獒","length":1.34},
+	{"asset":"res://assets/models/pets/tibetan_mastiff.glb","name":"藏獒","length":1.34,"flip":true},
 	{"asset":"res://assets/models/pets/labrador.glb","name":"拉布拉多","length":1.50},
 	{"asset":"res://assets/models/pets/white_tiger.glb","name":"白虎","length":1.70},
 	{"asset":"res://assets/models/pets/lion.glb","name":"狮子","length":1.55}]
