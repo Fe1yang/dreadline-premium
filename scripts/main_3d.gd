@@ -1253,8 +1253,9 @@ func _process(delta: float) -> void:
 ## Temporary hitch hunter (debug builds only): prints any tick slice that blows past 120 ms.
 func _profile_tick(name: String, t0: int) -> void:
 	var ms := float(Time.get_ticks_usec() - t0) / 1000.0
-	if ms > 120.0:
-		print("HITCH ", name, " ", snappedf(ms, 0.1), " ms")
+	# 20 ms is already a dropped frame at 60 fps; the old 120 ms threshold hid every real spike.
+	if ms > 20.0 and OS.has_environment("PERF_TRACE"):
+		print("SECTION ", name, " ", snappedf(ms, 0.1), " ms")
 
 
 func _menu_zombies() -> void:
@@ -5232,11 +5233,16 @@ func _spawn_obstacle_pattern() -> void:
 		if _route_remains_open(kind,lane_x,at_z):
 			_spawn_obstacle(kind,lane_x,at_z)
 
+## A wreck hits harder on a bike than inside a car; the tank barely notices.
+const VEHICLE_CRASH_SCALE := {"TANK":0.30, "SEDAN":0.55, "GOLD_CAR":0.55, "":1.0}
+
 func _tick_obstacles(delta: float) -> void:
 	for i in range(obstacles.size()-1,-1,-1):
 		var obstacle=obstacles[i]
 		obstacle.tick(delta)
-		if obstacle.overlaps(player.position) and player.vehicle!="SEDAN":  # the car ploughs through wrecks
+		# Every vehicle crashes into wrecks now. A car used to drive straight through them with
+		# no damage at all; the hit is simply scaled by how solid the vehicle is.
+		if obstacle.overlaps(player.position):
 			var clearance: float=obstacle.half_extents.x+0.43
 			var left: float=clampf(obstacle.position.x-clearance,-3.15,3.15)
 			var right: float=clampf(obstacle.position.x+clearance,-3.15,3.15)
@@ -5247,7 +5253,8 @@ func _tick_obstacles(delta: float) -> void:
 			player.target_x=new_x
 			if obstacle.hit_cooldown<=0.0:
 				obstacle.hit_cooldown=1.0
-				_hurt_player(obstacle.damage)
+				var crash_scale: float=float(VEHICLE_CRASH_SCALE.get(String(player.vehicle),1.0))
+				_hurt_player(obstacle.damage*crash_scale)
 				# At speed the vehicle smashes, it doesn't gently scrape: extra wear.
 				if player.vehicle!="": player.vehicle_durability-=maxf(6.0,obstacle.damage*0.6)
 				shake=maxf(shake,0.55)
