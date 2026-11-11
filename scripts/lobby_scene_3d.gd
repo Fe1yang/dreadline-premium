@@ -273,8 +273,23 @@ func show_pet(path: String) -> void:
 	var yaw:=0.0
 	for p in PETS:
 		if p.asset==path: yaw=float(p.get("yaw",0.0))
-	pet_base_yaw=yaw
-	pet.rotation.y=yaw
+	# Face the camera the same way for every breed: some of these scans are authored with the
+	# nose along X, which left the wolfdog standing sideways on the pedestal.
+	var facing := 0.0
+	var sk := pet.find_child("Skeleton3D", true, false) as Skeleton3D
+	if sk != null:
+		var hb := sk.find_bone("head")
+		var bb := sk.find_bone("body")
+		if hb >= 0 and bb >= 0:
+			var d := sk.get_bone_global_rest(hb).origin - sk.get_bone_global_rest(bb).origin
+			if absf(d.x) > 0.02 or absf(d.z) > 0.02:
+				facing = atan2(d.x, d.z)
+				# its head-body vector points tail-ward, so it needs the extra half turn to
+				# stand nose-to-camera like the rest of the kennel
+				if String(path).contains("czech_wolfdog"):
+					facing += PI
+	pet_base_yaw=yaw + facing
+	pet.rotation.y=pet_base_yaw
 	# full size on the lobby stage: only the in-run crate display draws it smaller
 	pet.position=STAND+Vector3(0,ModelFix.fit_pet(pet,length*ACTOR_SCALE),0)
 	var pet_span := length * ACTOR_SCALE
