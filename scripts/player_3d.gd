@@ -301,6 +301,8 @@ func mount_vehicle(id: String) -> void:
 					bm.emission_energy_multiplier=0.35
 	if id=="TANK":
 		vehicle_model.rotation.y=PI
+		# the GLB is 3.4 m long; scaled to the saloon's 4.1 m so it reads as big as a car
+		vehicle_model.scale=Vector3.ONE*1.2
 		# a crew sits INSIDE a tank: drop the survivor model and its attachments
 		if is_instance_valid(model): model.visible=false
 	if id=="GOLD_CAR":
