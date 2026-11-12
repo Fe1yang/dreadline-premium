@@ -3325,7 +3325,7 @@ var mail_return_state:="character_select"
 var mail_http: HTTPRequest
 
 func _builtin_mail() -> Array:
-	return [{"id":"welcome_v1","title":ExtraText.text(language_code,"welcome_title"),"body":ExtraText.text(language_code,"welcome_body"),"coins":200,"vouchers":3,"cans":50}]
+	return [{"id":"welcome_v1","title":ExtraText.text(language_code,"welcome_title"),"body":ExtraText.text(language_code,"welcome_body"),"coins":0,"vouchers":3,"cans":0}]
 
 func _mail_text(v,fallback:="") -> String:
 	if v is Dictionary: return String(v.get(language_code,v.get("en",fallback)))
@@ -7241,8 +7241,8 @@ func _smoke_test() -> void:
 	_pointer_down(mail_row(0).get_center()); _letter_release(mail_row(0).get_center()); assert(mail_open==0 and bank_coins==mc)
 	mail_text_h=900.0; assert(letter_max_scroll()>0.0); mail_scroll=letter_max_scroll()
 	var cr: Rect2=letter_claim_rect(); assert(LETTER_VIEW.has_point(cr.get_center()))
-	_pointer_down(cr.get_center()); _letter_release(cr.get_center()); assert(bank_coins==mc+200 and bank_vouchers==mv+3 and stamina.value==ms2+50 and mail_unclaimed()==0)
-	_pointer_down(cr.get_center()); _letter_release(cr.get_center()); assert(bank_coins==mc+200)
+	_pointer_down(cr.get_center()); _letter_release(cr.get_center()); assert(bank_coins==mc and bank_vouchers==mv+3 and stamina.value==ms2 and mail_unclaimed()==0)
+	_pointer_down(cr.get_center()); _letter_release(cr.get_center()); assert(bank_coins==mc)
 	_pointer_down(Vector2(60,48)); assert(state=="mail" and mail_open==-1)
 	remote_mail=[{"id":"gift2","title":{"en":"Gift","zh_CN":"福利"},"body":"x","coins":50,"vouchers":0},{"id":"old","coins":9,"until":"2000-01-01"}]
 	refresh_mail(); assert(mails.size()==2 and mail_unclaimed()==1); remote_mail=[]
