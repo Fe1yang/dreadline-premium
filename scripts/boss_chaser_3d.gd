@@ -4,10 +4,12 @@ extends Node3D
 ## together so runtime retargeting cannot tear the skin.
 
 const MODEL_PATH:="res://assets/models/actors/pursuer_abomination.glb"
-const SCALE:=1.95
+const SCALE:=2.15
 const ModelFix=preload("res://scripts/model_fix.gd")
 const AnimLibrary=preload("res://scripts/anim_library.gd")
-const WALK_STRIDE_SPEED:=1.52   # m/s the planted foot travels in Zombie_Walk_Fwd at speed 1, at SCALE
+## Matching the road exactly needed the walk at 2.4x and it twitched. A bigger beast takes longer
+## strides, and a calmer 1.6x cadence leaves only a little slide that the eye forgives.
+const WALK_CADENCE:=1.6
 const GROUND_SPEED:=3.7         # road speed (3.5) plus what it gains on the survivor
 
 var model: Node3D
@@ -73,7 +75,7 @@ func _ready() -> void:
 			if not anim.has_animation(clip_name): clip_name=String(anim.get_animation_list()[0])
 			anim.speed_scale=0.90
 		else:
-			anim.speed_scale=GROUND_SPEED/WALK_STRIDE_SPEED
+			anim.speed_scale=WALK_CADENCE
 		var clip:=anim.get_animation(clip_name)
 		clip.loop_mode=Animation.LOOP_LINEAR
 		anim.play(clip_name)
