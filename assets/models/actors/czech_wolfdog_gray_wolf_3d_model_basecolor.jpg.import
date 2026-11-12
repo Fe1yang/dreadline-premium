@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dljhpr8bxljip"
-path="res://.godot/imported/czech_wolfdog_gray_wolf_3d_model_basecolor.jpg-0e49374320b400193a490ae9e4cd3e58.ctex"
+path.s3tc="res://.godot/imported/czech_wolfdog_gray_wolf_3d_model_basecolor.jpg-0e49374320b400193a490ae9e4cd3e58.s3tc.ctex"
+path.etc2="res://.godot/imported/czech_wolfdog_gray_wolf_3d_model_basecolor.jpg-0e49374320b400193a490ae9e4cd3e58.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "1193aadd3727ed2f913ff98c77019ab8"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/actors/czech_wolfdog_gray_wolf_3d_model_basecolor.jpg"
-dest_files=["res://.godot/imported/czech_wolfdog_gray_wolf_3d_model_basecolor.jpg-0e49374320b400193a490ae9e4cd3e58.ctex"]
+dest_files=["res://.godot/imported/czech_wolfdog_gray_wolf_3d_model_basecolor.jpg-0e49374320b400193a490ae9e4cd3e58.s3tc.ctex", "res://.godot/imported/czech_wolfdog_gray_wolf_3d_model_basecolor.jpg-0e49374320b400193a490ae9e4cd3e58.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1

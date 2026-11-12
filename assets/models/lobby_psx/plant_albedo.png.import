@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://02n4kykitij5"
-path="res://.godot/imported/plant_albedo.png-a12c199c49984f98cdd22541db28ec7a.ctex"
+path.s3tc="res://.godot/imported/plant_albedo.png-a12c199c49984f98cdd22541db28ec7a.s3tc.ctex"
+path.etc2="res://.godot/imported/plant_albedo.png-a12c199c49984f98cdd22541db28ec7a.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "ca15e7421111dcddf634aff1d3c5df53"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/lobby_psx/plant_albedo.png"
-dest_files=["res://.godot/imported/plant_albedo.png-a12c199c49984f98cdd22541db28ec7a.ctex"]
+dest_files=["res://.godot/imported/plant_albedo.png-a12c199c49984f98cdd22541db28ec7a.s3tc.ctex", "res://.godot/imported/plant_albedo.png-a12c199c49984f98cdd22541db28ec7a.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1

@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b027hx04jmbj4"
-path="res://.godot/imported/survivor_medic_universal_NormalGL_627b09b4-e8fd-485c-936b-288bec4bb355.jpg-fd64bd565f9b970a76c750a0ae1cffe8.ctex"
+path.s3tc="res://.godot/imported/survivor_medic_universal_NormalGL_627b09b4-e8fd-485c-936b-288bec4bb355.jpg-fd64bd565f9b970a76c750a0ae1cffe8.s3tc.ctex"
+path.etc2="res://.godot/imported/survivor_medic_universal_NormalGL_627b09b4-e8fd-485c-936b-288bec4bb355.jpg-fd64bd565f9b970a76c750a0ae1cffe8.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "1703ed3902b3ed789e07d7582ab9b2c4"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/actors/survivor_medic_universal_NormalGL_627b09b4-e8fd-485c-936b-288bec4bb355.jpg"
-dest_files=["res://.godot/imported/survivor_medic_universal_NormalGL_627b09b4-e8fd-485c-936b-288bec4bb355.jpg-fd64bd565f9b970a76c750a0ae1cffe8.ctex"]
+dest_files=["res://.godot/imported/survivor_medic_universal_NormalGL_627b09b4-e8fd-485c-936b-288bec4bb355.jpg-fd64bd565f9b970a76c750a0ae1cffe8.s3tc.ctex", "res://.godot/imported/survivor_medic_universal_NormalGL_627b09b4-e8fd-485c-936b-288bec4bb355.jpg-fd64bd565f9b970a76c750a0ae1cffe8.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1

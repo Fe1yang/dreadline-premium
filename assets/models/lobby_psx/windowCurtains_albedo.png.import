@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cff76fxtt85o6"
-path="res://.godot/imported/windowCurtains_albedo.png-13049273e0e8c27af830cca0f88c358c.ctex"
+path.s3tc="res://.godot/imported/windowCurtains_albedo.png-13049273e0e8c27af830cca0f88c358c.s3tc.ctex"
+path.etc2="res://.godot/imported/windowCurtains_albedo.png-13049273e0e8c27af830cca0f88c358c.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "c4758af4f6a2ac7e7980562a91623427"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/lobby_psx/windowCurtains_albedo.png"
-dest_files=["res://.godot/imported/windowCurtains_albedo.png-13049273e0e8c27af830cca0f88c358c.ctex"]
+dest_files=["res://.godot/imported/windowCurtains_albedo.png-13049273e0e8c27af830cca0f88c358c.s3tc.ctex", "res://.godot/imported/windowCurtains_albedo.png-13049273e0e8c27af830cca0f88c358c.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +41,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1
