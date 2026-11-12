@@ -3247,14 +3247,23 @@ func _open_airdrop() -> void:
 const SHARE_RECT:=Rect2(66,832,408,54)   # same width/height as the shop button, same 20 px gap
 const SHARE_SINGLETONS:=["GodotShare","Share","NativeShare"]
 var share_toast:=0.0
+var share_node: Node   # created on the first share
 func share_text() -> String:
 	return ExtraText.text(language_code,"share_text").replace("%m",str(int(distance))).replace("%k",str(kills))
 
 func share_result() -> String:
 	var text:=share_text()
-	var img_path:=OS.get_user_data_dir().path_join("dead_frontier_result.png")
+	var img_path:=OS.get_user_data_dir().path_join("dreadline_result.png")
 	var vp:=get_viewport()
 	if vp and vp.get_texture(): vp.get_texture().get_image().save_png(img_path)
+	# The iOS share plugin (addons/SharePlugin + ios/plugins/SharePlugin): the system share sheet
+	# with the results screenshot and a line of text -- Facebook, X, WhatsApp, Messages, Photos...
+	if Engine.has_singleton("SharePlugin"):
+		if share_node == null:
+			share_node = (load("res://addons/SharePlugin/Share.gd") as GDScript).new()
+			add_child(share_node)
+		share_node.share_image(img_path, "Dreadline", "Dreadline", text)
+		return "native"
 	for name in SHARE_SINGLETONS:
 		if Engine.has_singleton(name):
 			var sh=Engine.get_singleton(name)

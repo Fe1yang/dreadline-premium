@@ -423,12 +423,14 @@ func _add_car_lamps() -> void:
 		# the user does not want — only the forward cone below is kept.
 		# forward beam: a real cone that paints the road ahead like a flashlight
 		var beam:=SpotLight3D.new()
-		beam.light_color=Color("fff4dd"); beam.light_energy=4.2
-		beam.spot_range=26.0; beam.spot_angle=34.0; beam.spot_attenuation=0.9
+		# A road beam, not a floodlight: the old 26 m / 34 degree cone reached the walls of the
+		# buildings ahead that face the camera and lit them up bright white at night.
+		beam.light_color=Color("fff4dd"); beam.light_energy=2.6
+		beam.spot_range=15.0; beam.spot_angle=24.0; beam.spot_attenuation=1.4
 		beam.position=Vector3(side*half_w*0.62,y,front_z-0.12)
 		# The lamp is a child of the model, so it inherits the model's yaw: cars mounted with a
 		# PI turn need the same half turn or the beam fires backwards out of the boot.
-		beam.rotation_degrees=Vector3(-8.0,0.0,0.0)   # every vehicle GLB now has its nose on -Z
+		beam.rotation_degrees=Vector3(-14.0,0.0,0.0)   # every vehicle GLB now has its nose on -Z
 		beam.shadow_enabled=false
 		# disabled until the beam direction is measured from the mesh instead of guessed:
 		# firing it from the boot looked worse than having no beam at all

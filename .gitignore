@@ -3,7 +3,8 @@
 *.import.bak
 # builds
 build/
-ios/
+/ios/*
+!/ios/plugins/
 ios_build/
 # tools and scratch
 tools/
