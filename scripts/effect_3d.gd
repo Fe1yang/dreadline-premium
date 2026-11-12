@@ -24,7 +24,38 @@ func make_text(text: String,color: Color) -> void:
 		label.billboard=BaseMaterial3D.BILLBOARD_ENABLED
 		add_child(label)
 	label.text=text; label.font_size=52; label.pixel_size=0.009; label.outline_size=10
-	label.modulate=color; visual=label
+	label.modulate=color; label.offset=Vector2.ZERO; visual=label
+	for q in crit_quads: q.visible=false
+
+## Crit popup in gradient gold (see main_3d._crit_glyphs): one billboard quad per glyph.
+## `items` = [[texture, advance_m, quad_w_m], ...]; the row is centred on the effect.
+static var crit_materials: Dictionary = {}
+var crit_quads: Array = []
+func show_crit_row(items: Array, height: float) -> void:
+	label.visible = false
+	var total := 0.0
+	for it in items: total += float(it[1])
+	var x := -total * 0.5
+	for i in range(items.size()):
+		var it: Array = items[i]
+		var tex: Texture2D = it[0]
+		if not crit_materials.has(tex):
+			var m := ShaderMaterial.new(); m.shader = load("res://shaders/crit_word.gdshader")
+			m.set_shader_parameter("word_tex", tex); crit_materials[tex] = m
+		if i >= crit_quads.size():
+			var mi := MeshInstance3D.new(); mi.mesh = QuadMesh.new()
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(mi); crit_quads.append(mi)
+		var q: MeshInstance3D = crit_quads[i]
+		q.material_override = crit_materials[tex]
+		var qm := q.mesh as QuadMesh
+		qm.size = Vector2(float(it[2]), height)
+		qm.center_offset = Vector3(x + float(it[1]) * 0.5, 0.0, 0.0)
+		q.set_instance_shader_parameter("fade", 1.0)
+		q.set_instance_shader_parameter("row_w", total)
+		q.visible = true
+		x += float(it[1])
+	for j in range(items.size(), crit_quads.size()): crit_quads[j].visible = false
 
 func make_spark(color: Color,size: float) -> void:
 	mode="spark"
@@ -102,11 +133,15 @@ func disarm() -> void:
 	life=0.0; visible=false
 	if label: label.visible=false
 	elif visual: visual.visible=false
+	for q in crit_quads: q.visible=false
 
 func tick(delta: float) -> void:
 	life-=delta; position+=velocity*delta; velocity.y+=gravity*delta
 	var a:=clampf(life/total_life,0,1)
-	if label: label.modulate.a=a
+	if label:
+		label.modulate.a=a
+		for q in crit_quads:
+			if q.visible: q.set_instance_shader_parameter("fade", a)
 	elif mode in ["blast","smoke","shockwave"] and visual:
 		var growth: float=3.8 if mode=="shockwave" else (1.6 if mode=="smoke" else 3.0)
 		visual.scale=Vector3.ONE*base_scale*(1.0+(1.0-a)*growth)

@@ -1853,6 +1853,7 @@ func _view_warm_tick() -> void:
 			view_queue.append("vehicle:" + vid)
 		view_queue.append("map_table")
 		view_queue.append("pursuer")
+		view_queue.append("crit_word")
 		# Car lamps: the first spot / omni light the renderer ever sees makes it rebuild the
 		# shaders of everything in view -- the multi-second freeze the first time a car was
 		# boarded. A pair of lamps stays on in front of the camera for the whole of this pass,
@@ -1929,6 +1930,8 @@ func _prefill_make(item: String, at: Vector3) -> void:
 			if ResourceLoader.exists("res://scripts/rider_pose.gd"): pinned_scenes["rider_pose"] = load("res://scripts/rider_pose.gd")
 	elif item == "map_table":
 		_ensure_map()
+	elif item == "crit_word":
+		_crit_glyphs()
 	elif item == "pursuer":
 		# the opening beast: loaded, built and drawn once here so the intro starts without a freeze
 		if ResourceLoader.exists(BossChaserScript.MODEL_PATH):
@@ -4586,7 +4589,6 @@ func _tick_bullets(delta: float) -> void:
 			# low targets (jockey, 1.05m) be shot over because the muzzle flies at ~1.35m.
 			if not z.dead and not b.hit_targets.has(z) and b.position.y<2.30 and _swept_2d(prev,b.position,zp,z.radius+0.24):
 				b.hit_targets.append(z); var hit_at: Vector3=b.position
-				if b.has_meta("crit"): _popup(hit_at+Vector3(0,0.9,0),RunText.text("crit"),Color("ffd84a"))
 				_hit_zombie(z,b.damage,_body_part(z,b.position),b.position,Color("f4f0df"),b.has_meta("crit"))
 				_on_bullet_hit(z,b,hit_at)
 				if b.pierce>0: b.pierce-=1
@@ -4655,9 +4657,11 @@ func _detonate_ordnance(projectile: Node3D) -> void:
 	var kind: String=projectile.kind
 	if kind=="molotov":
 		# a burning pool: everything inside catches fire exactly like a flamethrower hit
-		sound.play("explosion"); shake=maxf(shake,0.35)
-		_burst(center,Color("ff9b35"),30); _fire_spray(center)
-		_fx_ring_at(Vector3(center.x,0.06,center.z),Color(1.0,0.55,0.15,0.85),4.0,3.0)
+		# same blast as a frag grenade (the huge orange ring that spread over the road is gone);
+		# the fire still catches everything inside, like the flamethrower
+		sound.play("explosion"); shake=maxf(shake,0.6)
+		_custom_explosion(center)
+		_burst(center,Color("ff9b35"),26); _fire_spray(center)
 		for z in zombies:
 			if is_instance_valid(z) and not z.dead and _flat_distance(z.position,center)<4.5:
 				_z_ignite_molotov(z)
@@ -4851,7 +4855,35 @@ func _tick_zombies(delta: float) -> void:
 			else:
 				_hurt_player(z.damage); _burst(z.position+Vector3(0,1,0),Color("91a85c"),8); zombies.remove_at(i); _release_zombie(z)
 		elif z.position.z>13: zombies.remove_at(i); _release_zombie(z)
+	_overtake_zombies(delta)
 	_separate_zombies()
+
+## A fast zombie stuck behind a slow one (a jockey behind a walker, a brute behind both) used to
+## crawl along at the slow one's pace, nose to back. Now it looks ahead, and when something
+## slower is in its way it swings out to the freer side and goes round, like a real horde.
+const OVERTAKE_LOOK := 1.6        # metres of clear space it wants in front
+const OVERTAKE_SIDE_SPEED := 2.8  # m/s it moves sideways while going round
+func _overtake_zombies(delta: float) -> void:
+	for a in zombies:
+		if not is_instance_valid(a) or a.dead or a.kind=="banshee": continue
+		var a_speed: float=float(a.get("speed")) if a.get("speed")!=null else 0.0
+		var blocker=null
+		var best_gap:=INF
+		for b in zombies:
+			if b==a or not is_instance_valid(b) or b.dead: continue
+			var gap: float=b.position.z-a.position.z          # zombies advance towards +Z
+			if gap<=0.0 or gap>a.radius+b.radius+OVERTAKE_LOOK: continue
+			if absf(b.position.x-a.position.x)>a.radius+b.radius+0.08: continue
+			var b_speed: float=float(b.get("speed")) if b.get("speed")!=null else 0.0
+			if b.kind!="banshee" and b_speed>=a_speed*0.95: continue   # not slower: just follow
+			if gap<best_gap: best_gap=gap; blocker=b
+		if blocker==null: continue
+		var side: float=signf(a.position.x-blocker.position.x)
+		if absf(a.position.x-blocker.position.x)<0.05:
+			side=-1.0 if (a.get_instance_id()%2==0) else 1.0
+		# never into the kerb: swing to the other side if there is no room on this one
+		if a.position.x+side*(a.radius+blocker.radius)>3.05 or a.position.x+side*(a.radius+blocker.radius)< -3.05: side=-side
+		a.position.x=clampf(a.position.x+side*OVERTAKE_SIDE_SPEED*delta,-3.05,3.05)
 
 ## Zombies only advance along +Z, so a fast one (jockey 7.4 m/s) used to walk
 ## straight through a slow one (banshee 1.65, brute 5.6) and the models overlapped.
@@ -4875,6 +4907,9 @@ func _separate_zombies() -> void:
 			var overlap: float=min_dist-d
 			var nx: float=dx/d
 			var nz: float=dz/d
+			# straight behind each other: spread them sideways anyway instead of queuing in line
+			if absf(nx)<0.35:
+				nx=(0.35 if (nx>0.0 or (nx==0.0 and a.get_instance_id()>b.get_instance_id())) else -0.35)
 			var half: float=overlap*0.5
 			a.position.x=clampf(a.position.x+nx*half,-3.05,3.05)
 			b.position.x=clampf(b.position.x-nx*half,-3.05,3.05)
@@ -5025,14 +5060,84 @@ func _crit_word() -> String:
 	# from the translation table; the old hard-coded words had been saved as "??"
 	return RunText.text("crit")
 
+## Crit popups in gradient gold (pale gold -> gold -> amber, dark brown rim), like the big
+## crit numbers of gacha games. "-", the ten digits and the crit word are drawn once per language
+## into small pictures; each crit is then laid out from those, with a glint sweeping across.
+const CRIT_GLYPH_PAD := 22      # px of rim room on each side of a glyph picture
+const CRIT_GLYPH_H := 128
+var crit_glyph_cache := {}
+var crit_glyph_building := false
+func _crit_glyphs() -> Variant:
+	var key := String(language_code)
+	if crit_glyph_cache.has(key): return crit_glyph_cache[key]
+	if not crit_glyph_building: _build_crit_glyphs(key)
+	return null
+
+func _build_crit_glyphs(key: String) -> void:
+	crit_glyph_building = true
+	var font: Font = RunText.font()
+	var fs := 84
+	var word := RunText.text("crit", key)
+	var items: Array = ["-", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", word]
+	var widths: Array = []
+	var total := 0
+	for s in items:
+		var w := int(ceil(font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x))
+		widths.append(w); total += w + CRIT_GLYPH_PAD * 2
+	var vp := SubViewport.new(); vp.transparent_bg = true; vp.size = Vector2i(total, CRIT_GLYPH_H)
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS; add_child(vp)
+	var grad := ShaderMaterial.new(); grad.shader = load("res://shaders/crit_gradient.gdshader")
+	grad.set_shader_parameter("top_y", 22.0); grad.set_shader_parameter("bottom_y", 102.0)
+	var x := 0
+	for i in range(items.size()):
+		for layer in [0, 1]:
+			var l := Label.new(); l.text = items[i]
+			l.position = Vector2(x + CRIT_GLYPH_PAD, 4); l.size = Vector2(widths[i], CRIT_GLYPH_H - 8)
+			l.add_theme_font_override("font", font); l.add_theme_font_size_override("font_size", fs)
+			if layer == 0:
+				l.add_theme_color_override("font_color", Color("3b1a02"))
+				l.add_theme_color_override("font_outline_color", Color("3b1a02"))
+				l.add_theme_constant_override("outline_size", 16)
+			else:
+				l.add_theme_color_override("font_color", Color.WHITE)
+				l.material = grad
+			vp.add_child(l)
+		x += widths[i] + CRIT_GLYPH_PAD * 2
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var img := vp.get_texture().get_image()
+	var out := {}
+	x = 0
+	for i in range(items.size()):
+		var cw: int = widths[i] + CRIT_GLYPH_PAD * 2
+		var part := img.get_region(Rect2i(x, 0, cw, CRIT_GLYPH_H)); part.generate_mipmaps()
+		out[items[i]] = [ImageTexture.create_from_image(part), widths[i], cw]
+		x += cw
+	out["__word"] = word
+	crit_glyph_cache[key] = out
+	vp.queue_free()
+	crit_glyph_building = false
+
 func _damage_number(z: Node3D,amount: float,_color: Color,crit:=false) -> void:
-	# A crit prints in acid yellow, a size up, number first: "-100 暴击".
-	var col := Color("ffd63a") if crit else DAMAGE_RED
+	# A crit prints a size up, number first: "-100 暴击", all of it in gradient gold.
+	var col := Color("ffcf45") if crit else DAMAGE_RED
 	var big := crit
 	var body := "-%d" % maxi(1, roundi(amount))
+	var glyphs: Variant = null
+	if crit: glyphs = _crit_glyphs()
 	var text := (body + " " + _crit_word()) if crit else body
-	_fx_label_at(z.global_position+Vector3(rng.randf_range(-0.24,0.24),2.78,rng.randf_range(-0.12,0.12)),
+	var e = _fx_label_at(z.global_position+Vector3(rng.randf_range(-0.24,0.24),2.78,rng.randf_range(-0.12,0.12)),
 		text,col,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,big)
+	if glyphs != null:
+		var hgt := 0.62
+		var k: float = hgt / float(CRIT_GLYPH_H)
+		var row: Array = []
+		for ch in body:
+			var g: Array = glyphs[ch]
+			row.append([g[0], float(g[1]) * k, float(g[2]) * k])
+		var wg: Array = glyphs[glyphs["__word"]]
+		row.append([wg[0], float(wg[1]) * k + 0.14, float(wg[2]) * k])   # a little space before the word
+		e.show_crit_row(row, hgt)
 
 ## Blood thrown away from the shooter: one directional splash (random shape out of eight,
 ## random size, angle jittered around the shot) plus flung droplets landing further along.
@@ -6143,7 +6248,7 @@ func _fx_drop_at(pos: Vector3,color: Color,size: float,vel: Vector3,grav: float,
 	e.position=pos; e.velocity=vel; e.gravity=grav; e.arm(seconds)
 	effects.append(e)
 
-func _fx_label_at(pos: Vector3,text: String,color: Color,vel: Vector3,seconds: float,big: bool) -> void:
+func _fx_label_at(pos: Vector3,text: String,color: Color,vel: Vector3,seconds: float,big: bool):
 	var e
 	if fx_labels.is_empty(): e=EffectScript.new(); add_child(e)
 	else: e=fx_labels.pop_back()
@@ -6152,6 +6257,7 @@ func _fx_label_at(pos: Vector3,text: String,color: Color,vel: Vector3,seconds: f
 	if big: e.label.font_size=64; e.label.pixel_size=0.0085; e.label.outline_size=12
 	e.position=pos; e.velocity=vel; e.gravity=0.0; e.arm(seconds)
 	effects.append(e)
+	return e
 
 ## Shockwave or blast sphere from the pool. `seconds` is the effect lifetime.
 func _fx_ring_at(pos: Vector3,color: Color,size: float,seconds: float,smoke:=false) -> void:
