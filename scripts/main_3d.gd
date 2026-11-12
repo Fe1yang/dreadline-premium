@@ -165,6 +165,14 @@ const LOOKS:=[
 		"agx":false,"exposure":1.12,"glow":0.25,"contrast":1.0,"saturation":1.28,"brightness":1.05},
 ]
 const LOOK_NAMES:={
+	"id":["REALISTIS","KLASIK","SINEMA","CERAH","SEGAR","FILTER"],
+	"it":["REALISTICO","CLASSICO","CINEMA","VIVIDO","FRESCO","FILTRO"],
+	"tr":["GERÇEKÇİ","KLASİK","SİNEMA","CANLI","TAZE","FİLTRE"],
+	"nl":["REALISTISCH","KLASSIEK","CINEMA","LEVENDIG","FRIS","FILTER"],
+	"pl":["REALISTYCZNY","KLASYCZNY","KINO","ŻYWY","ŚWIEŻY","FILTR"],
+	"th":["สมจริง","คลาสสิก","ภาพยนตร์","สดใส","สดชื่น","ฟิลเตอร์"],
+	"vi":["CHÂN THỰC","CỔ ĐIỂN","ĐIỆN ẢNH","SỐNG ĐỘNG","TƯƠI MỚI","BỘ LỌC"],
+	"uk":["РЕАЛІСТИЧНИЙ","КЛАСИЧНИЙ","КІНО","ЯСКРАВИЙ","СВІЖИЙ","ФІЛЬТР"],
 	"en":["REALISTIC","CLASSIC","CINEMA","VIVID","FRESH","LOOK"],
 	"zh_CN":["写实","经典","电影","鲜艳","清新","滤镜"],
 	"zh_TW":["寫實","經典","電影","鮮豔","清新","濾鏡"],

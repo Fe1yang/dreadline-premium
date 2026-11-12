@@ -72,7 +72,7 @@ const TEXT:={
 		"multishot":"雙聯槍管|彈丸","split":"破片彈|分裂","explode":"高爆彈|爆炸機率",
 		"burn":"燃燒彈|灼燒","poison":"毒素彈|中毒","shock":"特斯拉線圈|電擊機率",
 		"coins":"拾荒者|金幣","drop":"好運連連|掉落機率","ammo_return":"彈藥回收|回收機率","pickup_range":"磁吸|拾取範圍"},
-	"ja":{
+	"ja":{"range":"長銃身|射程","strafe":"軽業|横移動",
 		"max_hp":"強靭な体|最大HP","heal":"応急手当|HP","regen":"アドレナリン|再生","kill_heal":"血の渇き|撃破回復",
 		"dmg_reduce":"硬化|被ダメージ","shield":"ライオットシールド|シールド","move":"軽装|移動速度",
 		"damage":"重型弾薬|ダメージ","rate":"高速トリガー|射速","bullet_speed":"強装弾|弾速",
