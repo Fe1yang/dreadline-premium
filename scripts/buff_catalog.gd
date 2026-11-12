@@ -3,36 +3,39 @@ extends RefCounted
 ## in player_3d.gd / main_3d.gd; there is no dodge, roll or sprint because the game has none.
 ##
 ## values: [common, rare, epic, legendary]. min: lowest rarity it may roll at.
+## Steps you can feel (about +8% for a common damage / fire-rate gate) but no runaway: a run grows
+## at every gate, and
+## the strongest effects (pierce, extra bullets, fragments) are rare and capped in player_3d.gd.
 ## unit: how the value reads on the gate ("%" percent, "" flat, "/s" per second, "m" metres).
 
 const BUFFS:={
 	# --- survival ---
-	"max_hp":      {"values":[15,30,50,80],   "unit":"",   "min":0, "group":"survival"}, # +max HP (and heals that much)
-	"heal":        {"values":[15,30,55,100],  "unit":"",   "min":0, "group":"survival"}, # instant heal
-	"regen":       {"values":[1,2,3,5],       "unit":"/s", "min":0, "group":"survival"}, # HP per second
-	"kill_heal":   {"values":[1,2,4,8],       "unit":"",   "min":0, "group":"survival"}, # HP per kill
-	"dmg_reduce":  {"values":[4,8,12,20],     "unit":"%",  "min":0, "group":"survival"}, # damage taken -x% (cap 60%)
-	"shield":      {"values":[20,40,70,120],  "unit":"",   "min":0, "group":"survival"}, # absorbs damage before HP
-	"move":        {"values":[4,8,12,20],     "unit":"%",  "min":0, "group":"survival"}, # run + side-step speed (cap +40%)
+	"max_hp":      {"values":[12,20,35,55],   "unit":"",   "min":0, "group":"survival"}, # +max HP (and heals that much)
+	"heal":        {"values":[15,30,50,80],  "unit":"",   "min":0, "group":"survival"}, # instant heal
+	"regen":       {"values":[1,1,2,3],       "unit":"/s", "min":0, "group":"survival"}, # HP per second
+	"kill_heal":   {"values":[1,1,2,3],       "unit":"",   "min":0, "group":"survival"}, # HP per kill
+	"dmg_reduce":  {"values":[3,5,8,12],     "unit":"%",  "min":0, "group":"survival"}, # damage taken -x% (cap 60%)
+	"shield":      {"values":[15,25,45,70],  "unit":"",   "min":0, "group":"survival"}, # absorbs damage before HP
+	"move":        {"values":[4,6,9,12],     "unit":"%",  "min":0, "group":"survival"}, # run + side-step speed (cap +40%)
 	# --- gun ---
-	"damage":      {"values":[8,16,28,50],    "unit":"%",  "min":0, "group":"gun"},
-	"rate":        {"values":[6,12,20,35],    "unit":"%",  "min":0, "group":"gun"},
-	"bullet_speed":{"values":[10,20,35,60],   "unit":"%",  "min":0, "group":"gun"},
-	"range":       {"values":[12,22,35,55],   "unit":"%",  "min":0, "group":"gun"},   # bullet reach (cap +180%)
-	"strafe":      {"values":[8,14,22,35],    "unit":"%",  "min":0, "group":"survival"}, # side-step only (cap +60%)
-	"crit_chance": {"values":[1,3,6,12],       "unit":"%",  "min":0, "group":"gun"},   # common 1%, cap 100%
-	"crit_damage": {"values":[8,15,30,60],    "unit":"%",  "min":0, "group":"gun"},   # only once crit chance > 0
-	"magazine":    {"values":[15,30,50,100],  "unit":"%",  "min":0, "group":"gun"},
-	"reserve":     {"values":[1,2,4,8],       "unit":"",   "min":0, "group":"gun"},   # spare magazines; only with a non-pistol gun
-	"reload":      {"values":[8,15,25,40],    "unit":"%",  "min":0, "group":"gun"},   # faster reload (cap 70%)
-	"pierce":      {"values":[1,1,1,2],       "unit":"",   "min":1, "group":"gun"},
-	"multishot":   {"values":[1,1,1,2],       "unit":"",   "min":2, "group":"gun"},   # more bullets per shot
-	"split":       {"values":[1,1,2,3],       "unit":"",   "min":1, "group":"gun"},   # a hit bursts into fragments
+	"damage":      {"values":[8,12,18,25],    "unit":"%",  "min":0, "group":"gun"},
+	"rate":        {"values":[6,9,13,18],    "unit":"%",  "min":0, "group":"gun"},
+	"bullet_speed":{"values":[8,15,22,35],   "unit":"%",  "min":0, "group":"gun"},
+	"range":       {"values":[10,15,22,35],   "unit":"%",  "min":0, "group":"gun"},   # bullet reach (cap +180%)
+	"strafe":      {"values":[5,8,12,18],    "unit":"%",  "min":0, "group":"survival"}, # side-step only (cap +60%)
+	"crit_chance": {"values":[2,3,5,8],       "unit":"%",  "min":0, "group":"gun"},   # common 1%, cap 100%
+	"crit_damage": {"values":[10,15,25,40],    "unit":"%",  "min":0, "group":"gun"},   # only once crit chance > 0
+	"magazine":    {"values":[15,25,40,60],  "unit":"%",  "min":0, "group":"gun"},
+	"reserve":     {"values":[1,1,2,3],       "unit":"",   "min":0, "group":"gun"},   # spare magazines; only with a non-pistol gun
+	"reload":      {"values":[8,12,18,25],    "unit":"%",  "min":0, "group":"gun"},   # faster reload (cap 70%)
+	"pierce":      {"values":[1,1,1,1],       "unit":"",   "min":2, "group":"gun"},
+	"multishot":   {"values":[1,1,1,1],       "unit":"",   "min":3, "group":"gun"},   # more bullets per shot
+	"split":       {"values":[1,1,1,1],       "unit":"",   "min":2, "group":"gun"},   # a hit bursts into fragments
 	# --- on-hit effects ---
-	"explode":     {"values":[8,15,25,40],    "unit":"%",  "min":1, "group":"effect"}, # chance of a small blast
-	"burn":        {"values":[4,8,14,24],     "unit":"/s", "min":0, "group":"effect"}, # hits set zombies on fire (2.5 s)
-	"poison":      {"values":[3,6,10,18],     "unit":"/s", "min":0, "group":"effect"}, # hits poison (5 s)
-	"shock":       {"values":[10,18,28,45],   "unit":"%",  "min":1, "group":"effect"}, # chance to arc to nearby zombies
+	"explode":     {"values":[6,10,15,22],    "unit":"%",  "min":2, "group":"effect"}, # chance of a small blast
+	"burn":        {"values":[3,5,8,12],     "unit":"/s", "min":0, "group":"effect"}, # hits set zombies on fire (2.5 s)
+	"poison":      {"values":[2,4,6,9],     "unit":"/s", "min":0, "group":"effect"}, # hits poison (5 s)
+	"shock":       {"values":[8,12,18,25],   "unit":"%",  "min":2, "group":"effect"}, # chance to arc to nearby zombies
 	# --- loot ---
 	"coins":       {"values":[10,20,35,60],   "unit":"%",  "min":0, "group":"loot"},   # kill coins multiplier
 	"drop":        {"values":[3,6,10,16],     "unit":"%",  "min":0, "group":"loot"},   # chance a kill drops a pickup

@@ -90,6 +90,8 @@ func _apply_stats(type: String, difficulty: float) -> void:
 		# while its legs walk forwards, which is why it looked like it was walking on the spot.
 		"spitter": health=70*difficulty; speed=3.95+difficulty*0.08; damage=13; reward=3; radius=0.55
 		_: health=44*difficulty; speed=3.65+difficulty*0.1; damage=18; reward=1
+	# their bite gets worse the further you are (x1 at the start, x2.25 at the toughest)
+	damage*=1.0+(difficulty-1.0)*0.25
 	max_health = health
 	age = randf()*4
 	banshee_pulse_timer = 2.8 if kind=="banshee" else 0.0

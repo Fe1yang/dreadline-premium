@@ -1309,7 +1309,8 @@ func _process(delta: float) -> void:
 				spawn_timer=lerpf(0.42,0.22,ramp)*rng.randf_range(0.85,1.15)
 	gate_timer-=delta
 	if gate_timer<=0:
-		if _road_clear(-40.0): _spawn_gate(); gate_timer=lerpf(11.0,7.5,ramp)*rng.randf_range(0.9,1.15)
+		# a gate every 12-15 s (was 7.5-11 s): fewer steps up per run, each one worth having
+		if _road_clear(-40.0): _spawn_gate(); gate_timer=lerpf(15.0,12.0,ramp)*rng.randf_range(0.9,1.15)
 		else: gate_timer=1.2
 	_district_threads()
 	barrel_timer-=delta
@@ -4077,10 +4078,16 @@ func _count_zombie_kind(type: String) -> int:
 func _wave_size() -> int:
 	return clampi(4+wave*2,6,26)
 
-## Difficulty steps up with the wave number and stops at 2.1 (it used to grow with run
-## time without a ceiling, which turned every gun into a peashooter by ten minutes).
+## Zombie toughness grows with the distance run, slowly at first and faster later:
+## x1.16 at 500 m, x1.37 at 1000 m, x1.9 at 2000 m, x2.5 at 3000 m, x3.8 at 5000 m, x7.6 at
+## 10 000 m, and it stops at x10 (about 12 500 m). Early on the gates outgrow the horde, so every buff is felt;
+## around 2000 m the horde catches up, and from there it pulls away. (It used to stop at x2.1,
+## which a run full of gate buffs outgrew long before 10 000 m.)
+const DIFFICULTY_SCALE_M := 2200.0
+const DIFFICULTY_POWER := 1.25
+const DIFFICULTY_MAX := 10.0
 func _wave_difficulty() -> float:
-	return minf(1.0+0.08*float(maxi(0,wave-1)),2.1)
+	return clampf(1.0+pow(maxf(distance,0.0)/DIFFICULTY_SCALE_M,DIFFICULTY_POWER),1.0,DIFFICULTY_MAX)
 
 func _living_zombies() -> int:
 	var count:=0
@@ -5085,13 +5092,13 @@ func _spawn_gate() -> void:
 ## Pity: after PITY_GATES gates without an epic or better, one is guaranteed.
 const THREE_GATE_DISTANCE:=500.0
 const PITY_GATES:=8
-const RARITY_WEIGHTS:=[64.0,25.0,9.0,2.0]
+const RARITY_WEIGHTS:=[72.0,22.0,5.0,1.0]
 var gates_since_epic:=0
 
 func _roll_rarity() -> int:
 	var w: Array=RARITY_WEIGHTS.duplicate()
-	var late: float=clampf(distance/1500.0,0.0,1.0) # a little luckier deeper into a run
-	w[2]+=3.0*late; w[3]+=2.0*late
+	var late: float=clampf(distance/6000.0,0.0,1.0) # a little luckier deeper into a run
+	w[2]+=2.0*late; w[3]+=0.8*late
 	var total:=0.0
 	for x in w: total+=x
 	var r:=rng.randf()*total
@@ -5111,19 +5118,26 @@ func _buff_useful(id: String,rarity: int) -> bool:
 	match id:
 		"heal": return player.health<player.max_health*0.9
 		"crit_damage": return player.crit_chance>0.0
-		"crit_chance": return player.crit_chance<1.0
+		"crit_chance": return player.crit_bonus<player.CRIT_BONUS_CAP
 		"reserve": return player.can_use_reserve()
-		"dmg_reduce": return player.dmg_reduce<0.6
-		"move": return player.move_mult<1.4
+		"dmg_reduce": return player.dmg_reduce<player.DMG_REDUCE_CAP
+		"move": return player.move_mult<player.MOVE_CAP
+		"rate": return player.rate_scale>player.RATE_SCALE_MIN+0.005
+		"pierce": return player.pierce_bonus<player.PIERCE_CAP
+		"split": return player.bullet_split<player.SPLIT_CAP
+		"regen": return player.regen<player.REGEN_CAP
+		"kill_heal": return player.kill_heal<player.KILL_HEAL_CAP
+		"burn": return player.burn_dps<player.BURN_CAP
+		"poison": return player.poison_dps<player.POISON_CAP
 		"range": return player.range_mult<player.RANGE_CAP
 		"strafe": return player.strafe_mult<player.STRAFE_CAP
-		"reload": return player.reload_scale>0.3
-		"shield": return player.shield<200.0
-		"explode": return player.explode_chance<0.6
-		"shock": return player.shock_chance<0.6
+		"reload": return player.reload_scale>player.RELOAD_SCALE_MIN+0.005
+		"shield": return player.shield<player.SHIELD_CAP
+		"explode": return player.explode_chance<player.EFFECT_CHANCE_CAP
+		"shock": return player.shock_chance<player.EFFECT_CHANCE_CAP
 		"ammo_return": return player.ammo_return<0.6
 		"drop": return player.drop_chance<0.4
-		"multishot": return player.projectile_count<(9 if player.weapon=="SHOTGUN" else 5)
+		"multishot": return player.split_bonus<player.MULTISHOT_CAP and player.projectile_count<(9 if player.weapon=="SHOTGUN" else 5)
 	return true
 
 func _roll_gate_options() -> Array:

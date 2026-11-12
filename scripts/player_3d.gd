@@ -1282,31 +1282,53 @@ func _refresh_crit() -> void:
 	crit_chance = clampf(base + crit_bonus, 0.0, 1.0)
 
 
+## ---- How far gate buffs can stack in one run ----------------------------------------
+## Without these a long run ended with three fragments per round, double pierce, 13 shots a
+## second and guaranteed crits: everything died in one shot and the rest of the run was a walk.
+const RATE_SCALE_MIN := 0.69      # fire rate at most ~45% faster
+const MULTISHOT_CAP := 1          # one extra bullet per shot, ever
+const SPLIT_CAP := 1              # one fragment burst
+const PIERCE_CAP := 2
+const CRIT_BONUS_CAP := 0.30
+const RELOAD_SCALE_MIN := 0.55
+const REGEN_CAP := 4.0
+const KILL_HEAL_CAP := 5.0
+const DMG_REDUCE_CAP := 0.40
+const SHIELD_CAP := 120.0
+const MOVE_CAP := 1.25
+const BURN_CAP := 20.0
+const POISON_CAP := 15.0
+const EFFECT_CHANCE_CAP := 0.30
 func apply_upgrade(id: String,value:=-1.0) -> void:
 	match id:
 		# Small steps per gate (many gates per run), so a run builds up gradually.
 		"damage":
-			var f:=1.0+(8.0 if value<0 else value)/100.0
-			damage_scale *= f; damage *= f; gun_level += 1
+			# Damage gates ADD up (+12% and +12% = +24%, like Archero) instead of multiplying:
+			# multiplied, thirty gates made a gun thirty times stronger and the late run trivial.
+			var before:=damage_scale
+			damage_scale += (8.0 if value<0 else value)/100.0
+			damage *= damage_scale/before; gun_level += 1
 		"rate":
-			var f:=1.0-(6.0 if value<0 else value)/100.0
+			# at most 45% faster than the gun's own rate (it used to reach 13 shots a second)
+			var f:=maxf(1.0-(6.0 if value<0 else value)/100.0,RATE_SCALE_MIN/maxf(rate_scale,0.01))
 			rate_scale *= f; fire_interval = maxf(0.075,fire_interval*f); gun_level += 1
 		"multishot":
-			var n:=1 if value<0 else int(value)
+			var n:=mini(1 if value<0 else int(value),MULTISHOT_CAP-split_bonus)
+			if n<=0: return
 			split_bonus += n; projectile_count = mini(9 if weapon=="SHOTGUN" else 5,projectile_count+n); gun_level += 1
 		"heal": health = minf(max_health,health+(15.0 if value<0 else value)*heal_scale())
 		"max_hp": max_health += value; health = minf(max_health,health+value)
-		"regen": regen += value
-		"kill_heal": kill_heal += value
-		"dmg_reduce": dmg_reduce = minf(0.6,dmg_reduce+value/100.0)
-		"shield": shield = minf(200.0,shield+value)
-		"move": move_mult = minf(1.4,move_mult*(1.0+value/100.0))
+		"regen": regen = minf(REGEN_CAP,regen+value)
+		"kill_heal": kill_heal = minf(KILL_HEAL_CAP,kill_heal+value)
+		"dmg_reduce": dmg_reduce = minf(DMG_REDUCE_CAP,dmg_reduce+value/100.0)
+		"shield": shield = minf(SHIELD_CAP,shield+value)
+		"move": move_mult = minf(MOVE_CAP,move_mult*(1.0+value/100.0))
 		"range": range_mult = minf(RANGE_CAP,range_mult*(1.0+value/100.0))
 		"strafe": strafe_mult = minf(STRAFE_CAP,strafe_mult*(1.0+value/100.0))
 		"bullet_speed":
 			var f:=1.0+value/100.0
 			bullet_speed_scale *= f; bullet_speed *= f
-		"crit_chance": crit_bonus += value/100.0; _refresh_crit()
+		"crit_chance": crit_bonus = minf(CRIT_BONUS_CAP,crit_bonus+value/100.0); _refresh_crit()
 		"crit_damage": crit_mult += value/100.0
 		"magazine":
 			var f:=1.0+value/100.0
@@ -1319,14 +1341,16 @@ func apply_upgrade(id: String,value:=-1.0) -> void:
 			elif not stowed.is_empty(): stowed.reserve = int(stowed.reserve)+30*int(value)
 		"reload":
 			var f:=1.0-value/100.0
-			var before:=reload_scale; reload_scale = maxf(0.3,reload_scale*f)
+			var before:=reload_scale; reload_scale = maxf(RELOAD_SCALE_MIN,reload_scale*f)
 			reload_duration *= reload_scale/before
-		"pierce": pierce_bonus += int(value); pierce += int(value)
-		"split": bullet_split += int(value)
-		"explode": explode_chance = minf(0.6,explode_chance+value/100.0)
-		"burn": burn_dps += value
-		"poison": poison_dps += value
-		"shock": shock_chance = minf(0.6,shock_chance+value/100.0)
+		"pierce":
+			var n:=mini(int(value),PIERCE_CAP-pierce_bonus)
+			if n>0: pierce_bonus += n; pierce += n
+		"split": bullet_split = mini(SPLIT_CAP,bullet_split+int(value))
+		"explode": explode_chance = minf(EFFECT_CHANCE_CAP,explode_chance+value/100.0)
+		"burn": burn_dps = minf(BURN_CAP,burn_dps+value)
+		"poison": poison_dps = minf(POISON_CAP,poison_dps+value)
+		"shock": shock_chance = minf(EFFECT_CHANCE_CAP,shock_chance+value/100.0)
 		"coins": coin_mult += value/100.0
 		"drop": drop_chance = minf(0.4,drop_chance+value/100.0)
 		"ammo_return": ammo_return = minf(0.6,ammo_return+value/100.0)
