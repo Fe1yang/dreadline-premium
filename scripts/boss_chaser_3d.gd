@@ -6,6 +6,9 @@ extends Node3D
 const MODEL_PATH:="res://assets/models/actors/pursuer_abomination.glb"
 const SCALE:=1.95
 const ModelFix=preload("res://scripts/model_fix.gd")
+const AnimLibrary=preload("res://scripts/anim_library.gd")
+const WALK_STRIDE_SPEED:=1.52   # m/s the planted foot travels in Zombie_Walk_Fwd at speed 1, at SCALE
+const GROUND_SPEED:=3.7         # road speed (3.5) plus what it gains on the survivor
 
 var model: Node3D
 var anim: AnimationPlayer
@@ -58,15 +61,22 @@ func _ready() -> void:
 		anim=player
 		break
 	if is_instance_valid(anim):
-		var clip_name:="Pursuer_Run"
-		if not anim.has_animation(clip_name): clip_name=String(anim.get_animation_list()[0])
+		# A heavy, lumbering stride from the shared animation library (the beast is on the same
+		# 65-bone rig as the survivors). Its own "Pursuer_Run" never planted a foot -- each foot
+		# went forward and back while on the ground -- so it skated over the road at any speed.
+		# The library walk plants its feet and pushes them back 1.52 m per second at normal speed
+		# (at this model's 1.95 scale), so it is played at the road's pace: 3.5 m/s, plus the
+		# little it gains on the survivor.
+		var clip_name: String=AnimLibrary.borrow(anim,"Zombie_Walk_Fwd","ual2",{},["spine_01","spine_02","spine_03","neck_01","Head"])
+		if clip_name=="":
+			clip_name="Pursuer_Run"
+			if not anim.has_animation(clip_name): clip_name=String(anim.get_animation_list()[0])
+			anim.speed_scale=0.90
+		else:
+			anim.speed_scale=GROUND_SPEED/WALK_STRIDE_SPEED
 		var clip:=anim.get_animation(clip_name)
 		clip.loop_mode=Animation.LOOP_LINEAR
-		anim.speed_scale=0.90 # slowed for the opening: heavy stride, no ice-skate slide
 		anim.play(clip_name)
-		# The clip's first frames have the arms up (looks like it surrenders); start mid-stride
-		# instead so the beast charges with its arms down.
-		anim.seek(0.62, true)
 	else:
 		push_error("Pursuer custom run animation is missing")
 	for m in model.find_children("*","MeshInstance3D",true,false):
