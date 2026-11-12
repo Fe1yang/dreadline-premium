@@ -2547,7 +2547,9 @@ const CONFETTI_COLORS:=[Color("c4a56a"),Color("a94b43"),Color("d8d4ca"),Color("8
 ## Shown right after the player picks a new language: the strings are built at boot.
 func _draw_lang_restart() -> void:
 	var lang := String(game.language_code)
-	_box(Rect2(0, 0, 540, game.ui_h), Color(0, 0, 0, 0.55))
+	# Fully opaque backdrop: behind this dialog sits whatever screen was open, and a half-dim
+	# world behind a modal looks like a rendering bug rather than a choice.
+	_box(Rect2(0, 0, 540, game.ui_h), Color(0.018, 0.022, 0.023, 0.985))
 	var box := Rect2(50, game.ui_h * 0.5 - 100, 440, 200)
 	_panel(box, Color(0.05, 0.055, 0.06, 0.98), Color(LINE, 1.0), 0)
 	_text_center(UiText.text(lang, "lang_restart"), Vector2(270, box.position.y + 62), 18, WHITE)
