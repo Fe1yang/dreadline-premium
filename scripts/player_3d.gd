@@ -591,8 +591,71 @@ func _load_character() -> void:
 	animation_player=model.find_child("AnimationPlayer",true,false) as AnimationPlayer
 	_play_run()
 	_load_weapon_model()
+	_measure_gear_fit(asset_path)
 	set_armor(has_armor)
 	set_helmet(has_helmet)
+
+## Head and torso size of the loaded body, in model space, so the helmet and the vest are fitted
+## around THIS survivor instead of a fixed guess (a fixed size let the hood, the shirt and the
+## hair poke through). Measured once per body from the bind-pose mesh and cached.
+static var gear_fit_cache := {}
+var gear_fit := {}
+
+func _xform_to(top: Node, node: Node) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var n := node
+	while n != null and n != top:
+		if n is Node3D: t = (n as Node3D).transform * t
+		n = n.get_parent()
+	return t
+
+func _bone_model(bone: String) -> Transform3D:
+	var bi := skeleton.find_bone(bone)
+	if bi < 0: return Transform3D.IDENTITY
+	return _xform_to(model, skeleton) * skeleton.get_bone_global_rest(bi)
+
+func _measure_gear_fit(key: String) -> void:
+	gear_fit = {}
+	if not is_instance_valid(skeleton) or not is_instance_valid(model): return
+	if gear_fit_cache.has(key):
+		gear_fit = gear_fit_cache[key]; return
+	var pelvis_y: float = _bone_model("pelvis").origin.y
+	var neck_y: float = _bone_model("neck_01").origin.y
+	var head_y: float = _bone_model("Head").origin.y
+	var arm_x: float = absf(_bone_model("upperarm_l").origin.x)
+	var torso := AABB(); var tf := true
+	var head := AABB(); var hf := true
+	var head_top := -INF
+	for m in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := m as MeshInstance3D
+		if mi == null or mi.mesh == null: continue
+		var xf := _xform_to(model, mi)
+		for si in range(mi.mesh.get_surface_count()):
+			var verts: PackedVector3Array = mi.mesh.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]
+			for v0 in verts:
+				var p: Vector3 = xf * v0
+				var ax := absf(p.x)
+				if p.y > pelvis_y + 0.06 and p.y < neck_y - 0.03 and ax < arm_x - 0.01:
+					if tf: torso = AABB(p, Vector3.ZERO); tf = false
+					else: torso = torso.expand(p)
+				if p.y > head_y - 0.02 and ax < 0.17:
+					if hf: head = AABB(p, Vector3.ZERO); hf = false
+					else: head = head.expand(p)
+					head_top = maxf(head_top, p.y)
+	if tf or hf: return
+	gear_fit = {"torso": torso, "head": head, "neck_y": neck_y, "pelvis_y": pelvis_y}
+	gear_fit_cache[key] = gear_fit
+
+## Bounding box of a freshly loaded gear model in its own root space.
+func _gear_box(root: Node3D) -> AABB:
+	var box := AABB(); var first := true
+	for m in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := m as MeshInstance3D
+		if mi == null or mi.mesh == null: continue
+		var a: AABB = _xform_to(root, mi) * mi.get_aabb()
+		box = a if first else box.merge(a)
+		first = false
+	return box
 
 ## The run clip moves a planted foot ~0.97 m/s at normal speed, but the road scrolls at
 ## 3.5 m/s, so at the old 0.88 the feet skated. 1.9 is a fast sprint cadence (0.7 s a
@@ -933,37 +996,43 @@ func reset() -> void:
 func set_armor(equipped: bool) -> void:
 	has_armor = equipped
 	if is_instance_valid(armor_model):
-		armor_model.get_parent().remove_child(armor_model)
-		armor_model.queue_free()
+		var holder0 := armor_model.get_parent()
+		holder0.get_parent().remove_child(holder0)   # the bone attachment / holder goes with it
+		holder0.queue_free()
 		armor_model = null
 	if has_armor and is_instance_valid(model):
 		armor_model = load("res://assets/models/armor.glb").instantiate() as Node3D
-		# The vest GLB is authored around 120 m tall, so a fixed factor produced a 30 m vest
-		# hanging over the survivor. Normalise it to a 0.62 m wide shell first.
-		var abox := AABB()
-		var afirst := true
-		for m in armor_model.find_children("*", "MeshInstance3D", true, false):
-			var mi := m as MeshInstance3D
-			if mi == null or mi.mesh == null:
-				continue
-			var a: AABB = mi.get_aabb()
-			abox = a if afirst else abox.merge(a)
-			afirst = false
-		# Parented to the body, not a bone: the vest model's origin is mid-chest, so a bone
-		# attachment put it around the survivor's head. Measured fit: 0.46 m wide, 1.12 m up.
-		# Put the vest's own centre on the chest: its GLB origin is not centred, which is why a
-		# bare position put it around the survivor's head.
-		var holder := Node3D.new()
-		holder.position = Vector3(0.0, 1.18, 0.0)
-		model.add_child(holder)
-		if not afirst:
-			var widest: float = maxf(abox.size.x, maxf(abox.size.y, abox.size.z))
+		var vb := _gear_box(armor_model)
+		if gear_fit.has("torso") and vb.size.x > 0.0001 and skeleton.find_bone("spine_03") >= 0:
+			# A shell around the measured chest: a little wider and deeper than the body (jacket,
+			# hood and shirt included), from the belly up to the collar. It rides the upper spine
+			# bone, so it leans and twists with the torso instead of the body swinging through it.
+			var t: AABB = gear_fit.torso
+			# (the pouch belt hangs below the plate, so the vest is taller than the chest band and
+			# lifted, putting the plate's top edge at the collar rather than mid-chest)
+			# Riley and Maya (1, 3) have shorter, slimmer torsos: the lift that the men's bulky
+			# jacket and shirt need put their vest up at the throat, so they keep a lower, shorter fit.
+			var female: bool = character in [1, 3]
+			var want := Vector3(t.size.x * (1.12 if female else 1.22) + 0.03, t.size.y * (1.06 if female else 1.22), t.size.z * 1.18 + 0.03)
+			var sc := Vector3(want.x / vb.size.x, want.y / vb.size.y, want.z / vb.size.z)
+			var mean: float = (sc.x + sc.y + sc.z) / 3.0
+			sc = sc.clamp(Vector3.ONE * mean * 0.7, Vector3.ONE * mean * 1.4)   # keep its shape
+			var centre := t.get_center() + Vector3(0.0, (0.0 if female else 0.06), 0.0)
+			var fit := Transform3D(Basis.from_scale(sc), centre - vb.get_center() * sc)
+			var bone := BoneAttachment3D.new(); bone.bone_name = "spine_03"
+			skeleton.add_child(bone)
+			bone.add_child(armor_model)
+			armor_model.transform = _bone_model("spine_03").affine_inverse() * fit
+		else:
+			var holder := Node3D.new()
+			holder.position = Vector3(0.0, 1.18, 0.0)
+			model.add_child(holder)
+			var widest: float = maxf(vb.size.x, maxf(vb.size.y, vb.size.z))
 			if widest > 0.01:
-				var sc: float = 0.44 / widest
-				armor_model.scale = Vector3.ONE * sc
-				armor_model.position = -abox.get_center() * sc
-		armor_model.rotation.y = 0.0          # the GLB already faces +Z like the body
-		holder.add_child(armor_model)
+				var sc0: float = 0.44 / widest
+				armor_model.scale = Vector3.ONE * sc0
+				armor_model.position = -vb.get_center() * sc0
+			holder.add_child(armor_model)
 
 func set_helmet(equipped: bool) -> void:
 	has_helmet = equipped
@@ -978,19 +1047,26 @@ func set_helmet(equipped: bool) -> void:
 		skeleton.add_child(helmet_attachment)
 		helmet_model = load("res://assets/models/helmet.glb").instantiate() as Node3D
 		helmet_attachment.add_child(helmet_model)
-		# Fit by measured size: the Tripo export is authored in its own units, so normalise the
-		# harness to a 0.30 m wide shell instead of trusting a fixed factor.
-		var box := AABB(); var first := true
-		for m in helmet_model.find_children("*", "MeshInstance3D", true, false):
-			var mi := m as MeshInstance3D
-			if mi.mesh == null: continue
-			var a: AABB = mi.transform * mi.get_aabb()
-			box = a if first else box.merge(a)
-			first = false
-		var widest: float = maxf(box.size.x, maxf(box.size.y, box.size.z))
-		if widest > 0.001:
-			helmet_model.scale = Vector3.ONE * (0.34 / widest)
-		helmet_model.position = Vector3(0, 0.030 - box.get_center().y * (0.34 / maxf(widest, 0.001)), 0.010)
+		var hb := _gear_box(helmet_model)
+		if gear_fit.has("head") and hb.size.x > 0.0001:
+			# Sized from the measured head (hair included) so nothing pokes through the shell,
+			# and seated with its crown just above the top of the hair.
+			var h: AABB = gear_fit.head
+			var hc := h.get_center()
+			var head_y: float = _bone_model("Head").origin.y
+			# The rim always sits on the brow, where it sits on Maya (the fit that looked right:
+			# her head is 0.26 x 0.27 m and the crown 0.18 m above the head bone). A taller or
+			# bushier hairdo gets a bigger shell over it instead of pushing the rim down over the eyes.
+			var ref_sc: float = maxf(0.261 * 1.16 / hb.size.x, 0.267 * 1.10 / hb.size.z)
+			var rim: float = head_y + 0.202 - hb.size.y * ref_sc   # 2 cm above Maya's: clear of every survivor's eyes
+			var sc: float = maxf(maxf(h.size.x * 1.10 / hb.size.x, h.size.z * 1.06 / hb.size.z), (h.end.y + 0.03 - rim) / hb.size.y)
+			var pos := Vector3(hc.x - hb.get_center().x * sc, rim - hb.position.y * sc, hc.z + 0.005 - hb.get_center().z * sc)
+			helmet_model.transform = _bone_model("Head").affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * sc), pos)
+		else:
+			var widest: float = maxf(hb.size.x, maxf(hb.size.y, hb.size.z))
+			if widest > 0.001:
+				helmet_model.scale = Vector3.ONE * (0.34 / widest)
+			helmet_model.position = Vector3(0, 0.030 - hb.get_center().y * (0.34 / maxf(widest, 0.001)), 0.010)
 
 func apply_meta(upgrades: Dictionary) -> void:
 	max_health=100.0+int(upgrades.get("medical",0))*15.0
