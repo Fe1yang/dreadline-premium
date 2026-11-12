@@ -1838,6 +1838,7 @@ func _view_warm_tick() -> void:
 		for vid in ["SPORT", "CRUISER", "SEDAN", "TANK", "GOLD", "GOLD_CAR"]:
 			view_queue.append("vehicle:" + vid)
 		view_queue.append("map_table")
+		view_queue.append("pursuer")
 		# Car lamps: the first spot / omni light the renderer ever sees makes it rebuild the
 		# shaders of everything in view -- the multi-second freeze the first time a car was
 		# boarded. A pair of lamps stays on in front of the camera for the whole of this pass,
@@ -1900,6 +1901,10 @@ func _prefill_make(item: String, at: Vector3) -> void:
 			n = vscene.instantiate() as Node3D; n.position = at; add_child(n)
 	elif item == "map_table":
 		_ensure_map()
+	elif item == "pursuer":
+		# the opening beast: loaded, built and drawn once here so the intro starts without a freeze
+		if ResourceLoader.exists(BossChaserScript.MODEL_PATH):
+			n = BossChaserScript.new(); n.silent = true; n.position = at; add_child(n)
 	elif item == "burst":
 		# sparks, fire drops and a blood pool: the small effects every kill and blast throws out
 		_burst(at, Color("ffd275"), 6); _fire_spray(at)
@@ -2101,6 +2106,8 @@ func _begin_intro() -> void:
 const INTRO_PET_OFFSET:=Vector3(-1.15,0,0.15)
 
 func _tick_intro(delta: float) -> void:
+	# a slow frame must not skip the shot of the beast: the opening only advances a frame's worth
+	delta=minf(delta,1.0/30.0)
 	intro_time+=delta
 	player.set_aim(Vector3.FORWARD); player.tick(delta)
 	for dog in companion_pets:

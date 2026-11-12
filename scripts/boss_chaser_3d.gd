@@ -10,9 +10,15 @@ const ModelFix=preload("res://scripts/model_fix.gd")
 var model: Node3D
 var anim: AnimationPlayer
 var stomp_time:=0.0
+var silent:=false   # the copy drawn once behind the loading screen must not roar
+## The model is loaded once and kept: loading the 13 MB file the moment a run began froze the
+## phone for a second or more, and the intro camera had already swung away from the beast by
+## the time the first frame came back -- the "missing" pursuer.
+static var scene_cache: PackedScene
 
 func _ready() -> void:
-	var pursuer: Resource=load(MODEL_PATH)
+	if scene_cache==null: scene_cache=load(MODEL_PATH) as PackedScene
+	var pursuer: Resource=scene_cache
 	if pursuer==null:
 		push_error("pursuer model missing: "+MODEL_PATH)
 		return
@@ -68,7 +74,7 @@ func _ready() -> void:
 	# Use the game's voice pool so the supplied roar follows the existing mute setting.
 	# BossChaser is created for both the opening pursuit and mid-run ambushes.
 	var sound=get_parent().get("sound")
-	if is_instance_valid(sound): sound.play("pursuer_roar")
+	if is_instance_valid(sound) and not silent: sound.play("pursuer_roar")
 
 func height() -> float:
 	return 1.84*SCALE
