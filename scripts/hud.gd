@@ -1134,7 +1134,9 @@ func _draw_armory() -> void:
 	var y: float = 596.0
 	for row in rows:
 		_text(String(row[0]), Vector2(60, y + 4), 15, MUTED)
-		var bar := Rect2(110, y - 12, 280, 16)
+		# English labels (DAMAGE / FIRE RATE / MAGAZINE) are longer than the Chinese ones, so the
+		# bar starts further right or the label gets clipped.
+		var bar := Rect2(150, y - 12, 240, 16)
 		_box(bar, Color(0.10, 0.11, 0.12, 0.95), Color(0.25, 0.26, 0.27, 1.0), 1.0)
 		var fill: float = clampf(float(row[1]), 0.0, 1.0)
 		if fill > 0.0:
