@@ -41,7 +41,7 @@ const MAX_BLOOD_POOLS:=60
 ## the draw call count bounded.
 const MAX_ALIVE_ZOMBIES:=14
 func _max_alive() -> int:
-	return clampi(16+int(distance/240.0),16,44)
+	return clampi(16+int(distance/300.0),16,32)
 ## The city loop is 384 m and the run looks straight down it, so the whole loop used to be
 ## submitted every frame. Blocks fade out at the preset distance instead.
 const VIEW_CULL_END_HIGH:=150.0
@@ -4303,7 +4303,7 @@ func _count_zombie_kind(type: String) -> int:
 func _wave_size() -> int:
 	# The horde has to fill the street late: it grows two per wave up to 44, and the alive cap
 	# (MAX_ALIVE_ZOMBIES) is what actually keeps the frame rate safe on phones.
-	return clampi(6+wave*2,8,44)
+	return clampi(6+wave*2,8,34)
 
 ## Zombie toughness grows with the distance run, slowly at first and faster later:
 ## x1.16 at 500 m, x1.37 at 1000 m, x1.9 at 2000 m, x2.5 at 3000 m, x3.8 at 5000 m, x7.6 at
