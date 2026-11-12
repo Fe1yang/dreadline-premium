@@ -1,4 +1,5 @@
 extends Control
+const UiText=preload("res://scripts/ui_text.gd")
 const ModelFix := preload("res://scripts/model_fix.gd")
 
 const ExtraText=preload("res://scripts/extra_text.gd")
@@ -279,10 +280,10 @@ func _draw_intro() -> void:
 	draw_rect(Rect2(0,0,540,78),Color(0.01,0.012,0.013,0.94))
 	draw_rect(Rect2(0,game.ui_h-108,540,108),Color(0.01,0.012,0.013,0.94))
 	if game.intro_time<1.4:
-		_text_center("追杀者来了" if game.language_code.begins_with("zh") else "THE CHASER IS COMING",Vector2(270,902),30,WHITE)
+		_text_center(UiText.text(String(game.language_code),"chaser"),Vector2(270,902),30,WHITE)
 	else:
-		_text_center("跑！不要回头" if game.language_code.begins_with("zh") else "RUN! DON'T LOOK BACK",Vector2(270,902),30,WHITE)
-	_text_center("点击跳过" if game.language_code.begins_with("zh") else "TAP TO SKIP",Vector2(270,936),12,MUTED)
+		_text_center(UiText.text(String(game.language_code),"run"),Vector2(270,902),30,WHITE)
+	_text_center(UiText.text(String(game.language_code),"skip"),Vector2(270,936),12,MUTED)
 
 func _draw_hud() -> void:
 	# Minimal survival HUD: hearts top-left, distance and kills top-centre, ammo and pause top-right.
@@ -563,7 +564,7 @@ func _draw_cover() -> void:
 	else: draw_rect(Rect2(0,0,540,game.ui_h),INK)
 	# The Dreadline poster has no prompt painted on it, so draw it here.
 	var lang_t: String = game.language_code
-	var prompt: String = "点任意处开始" if String(lang_t).begins_with("zh") else "TAP ANYWHERE TO START"
+	var prompt: String = UiText.text(String(lang_t),"tap")
 	var pulse: float = 0.55 + 0.45 * sin(Time.get_ticks_msec() * 0.003)
 	_clean_center(bold, Vector2(270.0, game.ui_h - 150.0), prompt, 22, Color(1, 1, 1, pulse))
 	_clean_center(bold, Vector2(270.0, game.ui_h - 96.0), "v1.0.0", 12, Color(1, 1, 1, 0.45))
@@ -731,7 +732,7 @@ func _draw_equip_menu() -> void:
 		# second row: take it off entirely
 		var ur: Rect2 = game.equip_menu_unequip_rect()
 		_panel(ur, Color(0.10,0.10,0.11,1.0), Color(0.55,0.55,0.58,0.9), 1)
-		_clean_center(bold, Vector2(ur.get_center().x, ur.position.y + 24), "卸下" if String(game.language_code).begins_with("zh") else "REMOVE", 16, Color(0.88,0.88,0.9))
+		_clean_center(bold, Vector2(ur.get_center().x, ur.position.y + 24), UiText.text(String(game.language_code),"remove"), 16, Color(0.88,0.88,0.9))
 
 
 ## F3 overlay: frames per second, the worst frame of the last second, and the live object counts.
@@ -777,7 +778,7 @@ func _draw_character_select() -> void:
 		var tab: Rect2=game.lobby_tab_rect(t); var tab_on: bool=game.lobby_tab==t
 		if tab_on: _blood_banner(tab)
 		var _zhc: bool = String(lang).begins_with("zh")
-		var tlabel: String = ("载具" if _zhc else "VEHICLES") if t==3 else (("武器" if _zhc else "WEAPONS") if t==4 else ShopText.text(lang,"chars" if t==0 else "pets"))
+		var tlabel: String = UiText.text(String(lang),"vehicles") if t==3 else (UiText.text(String(lang),"weapons") if t==4 else ShopText.text(lang,"chars" if t==0 else "pets"))
 		_text_center(tlabel,Vector2(tab.get_center().x,tab.end.y-12),15,C_BONE if tab_on else MUTED)
 	# The settings gear lives in the same corner on every tab, always white. Equipping happens
 	# on the cards themselves, so the per-tab gear toggles are gone.
@@ -817,7 +818,7 @@ func _draw_character_select() -> void:
 					var pci: int = game.pet_for_card(ci)   # card slot -> pet index
 					var psub := ExtraText.text(lang,"pet_locked")
 					if game.premium_build():
-						psub = ("已拥有" if String(lang).begins_with("zh") else "OWNED") if game.pet_owned(pci) else ("%d %s" % [int(game.pack_by_id("pet_%d" % pci).get("coins",0)), "金币" if String(lang).begins_with("zh") else "coins"])
+						psub = UiText.text(String(lang),"owned") if game.pet_owned(pci) else ("%d %s" % [int(game.pack_by_id("pet_%d" % pci).get("coins",0)), "金币" if String(lang).begins_with("zh") else "coins"])
 					_info_tip(mpl,game.pet_name(pci),ShopText.text(lang,"pets"), psub)
 				elif game.lobby_tab==0 and ci<game.lobby.CHARACTERS.size():
 					var ch: Dictionary=game.lobby.CHARACTERS[ci]
@@ -826,7 +827,7 @@ func _draw_character_select() -> void:
 					if game.premium_build():
 						# ability first, then what it costs (or that you own it)
 						if game.character_owned(ci):
-							sub += "   ·   " + ("已拥有" if String(lang).begins_with("zh") else "OWNED")
+							sub += "   ·   " + UiText.text(String(lang),"owned")
 						else:
 							sub += "   ·   " + game.card_price_text(0, ci)
 					_info_tip(mpl,game.character_name(ci),ShopText.text(lang,"chars"), sub)
@@ -920,7 +921,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 		if not owned and wvis.size.y>1.0:
 			_box(wvis,Color(0,0,0,0.55))
 		if whole:
-			_text_center("火焰喷射器" if String(lang).begins_with("zh") else "FLAMETHROWER",Vector2(card.get_center().x,card.end.y-9),13,gold)
+			_text_center(UiText.text(String(lang),"flame"),Vector2(card.get_center().x,card.end.y-9),13,gold)
 			if flame_on:
 				draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),Color("b94a43"))
 			elif owned:
@@ -1095,7 +1096,7 @@ func _character_card(rect: Rect2,index: int) -> void:
 	if portraits.size()>index and portraits[index]:
 		clean_ops.append(["texture",portraits[index],Rect2(rect.position+Vector2(3,3),Vector2(rect.size.x-6,rect.size.y-61))])
 	draw_rect(Rect2(rect.position+Vector2(3,rect.size.y-58),Vector2(rect.size.x-6,55)),Color(0.025,0.03,0.031,0.96))
-	_text_center(("男" if index==0 else "女") if String(game.language_code).begins_with("zh") else ("M" if index==0 else "F"),rect.position+Vector2(rect.size.x/2,rect.size.y-20),22,WHITE)
+	_text_center(UiText.text(String(game.language_code),"male" if index==0 else "female"),rect.position+Vector2(rect.size.x/2,rect.size.y-20),22,WHITE)
 	if game.character_choice==index:
 		draw_rect(Rect2(rect.position,Vector2(5,rect.size.y)),RED)
 		draw_rect(Rect2(rect.position,Vector2(rect.size.x,4)),WHITE)
@@ -1112,7 +1113,7 @@ func _hex_badge(center: Vector2,radius: float,value: String) -> void:
 func _draw_armory() -> void:
 	_box(Rect2(0, 0, 540, game.ui_h), Color(0, 0, 0, 0.72))
 	_panel(Rect2(30, 90, 480, 700), Color(0.03, 0.034, 0.038, 0.97), Color(LINE, 1.0), 0)
-	_bold_text("军械库" if String(game.language_code).begins_with("zh") else "ARMORY", Vector2(60, 132), 26, WHITE)
+	_bold_text(UiText.text(String(game.language_code),"armory"), Vector2(60, 132), 26, WHITE)
 	_text("%d / %d" % [game.armory_index + 1, game.ARMORY_WEAPONS.size()], Vector2(430, 132), 15, MUTED)
 	var id: String = game.armory_weapon_id()
 	var stats: Dictionary = game.ARMORY_STATS.get(id, {})
@@ -1128,9 +1129,9 @@ func _draw_armory() -> void:
 	var rate: float = 1.0 / maxf(0.05, float(stats.get("rate", 0.3)))
 	var mag: float = float(stats.get("mag", 1))
 	var _zh: bool = String(game.language_code).begins_with("zh")
-	var rows := [["伤害" if _zh else "DAMAGE", dmg / 180.0, str(int(dmg))],
-		["攻速" if _zh else "FIRE RATE", rate / (1.0 / 0.085), "%.1f/s" % rate],
-		["容量" if _zh else "MAGAZINE", mag / 100.0, str(int(mag))]]
+	var rows := [[UiText.text(String(game.language_code),"damage"), dmg / 180.0, str(int(dmg))],
+		[UiText.text(String(game.language_code),"rate"), rate / (1.0 / 0.085), "%.1f/s" % rate],
+		[UiText.text(String(game.language_code),"mag"), mag / 100.0, str(int(mag))]]
 	var y: float = 596.0
 	for row in rows:
 		_text(String(row[0]), Vector2(60, y + 4), 15, MUTED)
@@ -1147,11 +1148,11 @@ func _draw_armory() -> void:
 	var lv: int = game.armory_level()
 	var lv_max: int = game.armory_max_level()
 	if lv_max > 0:
-		_text(("升级  LV %d / %d" if _zh else "UPGRADE  LV %d / %d") % [lv, lv_max], Vector2(60, 706), 15, GOLD)
-		_button(game.ARMORY_UPGRADE, (("升级  %d 银币" if _zh else "UPGRADE  %d SILVER") % game.armory_price()) if lv < lv_max else ("已满级" if _zh else "MAX LEVEL"), lv < lv_max)
+		_text(UiText.text(String(game.language_code),"up_lv") % [lv, lv_max], Vector2(60, 706), 15, GOLD)
+		_button(game.ARMORY_UPGRADE, (UiText.text(String(game.language_code),"up_silver") % game.armory_price()) if lv < lv_max else UiText.text(String(game.language_code),"maxed"), lv < lv_max)
 	else:
-		_text("升级  此枪不可升级" if _zh else "UPGRADE  NOT AVAILABLE", Vector2(60, 706), 15, MUTED)
-		_button(game.ARMORY_UPGRADE, "不可升级" if _zh else "NOT UPGRADEABLE", false)
+		_text(UiText.text(String(game.language_code),"no_up2"), Vector2(60, 706), 15, MUTED)
+		_button(game.ARMORY_UPGRADE, UiText.text(String(game.language_code),"no_up"), false)
 	# nav
 	_box(Rect2(60, 736, 60, 44), Color(0.10, 0.11, 0.12, 1.0), Color(LINE, 1.0), 0)
 	_text_center("‹", Vector2(90, 764), 22, WHITE)
@@ -1169,7 +1170,7 @@ func _draw_shop() -> void:
 	_button(Rect2(404,24,112,48),ShopText.text(lang,"cases"),true)
 	# armory entry: a second button under the case button
 	_box(game.ARMORY_BTN, Color(0.10, 0.11, 0.12, 0.95), Color(LINE, 1.0), 0)
-	_text_center("军械库" if String(lang).begins_with("zh") else "ARMORY", game.ARMORY_BTN.get_center() + Vector2(0, 6), 16, WHITE)
+	_text_center(UiText.text(String(lang),"armory"), game.ARMORY_BTN.get_center() + Vector2(0, 6), 16, WHITE)
 	_wallet_shop_only(game.WALLET_SHOP)
 	# plain entry into the store, next to the balance
 	var sb: Rect2=game.SHOP_STORE_BTN
@@ -1211,7 +1212,7 @@ func _draw_shop() -> void:
 		var chip: Dictionary=game.shop_items[i]; var rect:=Rect2(30+i*60,862,56,44); var on: bool=i==game.shop_index
 		_panel(rect,Color(0.12,0.13,0.13,0.95) if on else Color(0.07,0.075,0.08,0.90),RED if on else LINE,0)
 		_chip_text(ShopText.text(lang,chip.name_key),rect,WHITE if on else MUTED)
-	_text_center("PREMIUM / "+game.localize("planned"),Vector2(270,936),12,Color("cf8c75"))
+	_text_center(UiText.text(String(game.language_code),"premium"),Vector2(270,936),12,Color("cf8c75"))
 
 func _draw_languages() -> void:
 	draw_rect(Rect2(0,0,540,game.ui_h),Color(0.018,0.022,0.023,0.88))
@@ -2408,7 +2409,7 @@ func _draw_signin() -> void:
 		var on: bool = (game.signin_monthly == (ti == 1))
 		if on: _box(tr, Color(0.55,0.10,0.10,0.95))
 		else: _frame(tr.grow(-2), Color(1,1,1,0.22), 1.0)
-		var tab_label: String = ("月签到" if ti==1 else "周签到") if String(lang).begins_with("zh") else ("MONTHLY" if ti==1 else "WEEKLY")
+		var tab_label: String = UiText.text(String(lang),"monthly" if ti==1 else "weekly")
 		_clean_center(bold, tr.get_center()+Vector2(0,7), tab_label, 16, WHITE if on else MUTED)
 	var c: Vector2=game.SIGNIN_CLOSE.get_center()
 	clean_ops.append(["line",PackedVector2Array([c+Vector2(-11,-11),c+Vector2(11,11)]),WHITE,4.0])
