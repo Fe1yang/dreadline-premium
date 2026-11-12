@@ -1476,7 +1476,8 @@ func _process(delta: float) -> void:
 	gate_timer-=delta
 	if gate_timer<=0:
 		# a gate every 12-15 s (was 7.5-11 s): fewer steps up per run, each one worth having
-		if _road_clear(-40.0): _spawn_gate(); gate_timer=lerpf(34.0,26.0,ramp)*rng.randf_range(0.9,1.15)
+		# ~800 m between gates (the run covers about 10.5 m per second): 78 s early, 74 s late.
+		if _road_clear(-40.0): _spawn_gate(); gate_timer=lerpf(78.0,74.0,ramp)*rng.randf_range(0.98,1.02)
 		else: gate_timer=1.2
 	_district_threads()
 	barrel_timer-=delta
@@ -4192,8 +4193,11 @@ func select_shop_item(index: int) -> void:
 	if shop_items.is_empty(): return
 	shop_index=posmod(index,shop_items.size()); shop_truck.focus(shop_items[shop_index].id)
 
+## Silver for the next level. Tripled: a single run was paying for several upgrades, so the truck
+## had no economy at all.
+const UPGRADE_PRICE_SCALE := 3
 func item_cost(item: Dictionary) -> int:
-	return int(item.cost)+int(meta_upgrades.get(item.id,0))*20
+	return (int(item.cost)+int(meta_upgrades.get(item.id,0))*20)*UPGRADE_PRICE_SCALE
 
 ## Spends silver only: supply-truck gear upgrades are a pure silver transaction.
 func _spend_silver(cost: int) -> bool:
