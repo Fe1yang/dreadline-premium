@@ -147,9 +147,11 @@ var quality_high:=true
 ## Picture look ("filter"), chosen in Settings. 0 REALISTIC is the default: a stronger warm sun,
 ## a cool, darker sky fill so shade really reads as shade, full-strength shadows, soft bloom on
 ## bright things and AgX tone mapping (the Photon-shader kind of look). 1 CLASSIC is the old
-## softer picture, 2 CINEMA is warm light / teal shade with lower saturation, 3 VIVID is punchy.
-var look_mode:=0
-const LOOK_COUNT:=4
+## softer picture, 2 CINEMA is warm light / teal shade with lower saturation, 3 VIVID is punchy,
+## 4 FRESH (the default the player picked) is bright, clean daylight with cool blue shade and
+## shadows between soft and solid.
+var look_mode:=4
+const LOOK_COUNT:=5
 const LOOKS:=[
 	{"sun":1.6,"sun_tint":Color("ffdcb0"),"amb":0.86,"amb_tint":Color("b4c6e0"),"fill":0.8,"shadow":1.0,
 		"agx":true,"exposure":1.28,"glow":0.35,"contrast":1.06,"saturation":1.16,"brightness":1.0},
@@ -159,25 +161,27 @@ const LOOKS:=[
 		"agx":false,"exposure":1.18,"glow":0.30,"contrast":1.10,"saturation":0.88,"brightness":1.0},
 	{"sun":1.3,"sun_tint":Color("fff0d8"),"amb":0.95,"amb_tint":Color("d4e0ff"),"fill":0.9,"shadow":0.92,
 		"agx":false,"exposure":1.06,"glow":0.30,"contrast":1.08,"saturation":1.35,"brightness":1.02},
+	{"sun":1.25,"sun_tint":Color("fffaf2"),"amb":1.0,"amb_tint":Color("bfe2ff"),"fill":0.95,"shadow":0.92,
+		"agx":false,"exposure":1.12,"glow":0.25,"contrast":1.0,"saturation":1.28,"brightness":1.05},
 ]
 const LOOK_NAMES:={
-	"en":["REALISTIC","CLASSIC","CINEMA","VIVID","LOOK"],
-	"zh_CN":["写实","经典","电影","鲜艳","滤镜"],
-	"zh_TW":["寫實","經典","電影","鮮豔","濾鏡"],
-	"ja":["リアル","クラシック","シネマ","ビビッド","フィルター"],
-	"ko":["사실적","클래식","시네마","선명","필터"],
-	"es":["REALISTA","CLÁSICO","CINE","VIVO","FILTRO"],
-	"fr":["RÉALISTE","CLASSIQUE","CINÉMA","VIF","FILTRE"],
-	"de":["REALISTISCH","KLASSISCH","KINO","LEBHAFT","FILTER"],
-	"pt":["REALISTA","CLÁSSICO","CINEMA","VIVO","FILTRO"],
-	"ru":["РЕАЛИЗМ","КЛАССИКА","КИНО","ЯРКИЙ","ФИЛЬТР"],
-	"ar":["واقعي","كلاسيكي","سينمائي","زاهٍ","الفلتر"],
-	"hi":["यथार्थ","क्लासिक","सिनेमा","चटक","फ़िल्टर"],
+	"en":["REALISTIC","CLASSIC","CINEMA","VIVID","FRESH","LOOK"],
+	"zh_CN":["写实","经典","电影","鲜艳","清新","滤镜"],
+	"zh_TW":["寫實","經典","電影","鮮豔","清新","濾鏡"],
+	"ja":["リアル","クラシック","シネマ","ビビッド","フレッシュ","フィルター"],
+	"ko":["사실적","클래식","시네마","선명","청량","필터"],
+	"es":["REALISTA","CLÁSICO","CINE","VIVO","FRESCO","FILTRO"],
+	"fr":["RÉALISTE","CLASSIQUE","CINÉMA","VIF","FRAIS","FILTRE"],
+	"de":["REALISTISCH","KLASSISCH","KINO","LEBHAFT","FRISCH","FILTER"],
+	"pt":["REALISTA","CLÁSSICO","CINEMA","VIVO","FRESCO","FILTRO"],
+	"ru":["РЕАЛИЗМ","КЛАССИКА","КИНО","ЯРКИЙ","СВЕЖИЙ","ФИЛЬТР"],
+	"ar":["واقعي","كلاسيكي","سينمائي","زاهٍ","منعش","الفلتر"],
+	"hi":["यथार्थ","क्लासिक","सिनेमा","चटक","ताज़ा","फ़िल्टर"],
 }
 func look_label() -> String:
 	var names: Array=LOOK_NAMES.get(language_code,LOOK_NAMES["en"])
 	var sep: String="：" if language_code in ["zh_CN","zh_TW","ja"] else ": "
-	return str(names[4])+sep+str(names[look_mode])
+	return str(names[LOOK_COUNT])+sep+str(names[look_mode])
 
 ## Applies the parts of the look that do not change with the hour or the weather.
 func _apply_look() -> void:
@@ -6640,7 +6644,7 @@ func _load_save() -> void:
 	for f in ["--smoke-test","--soak-test","--lootbox-test","--stamina-test","--capture","--capture-medic","--capture-bike"]:
 		if f in OS.get_cmdline_user_args(): isolated=true; break
 	if not isolated and (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK):
-		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); look_mode=clampi(int(c.get_value("display","look",0)),0,LOOK_COUNT-1); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
+		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); look_mode=clampi(int(c.get_value("display","look",4)),0,LOOK_COUNT-1); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
 		if owned_vehicle=="CAR": owned_vehicle="CRUISER" # old save name for the third bike
 		owned_characters=_dict_or_empty(c.get_value("chars","owned",{})); owned_skins=_dict_or_empty(c.get_value("chars","skins",{}))
 		terms_accepted=bool(c.get_value("legal","terms_premium_v1",false))   # own key: an acceptance stored by the old in-app-purchase build does not count for this one
