@@ -1362,7 +1362,7 @@ func finish_reload() -> void:
 
 func take_damage(amount: float) -> void:
 	# Defence was stacking to near-immunity: helmet + dmg_reduce + shield soaked most of a hit.
-	var applied_damage := amount * (0.88 if has_helmet else 1.0) * (1.0-dmg_reduce)
+	var applied_damage := amount * (0.94 if has_helmet else 1.0) * (1.0-dmg_reduce)
 	if shield>0.0:
 		var soak := minf(shield,applied_damage)
 		shield -= soak; applied_damage -= soak
@@ -1392,10 +1392,10 @@ const PIERCE_CAP := 2
 const CRIT_BONUS_CAP := 0.60      # on top of the gun's own crit (sniper 25% -> up to 85%)
 const CRIT_MULT_CAP := 2.5        # a crit hits for at most x2.5
 const RELOAD_SCALE_MIN := 0.55
-const REGEN_CAP := 1.2
-const KILL_HEAL_CAP := 2.0
-const DMG_REDUCE_CAP := 0.28
-const SHIELD_CAP := 55.0
+const REGEN_CAP := 0.6
+const KILL_HEAL_CAP := 1.0
+const DMG_REDUCE_CAP := 0.18
+const SHIELD_CAP := 35.0
 const MOVE_CAP := 1.25
 const BURN_CAP := 20.0
 const POISON_CAP := 15.0

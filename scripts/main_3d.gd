@@ -4320,7 +4320,7 @@ func _wave_difficulty() -> float:
 ## for the same 18 HP at 10 000 m as at 0 m while the player stacked regen. This climbs to x3.2 by
 ## roughly 2500 m and stays there, so a sloppy fight ends a run inside the first couple of kilometres.
 func _zombie_damage_scale() -> float:
-	return clampf(1.0+maxf(distance,0.0)/1100.0,1.0,3.2)
+	return clampf(1.0+maxf(distance,0.0)/780.0,1.0,4.0)
 
 func _living_zombies() -> int:
 	var count:=0
@@ -6269,7 +6269,7 @@ func _tick_pickups(delta: float) -> void:
 				player.fire_ammo=mini(24,player.fire_ammo+4); _popup(player.position+Vector3(0,2.4,0),RunText.fmt("incendiary_n",4),Color("ff6547"))
 			else:
 				# Darius (paramedic) doubles the medkit: 70 HP instead of 35.
-				var healed:=int(22.0*player.heal_scale())
+				var healed:=int(15.0*player.heal_scale())
 				player.health=minf(player.max_health,player.health+healed); _popup(player.position+Vector3(0,2.4,0),RunText.fmt("health",healed),Color("c9f54a"))
 			sound.play("pickup"); pickups.remove_at(i); p.queue_free()
 		elif p.position.z>13: pickups.remove_at(i); p.queue_free()

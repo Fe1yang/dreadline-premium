@@ -81,6 +81,78 @@ var heading:=0.0       # where the nose points: 0 = down the road (-Z)
 var stride_rate:=1.0   # smoothed playback rate of the gallop
 var anim: AnimationPlayer
 var bark_player: AudioStreamPlayer
+
+## ---- Pets can fall ------------------------------------------------------------------------
+## A dog that fights gets clawed back: while it is at a zombie's throat, that zombie hits it now
+## and then. Its health is hidden; the tougher the breed, the longer it lasts. When it runs out
+## the dog plays its death fall and stays where it dropped (the road carries it away), and its
+## place in the pack is free for a new dog from a crate or a barrel.
+const PET_HP:=[60.0,80.0,100.0,150.0,90.0,260.0,260.0]   # doberman .. lion, by breed index
+const CLAW_INTERVAL:=1.1      # a zombie at the dog's face swings this often...
+const CLAW_CHANCE:=0.45       # ...and lands this share of the swings
+const CLAW_FACTOR:=0.45       # a landed swing does this share of the zombie's bite damage
+const DEATH_CLIPS:=["Death_Slow","Death_Fast"]
+const DEATH_SOURCE:="res://assets/models/pets/labrador.glb"   # same 47-bone rig as the dogs and the lion
+var hp:=60.0
+var dead:=false
+var dead_time:=0.0
+var claw_timer:=0.0
+static var death_source: AnimationPlayer
+
+func take_hit(amount: float) -> void:
+	if dead or amount<=0.0: return
+	hp-=amount
+	if hp<=0.0: die()
+
+func die() -> void:
+	if dead: return
+	dead=true; target=null; dead_time=0.0
+	if is_instance_valid(bark_player): bark_player.stop()
+	var played:=false
+	if anim!=null:
+		var clip: String=DEATH_CLIPS[randi()%DEATH_CLIPS.size()]
+		if not anim.has_animation(clip): clip=DEATH_CLIPS[0]
+		if anim.has_animation(clip):
+			anim.get_animation(clip).loop_mode=Animation.LOOP_NONE
+			anim.speed_scale=1.0
+			anim.play(clip,0.1)
+			played=true
+	if not played and is_instance_valid(model):
+		# the white tiger's rig has no death clip: it keels over onto its side. The whole pet
+		# node rolls about the road axis (its body points down the road once it stops turning),
+		# so the cat lies flat beside where it stood instead of tipping up onto its tail.
+		if anim!=null: anim.pause()
+		rotation.y=0.0
+		var tw:=create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.tween_property(self,"rotation:z",PI*0.5*(1.0 if randf()<0.5 else -1.0),0.5)
+
+## Copy the Labrador's death clips onto this pet (same rig): only the path in front of the
+## skeleton differs, so the tracks are re-pointed at this model's skeleton.
+func _ensure_death_clips() -> void:
+	if anim==null or anim.has_animation(DEATH_CLIPS[0]): return
+	if not ResourceLoader.exists(DEATH_SOURCE): return
+	if death_source==null:
+		var src_root: Node=(load(DEATH_SOURCE) as PackedScene).instantiate()
+		for ap in src_root.find_children("*","AnimationPlayer",true,false):
+			if (ap as AnimationPlayer).has_animation(DEATH_CLIPS[0]): death_source=ap; break
+		if death_source==null: return
+	var skel: Skeleton3D=null
+	for sk in model.find_children("*","Skeleton3D",true,false): skel=sk; break
+	if skel==null or skel.get_bone_count()!=47: return
+	var root_node: Node=anim.get_node_or_null(anim.root_node)
+	if root_node==null: return
+	var prefix: String=String(root_node.get_path_to(skel))
+	var lib: AnimationLibrary=anim.get_animation_library("")
+	if lib==null: return
+	for clip in DEATH_CLIPS:
+		if not death_source.has_animation(clip): continue
+		var a: Animation=death_source.get_animation(clip).duplicate(true)
+		for t in range(a.get_track_count()):
+			var p: String=String(a.track_get_path(t))
+			var k: int=p.find("Skeleton3D")
+			if k>=0: a.track_set_path(t,NodePath(prefix+p.substr(k+10)))
+		a.loop_mode=Animation.LOOP_NONE
+		if not lib.has_animation(clip): lib.add_animation(clip,a)
 var bark_wait:=0.0
 var bark_stop:=0.0
 
@@ -114,6 +186,8 @@ func setup(index: int, slot:=0) -> void:
 		anim.seek(randf()*anim.get_animation(RUN_CLIP).length,true)  # pack mates do not stride in sync
 	else:
 		push_error("pet has no %s clip: %s" % [RUN_CLIP, String(LobbyScene.PETS[breed].asset)])
+	hp=float(PET_HP[clampi(breed,0,PET_HP.size()-1)])
+	_ensure_death_clips()
 	bark_player=AudioStreamPlayer.new(); add_child(bark_player)
 	bark_wait=randf_range(LION_GAP.x,LION_GAP.y) if breed==LION_BREED else randf_range(4.0,8.0)  # first bark a few seconds into the run
 
@@ -210,6 +284,9 @@ func _acquire_target() -> void:
 
 func tick(delta: float) -> void:
 	if not is_instance_valid(model): return
+	if dead:
+		dead_time+=delta
+		return
 	age+=delta; cooldown=maxf(0.0,cooldown-delta); bite_time=maxf(0.0,bite_time-delta)
 	if not _valid_target(): _acquire_target()
 	var desired: Vector3=game.player.position+follow_offset(slot_index)
@@ -219,6 +296,12 @@ func tick(delta: float) -> void:
 	var distance: float=flat_delta.length()
 	var bite_range: float=0.72+(float(target.radius) if attacking else 0.0)
 	if attacking and distance<=bite_range:
+		# at the zombie's face: it claws back now and then
+		claw_timer-=delta
+		if claw_timer<=0.0:
+			claw_timer=CLAW_INTERVAL
+			if randf()<CLAW_CHANCE: take_hit(float(target.damage)*CLAW_FACTOR)
+			if dead: return
 		if cooldown<=0.0:
 			cooldown=bite_interval()
 			_start_bite()

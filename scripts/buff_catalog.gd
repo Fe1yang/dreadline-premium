@@ -11,11 +11,11 @@ extends RefCounted
 const BUFFS:={
 	# --- survival ---
 	"max_hp":      {"values":[12,20,35,55],   "unit":"",   "min":0, "group":"survival"}, # +max HP (and heals that much)
-	"heal":        {"values":[8,15,25,40],   "unit":"",   "min":0, "group":"survival"}, # instant heal
-	"regen":       {"values":[0.4,0.6,0.9,1.3],"unit":"/s", "min":0, "group":"survival"}, # HP per second
-	"kill_heal":   {"values":[0.4,0.6,1,1.5], "unit":"",   "min":0, "group":"survival"}, # HP per kill
-	"dmg_reduce":  {"values":[2,3,5,8],      "unit":"%",  "min":0, "group":"survival"}, # damage taken -x% (cap 60%)
-	"shield":      {"values":[10,16,26,40],  "unit":"",   "min":0, "group":"survival"}, # absorbs damage before HP
+	"heal":        {"values":[6,10,16,26],   "unit":"",   "min":0, "group":"survival"}, # instant heal
+	"regen":       {"values":[0.2,0.35,0.5,0.8],"unit":"/s", "min":0, "group":"survival"}, # HP per second
+	"kill_heal":   {"values":[0.2,0.35,0.5,0.8],"unit":"", "min":0, "group":"survival"}, # HP per kill
+	"dmg_reduce":  {"values":[1,2,3,5],      "unit":"%",  "min":0, "group":"survival"}, # damage taken -x% (cap 60%)
+	"shield":      {"values":[6,10,16,26],   "unit":"",   "min":0, "group":"survival"}, # absorbs damage before HP
 	"move":        {"values":[4,6,9,12],     "unit":"%",  "min":0, "group":"survival"}, # run + side-step speed (cap +40%)
 	# --- gun ---
 	"damage":      {"values":[8,12,18,25],    "unit":"%",  "min":0, "group":"gun"},
