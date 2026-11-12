@@ -1017,24 +1017,32 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 				_text_center(game.card_price_text(game.lobby_tab, pi), row.get_center()+Vector2(0,5), 11, C_ACID)
 		if on: draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),Color("b94a43"))
 
+func _disc(center: Vector2, r: float) -> PackedVector2Array:
+	var pts:=PackedVector2Array()
+	for k in range(16): pts.append(center+Vector2(cos(TAU*k/16.0),sin(TAU*k/16.0))*r)
+	return pts
+
 func _locked_slot(rect: Rect2,pet:=false,skin:=false) -> void:
 	_panel(rect,Color(0.04,0.045,0.047,0.80),Color(LINE,0.7),0)
 	var c:=rect.get_center()+Vector2(0,-8)
+	# Drawn on the same layer as the panel (clean_ops): plain draw_* calls went UNDER the panel
+	# and the icons came out almost invisible.
+	var ink:=Color(1,1,1,0.78)
 	if skin:
-		# T-shirt outline with a small padlock on it.
 		var tee:=PackedVector2Array([c+Vector2(-7,-16),c+Vector2(-20,-9),c+Vector2(-15,0),c+Vector2(-10,-3),c+Vector2(-10,16),c+Vector2(10,16),c+Vector2(10,-3),c+Vector2(15,0),c+Vector2(20,-9),c+Vector2(7,-16),c+Vector2(4,-12),c+Vector2(-4,-12),c+Vector2(-7,-16)])
-		draw_polyline(tee,Color(1,1,1,0.24),2.5,true)
-		draw_rect(Rect2(c+Vector2(-6,2),Vector2(12,9)),Color(1,1,1,0.3))
-		draw_arc(c+Vector2(0,2),4,PI,TAU,10,Color(1,1,1,0.3),2.0)
+		clean_ops.append(["line",tee,ink,2.5])
 	elif pet:
 		# Paw print.
-		draw_circle(c+Vector2(0,8),11,Color(1,1,1,0.22))
-		for o in [Vector2(-13,-6),Vector2(-5,-14),Vector2(5,-14),Vector2(13,-6)]: draw_circle(c+o,4.5,Color(1,1,1,0.22))
+		clean_ops.append(["poly",_disc(c+Vector2(0,8),11.0),ink])
+		for o in [Vector2(-13,-6),Vector2(-5,-14),Vector2(5,-14),Vector2(13,-6)]: clean_ops.append(["poly",_disc(c+o,4.5),ink])
 	else:
-		# Padlock.
-		draw_rect(Rect2(c+Vector2(-12,-2),Vector2(24,20)),Color(1,1,1,0.22))
-		draw_arc(c+Vector2(0,-2),8,PI,TAU,16,Color(1,1,1,0.22),3.0)
-	_text_center(ShopText.text(game.language_code,"coming"),Vector2(c.x,rect.end.y-10),10,Color(MUTED,0.8))
+		# Padlock: body plus shackle, with a keyhole.
+		_box(Rect2(c+Vector2(-12,-2),Vector2(24,20)),ink)
+		var arc:=PackedVector2Array()
+		for k in range(13): arc.append(c+Vector2(cos(PI+PI*k/12.0),sin(PI+PI*k/12.0))*8.0+Vector2(0,-2))
+		clean_ops.append(["line",arc,ink,3.0])
+		_box(Rect2(c+Vector2(-2,5),Vector2(4,7)),Color(0,0,0,0.8))
+	_text_center(ShopText.text(game.language_code,"coming"),Vector2(c.x,rect.end.y-10),11,Color(1,1,1,0.85))
 
 ## Gear toggle with a visible state: bright ring + "ON" when equipped, dim + "OFF" when not.
 ## Settings gear in the lobby's top-right corner: same place and look as the in-run pause area.
