@@ -1141,7 +1141,7 @@ func _dress_district(road: Node3D, index: int) -> void:
 		var lamp_sides: Array = [-1.0, 1.0] if d.randf() < 0.4 else [(-1.0 if d.randf() < 0.5 else 1.0)]
 		for ls in lamp_sides:
 			var lamp := _dress_one(road, taken, "lamp_round", Vector3(ls * KERB_PROP_X, PAVEMENT_Y, z0 + 4.8), 0.0, 0.7, 0.7)
-			if lamp != null and d.randf() < 0.65: _light_round_lamp(road, lamp)
+			if lamp != null: _light_round_lamp(road, lamp, d.randf() < 0.65)
 
 	# --- against the wall ----------------------------------------------------------------------
 	for side in [-1.0, 1.0]:
@@ -1228,18 +1228,23 @@ func _reroll_dressing(road: Node3D) -> void:
 
 ## The round lamp's globe glows at night and throws a pool of light, like the blocks' own lamps.
 var round_globe_mesh: SphereMesh
-func _light_round_lamp(road: Node3D, lamp: Node3D) -> void:
+## Every globe is a dull frosted grey by day (the model's own globe is painted bright white and
+## read as switched on in sunlight); the working ones warm up and glow only after dark.
+const GLOBE_DAY := Color("8e908b")
+const GLOBE_NIGHT := Color("f2ead8")
+func _light_round_lamp(road: Node3D, lamp: Node3D, works: bool = true) -> void:
 	if round_globe_mesh == null:
 		round_globe_mesh = SphereMesh.new(); round_globe_mesh.radius = 0.36; round_globe_mesh.height = 0.72
 	var globe := MeshInstance3D.new(); globe.mesh = round_globe_mesh
-	var mat := StandardMaterial3D.new(); mat.albedo_color = Color("e9e6dc"); mat.roughness = 0.6
+	var mat := StandardMaterial3D.new(); mat.albedo_color = GLOBE_DAY.lerp(GLOBE_NIGHT, night_amount if works else 0.0); mat.roughness = 0.6
 	mat.emission_enabled = true; mat.emission = Color("ffd78e"); mat.emission_energy_multiplier = 0.0
 	globe.material_override = mat; globe.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	lamp.add_child(globe); globe.position = Vector3(0, 3.2, 0)
+	if not works: return          # a dead lamp: grey globe, never lit
 	var spot := SpotLight3D.new(); spot.position = Vector3(0, 3.0, 0); spot.rotation_degrees = Vector3(-90, 0, 0)
 	spot.light_color = Color("ffdca3"); spot.spot_range = 9.0; spot.spot_angle = 55.0; spot.spot_attenuation = 1.2
 	spot.light_energy = 0.0; spot.visible = false; lamp.add_child(spot)
-	street_lamps.append({"light": spot, "material": mat})
+	street_lamps.append({"light": spot, "material": mat, "globe": true})
 
 
 func _build_road() -> void:
@@ -2423,6 +2428,7 @@ func _apply_day_night() -> void:
 		var lamp: SpotLight3D=entry.light
 		lamp.visible=night_amount>0.04; lamp.light_energy=3.1*night_amount
 		(entry.material as StandardMaterial3D).emission_energy_multiplier=2.4*night_amount
+		if entry.has("globe"): (entry.material as StandardMaterial3D).albedo_color=GLOBE_DAY.lerp(GLOBE_NIGHT,night_amount)
 
 ## Lightning only supplies a flash; _apply_day_night combines it with the current hour.
 func _tick_lightning(delta: float) -> void:
