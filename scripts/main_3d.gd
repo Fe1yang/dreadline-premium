@@ -4834,12 +4834,23 @@ func _spawn_gate() -> void:
 const THREE_GATE_DISTANCE:=500.0
 const PITY_GATES:=8
 const RARITY_WEIGHTS:=[64.0,25.0,9.0,2.0]
+## Early gates are almost always common; the rare tiers only open up deep into a run, so a fresh
+## run is not handed an epic on the second gate.
+const RARITY_CURVE:={0:[84.0,14.0,1.8,0.2], 1:[46.0,36.0,13.0,5.0], 2:[16.0,40.0,30.0,14.0]}
 var gates_since_epic:=0
 
 func _roll_rarity() -> int:
-	var w: Array=RARITY_WEIGHTS.duplicate()
-	var late: float=clampf(distance/1500.0,0.0,1.0) # a little luckier deeper into a run
-	w[2]+=3.0*late; w[3]+=2.0*late
+	# distance 0 -> all common; about 1200 m -> mid; 2600 m and beyond -> the late table.
+	var t: float=clampf(distance/2600.0,0.0,1.0)
+	var k: float=t*t                                # slow at first, steep later
+	var a: Array=RARITY_CURVE[0]
+	var b: Array=RARITY_CURVE[1]
+	var c: Array=RARITY_CURVE[2]
+	var w: Array=[]
+	for i in range(4):
+		var lo: float=lerpf(a[i],b[i],clampf(k*2.0,0.0,1.0))
+		var hi: float=c[i]
+		w.append(lerpf(lo,hi,clampf((k-0.5)*2.0,0.0,1.0)))
 	var total:=0.0
 	for x in w: total+=x
 	var r:=rng.randf()*total
