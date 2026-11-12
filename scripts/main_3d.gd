@@ -5107,9 +5107,6 @@ func _build_crit_glyphs(key: String) -> void:
 		widths.append(w); total += w + CRIT_GLYPH_PAD * 2
 	var vp := SubViewport.new(); vp.transparent_bg = true; vp.size = Vector2i(total, CRIT_GLYPH_H)
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS; add_child(vp)
-	var grad := ShaderMaterial.new(); grad.shader = load("res://shaders/crit_gradient.gdshader")
-	grad.set_shader_parameter("mode", CRIT_GRADIENT_MODE)
-	grad.set_shader_parameter("end_y", float(CRIT_GLYPH_H))
 	var x := 0
 	for i in range(items.size()):
 		for layer in [0, 1]:
@@ -5121,8 +5118,8 @@ func _build_crit_glyphs(key: String) -> void:
 				l.add_theme_color_override("font_outline_color", Color("3b1a02"))
 				l.add_theme_constant_override("outline_size", 16)
 			else:
+				# flat colour, no gradient shader: the gold fill is solid
 				l.add_theme_color_override("font_color", Color.WHITE)
-				l.material = grad
 			vp.add_child(l)
 		x += widths[i] + CRIT_GLYPH_PAD * 2
 	await RenderingServer.frame_post_draw
