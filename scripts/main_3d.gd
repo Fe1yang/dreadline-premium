@@ -819,6 +819,20 @@ func _randomize_zebra(road: Node3D) -> void:
 	var z:=road.find_child("CITY_zebra_paint",true,false) as Node3D
 	if z: z.visible=rng.randf()<0.16
 
+## First launch only (until the player picks a preset in Settings): older iPhones and iPads start
+## on FAST. iOS reports the hardware id, e.g. "iPhone14,7" (iPhone 14) or "iPhone12,1" (iPhone 11);
+## the number before the comma is the chip generation. iPhone 12 (A14, "iPhone13,x") and newer
+## run HIGH smoothly; anything older, or any device with less than 4 GB of memory, gets FAST.
+func device_can_run_high() -> bool:
+	var model := OS.get_model_name()
+	var mem: int = int(OS.get_memory_info().get("physical", 0))
+	if mem > 0 and mem < 3_800_000_000: return false
+	for family in [["iPhone", 13], ["iPad", 13], ["iPod", 99]]:
+		if model.begins_with(family[0]):
+			var gen := model.trim_prefix(family[0]).get_slice(",", 0)
+			if gen.is_valid_int(): return int(gen) >= int(family[1])
+	return true
+
 ## Quality preset, saved with the rest of the settings. HIGH is the authored look: 2x MSAA,
 ## four shadow splits over 180 m and the city drawn to 250 m. FAST trades those for frame
 ## rate. Textures, models, materials and effects are identical in both.
@@ -1835,7 +1849,7 @@ func _view_warm_tick() -> void:
 			view_queue.append("obstacle:" + kind)
 		for item in ["gate2:damage", "gate:heal", "gate2:rate", "barrel", "roller", "explosion", "showcrate:SMG", "showcrate:BIKE", "showcrate:PET_0", "pickup:medkit", "pickup:coin", "burst"]:
 			view_queue.append(item)
-		for vid in ["SPORT", "CRUISER", "SEDAN", "TANK", "GOLD", "GOLD_CAR"]:
+		for vid in ["BIKE", "SPORT", "CRUISER", "SEDAN", "TANK", "GOLD", "GOLD_CAR"]:
 			view_queue.append("vehicle:" + vid)
 		view_queue.append("map_table")
 		view_queue.append("pursuer")
@@ -1897,8 +1911,22 @@ func _prefill_make(item: String, at: Vector3) -> void:
 		# the very model the player mounts (player.VEHICLE_MODELS), kept loaded and drawn once
 		var vpath := String(player.VEHICLE_MODELS.get(item.trim_prefix("vehicle:"), ""))
 		if vpath != "" and ResourceLoader.exists(vpath):
+			var vid := item.trim_prefix("vehicle:")
 			var vscene: PackedScene = load(vpath); pinned_scenes[vpath] = vscene
 			n = vscene.instantiate() as Node3D; n.position = at; add_child(n)
+			# exactly what mounting does to it -- double-sided faces, gold paint, the saloon's
+			# glass shader -- plus its lamps and the rain reflection, so the first car of a run
+			# finds every shader already built instead of freezing the game for a moment
+			player.dress_vehicle_materials(vid, n)
+			var tail := OmniLight3D.new(); tail.light_energy = 0.01; tail.omni_range = 1.6; n.add_child(tail)
+			var beam := SpotLight3D.new(); beam.light_energy = 0.01; beam.spot_range = 26.0; n.add_child(beam)
+			var ghost := StandardMaterial3D.new(); ghost.albedo_color = Color(0.55, 0.58, 0.62, 0.28)
+			ghost.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA; ghost.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			ghost.cull_mode = BaseMaterial3D.CULL_DISABLED
+			for gm in n.find_children("*", "MeshInstance3D", true, false):
+				var dup := MeshInstance3D.new(); dup.mesh = (gm as MeshInstance3D).mesh; dup.material_override = ghost
+				dup.position = Vector3(0, -3, 0); n.add_child(dup); break
+			if ResourceLoader.exists("res://scripts/rider_pose.gd"): pinned_scenes["rider_pose"] = load("res://scripts/rider_pose.gd")
 	elif item == "map_table":
 		_ensure_map()
 	elif item == "pursuer":
@@ -6646,7 +6674,7 @@ func _load_save() -> void:
 	for f in ["--smoke-test","--soak-test","--lootbox-test","--stamina-test","--capture","--capture-medic","--capture-bike"]:
 		if f in OS.get_cmdline_user_args(): isolated=true; break
 	if not isolated and (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK):
-		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); look_mode=clampi(int(c.get_value("display","look",4)),0,LOOK_COUNT-1); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
+		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)) if c.has_section_key("display","quality_high") else device_can_run_high(); look_mode=clampi(int(c.get_value("display","look",4)),0,LOOK_COUNT-1); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
 		if owned_vehicle=="CAR": owned_vehicle="CRUISER" # old save name for the third bike
 		owned_characters=_dict_or_empty(c.get_value("chars","owned",{})); owned_skins=_dict_or_empty(c.get_value("chars","skins",{}))
 		terms_accepted=bool(c.get_value("legal","terms_premium_v1",false))   # own key: an acceptance stored by the old in-app-purchase build does not count for this one

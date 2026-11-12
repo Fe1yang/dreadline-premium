@@ -232,6 +232,7 @@ func set_character(index: int, asset_override:="") -> void:
 	character = clampi(index,0,CHARACTER_ASSETS.size()-1)
 	character_asset_override = asset_override
 	_load_character()
+	_refresh_crit()
 	set_aim(aim_direction)
 
 ## Darius the paramedic doubles every healing effect (medkits, heal gates, kill-heal,
@@ -272,21 +273,12 @@ func on_vehicle() -> bool:
 
 ## Climb on: the bike appears under the survivor, the run cycle freezes and the seated
 ## pose modifier folds the legs onto the pegs (arms stay on the gun via the grip IK).
-func mount_vehicle(id: String) -> void:
-	var path: String=String(VEHICLE_MODELS.get(id,""))
-	if vehicle!="" or path=="" or not ResourceLoader.exists(path): return
-	vehicle=id; vehicle_durability=BIKE_DURABILITY
-	vehicle_model=(load(path) as PackedScene).instantiate() as Node3D
-	vehicle_model.position=Vector3(0,0,0.05)
-	add_child(vehicle_model); ModelFix.double_sided(vehicle_model)
-	# the tank GLB faces +Z; the survivor runs -Z, so turn the hull around
-	hide_rider=(id=="TANK")
-	# every vehicle gets lamps; the mirrored copy is off while the light rig is being sorted
-	_add_car_lamps()
-	# GOLD: reflective paint - high metallic + low roughness lets the sky light
-	# run along the bodywork instead of faking it with particles.
+## Paint and glass for a vehicle model: shared by mounting and by the loading screen, which
+## draws every vehicle once so its shaders are ready (the first car used to freeze the run).
+static func dress_vehicle_materials(id: String, vm: Node3D) -> void:
+	ModelFix.double_sided(vm)
 	if id=="GOLD":
-		for mi in vehicle_model.find_children("*","MeshInstance3D",true,false):
+		for mi in vm.find_children("*","MeshInstance3D",true,false):
 			var m2:=mi as MeshInstance3D
 			if m2==null or m2.mesh==null: continue
 			for s2 in range(m2.mesh.get_surface_count()):
@@ -299,6 +291,48 @@ func mount_vehicle(id: String) -> void:
 					bm.emission_enabled=true
 					bm.emission=Color(0.42,0.30,0.10)
 					bm.emission_energy_multiplier=0.35
+	if id=="GOLD_CAR":
+		# same treatments as the gold bike: glossy dielectric paint + warm rim so the sun
+		# slides over the bodywork (no reflection probe in the scene, so metal renders black)
+		for mi in vm.find_children("*","MeshInstance3D",true,false):
+			var m2:=mi as MeshInstance3D
+			if m2==null or m2.mesh==null: continue
+			for s2 in range(m2.mesh.get_surface_count()):
+				var bm:=m2.mesh.surface_get_material(s2) as BaseMaterial3D
+				if bm!=null:
+					# A gentle satin finish: the earlier 0.16 roughness + full specular + strong rim
+					# read as wet grease in the rain, so keep it close to the painted look.
+					bm.metallic=0.0; bm.roughness=0.38; bm.metallic_specular=0.65
+					bm.rim_enabled=true; bm.rim=0.22; bm.rim_tint=1.0
+	if id=="SEDAN":
+		# The model is one Tripo mesh with one baked atlas, so the windows were just bright
+		# grey paint: flat, opaque, plastic. One shader reads the bright neutral patches as
+		# dark tinted glass and keeps the bodywork glossy, no extra materials needed.
+		var car_shader:=load("res://assets/shaders/car_paint.gdshader") as Shader
+		for mi in vm.find_children("*","MeshInstance3D",true,false):
+			var m3:=mi as MeshInstance3D
+			if m3==null or m3.mesh==null: continue
+			for s3 in range(m3.mesh.get_surface_count()):
+				var src:=m3.mesh.surface_get_material(s3) as BaseMaterial3D
+				if src==null or src.albedo_texture==null: continue
+				var sm:=ShaderMaterial.new()
+				sm.shader=car_shader
+				sm.set_shader_parameter("paint_tex",src.albedo_texture)
+				m3.set_surface_override_material(s3,sm)
+
+func mount_vehicle(id: String) -> void:
+	var path: String=String(VEHICLE_MODELS.get(id,""))
+	if vehicle!="" or path=="" or not ResourceLoader.exists(path): return
+	vehicle=id; vehicle_durability=BIKE_DURABILITY
+	vehicle_model=(load(path) as PackedScene).instantiate() as Node3D
+	vehicle_model.position=Vector3(0,0,0.05)
+	add_child(vehicle_model); dress_vehicle_materials(id, vehicle_model)
+	# the tank GLB faces +Z; the survivor runs -Z, so turn the hull around
+	hide_rider=(id=="TANK")
+	# every vehicle gets lamps; the mirrored copy is off while the light rig is being sorted
+	_add_car_lamps()
+	# GOLD: reflective paint - high metallic + low roughness lets the sky light
+	# run along the bodywork instead of faking it with particles.
 	if id=="TANK":
 		vehicle_model.rotation.y=PI
 		# the GLB is 3.4 m long; scaled to the saloon's 4.1 m so it reads as big as a car
@@ -322,18 +356,6 @@ func mount_vehicle(id: String) -> void:
 			var to_local: Transform3D=global_transform.affine_inverse()*m.global_transform
 			lowest=minf(lowest,(to_local*m.get_aabb()).position.y)
 		vehicle_model.position.y=0.0 if lowest==INF else -lowest
-		# same treatments as the gold bike: glossy dielectric paint + warm rim so the sun
-		# slides over the bodywork (no reflection probe in the scene, so metal renders black)
-		for mi in vehicle_model.find_children("*","MeshInstance3D",true,false):
-			var m2:=mi as MeshInstance3D
-			if m2==null or m2.mesh==null: continue
-			for s2 in range(m2.mesh.get_surface_count()):
-				var bm:=m2.mesh.surface_get_material(s2) as BaseMaterial3D
-				if bm!=null:
-					# A gentle satin finish: the earlier 0.16 roughness + full specular + strong rim
-					# read as wet grease in the rain, so keep it close to the painted look.
-					bm.metallic=0.0; bm.roughness=0.38; bm.metallic_specular=0.65
-					bm.rim_enabled=true; bm.rim=0.22; bm.rim_tint=1.0
 		hide_rider=true
 		if is_instance_valid(model): model.visible=false
 		_add_car_lamps()
@@ -353,20 +375,6 @@ func mount_vehicle(id: String) -> void:
 			lowest=minf(lowest,(to_local*m.get_aabb()).position.y)
 		var lift:=0.0 if lowest==INF else -lowest
 		vehicle_model.position=Vector3(0,lift,SEDAN_FORWARD)
-		# The model is one Tripo mesh with one baked atlas, so the windows were just bright
-		# grey paint: flat, opaque, plastic. One shader reads the bright neutral patches as
-		# dark tinted glass and keeps the bodywork glossy, no extra materials needed.
-		var car_shader:=load("res://assets/shaders/car_paint.gdshader") as Shader
-		for mi in vehicle_model.find_children("*","MeshInstance3D",true,false):
-			var m3:=mi as MeshInstance3D
-			if m3==null or m3.mesh==null: continue
-			for s3 in range(m3.mesh.get_surface_count()):
-				var src:=m3.mesh.surface_get_material(s3) as BaseMaterial3D
-				if src==null or src.albedo_texture==null: continue
-				var sm:=ShaderMaterial.new()
-				sm.shader=car_shader
-				sm.set_shader_parameter("paint_tex",src.albedo_texture)
-				m3.set_surface_override_material(s3,sm)
 		hide_rider=true
 		if is_instance_valid(model): model.visible=false
 	# Seat the rider on THIS vehicle's seat (per-vehicle lift/back, see SEAT_FIT).
@@ -1362,8 +1370,12 @@ func take_damage(amount: float) -> void:
 ## `value` comes from the gate's rarity roll (percent for damage / rate, HP for heal, bullets for
 ## split); -1 keeps the original common-gate amounts.
 ## Total crit chance = the weapon's own base plus whatever the gates added.
+## Riley's perk: a steady hand, +5 % crit chance on every gun. Small on purpose -- she is a
+## paid survivor, but the gates and the shop are still where the real power comes from.
+const RILEY_CRIT := 0.05
 func _refresh_crit() -> void:
 	var base: float = float(BASE_CRIT.get(weapon, 0.05))
+	if character == 1: base += RILEY_CRIT   # Riley the sharpshooter
 	crit_chance = clampf(base + crit_bonus, 0.0, 1.0)
 
 

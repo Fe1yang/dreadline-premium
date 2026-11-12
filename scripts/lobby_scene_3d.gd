@@ -10,7 +10,7 @@ const ModelFix=preload("res://scripts/model_fix.gd")
 const IdleLife=preload("res://scripts/idle_life.gd")
 const CHARACTERS:=[
 	{"asset":"res://assets/models/actors/survivor_male_universal.glb","name":"MASON","lobby_clavicle":8.0,"lobby_out":0.18,"lobby_fwd":0.04,"lobby_palm_twist":-15.0,"lobby_bend":0.0},
-	{"asset":"res://assets/models/actors/survivor_riley_universal.glb","name":"RILEY","palm_twist":90.0,"lobby_palm_twist":25.0,"lobby_out":0.16,"lobby_fwd":0.04,"lobby_clavicle":8.0,"lobby_bend":6.0},
+	{"asset":"res://assets/models/actors/survivor_riley_universal.glb","name":"RILEY","palm_twist":90.0,"lobby_palm_twist":25.0,"lobby_out":0.16,"lobby_fwd":0.04,"lobby_clavicle":8.0,"lobby_bend":6.0,"perk":"perk_riley"},
 	{"asset":"res://assets/models/actors/survivor_medic_universal.glb","name":"DARIUS","lobby_clavicle":6.0,"lobby_out":0.14,"lobby_fwd":0.08,"lobby_palm_twist":-10.0,"lobby_bend":8.0,"perk":"perk_darius"},
 	{"asset":"res://assets/models/actors/survivor_maya_universal.glb","name":"MAYA","palm_twist":90.0,"lobby_palm_twist":25.0,"lobby_out":0.06,"lobby_fwd":0.03,"lobby_clavicle":5.0,"lobby_bend":14.0,"perk":"perk_maya"}
 ]
