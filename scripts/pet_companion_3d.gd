@@ -122,9 +122,15 @@ func die() -> void:
 		# node rolls about the road axis (its body points down the road once it stops turning),
 		# so the cat lies flat beside where it stood instead of tipping up onto its tail.
 		if anim!=null: anim.pause()
-		rotation.y=0.0
+		# roll about the body's own long axis, whichever way the model happens to lie
+		var box:=AABB(); var first:=true
+		for mi in model.find_children("*","MeshInstance3D",true,false):
+			var m3:=mi as MeshInstance3D
+			var bb:AABB=(global_transform.affine_inverse()*m3.global_transform)*m3.get_aabb()
+			box=bb if first else box.merge(bb); first=false
+		var prop:="rotation:z" if box.size.z>=box.size.x else "rotation:x"
 		var tw:=create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tw.tween_property(self,"rotation:z",PI*0.5*(1.0 if randf()<0.5 else -1.0),0.5)
+		tw.tween_property(self,prop,PI*0.5*(1.0 if randf()<0.5 else -1.0),0.5)
 
 ## Copy the Labrador's death clips onto this pet (same rig): only the path in front of the
 ## skeleton differs, so the tracks are re-pointed at this model's skeleton.
