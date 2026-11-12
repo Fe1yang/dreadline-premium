@@ -144,6 +144,60 @@ var settings_return_state:="cover"
 var text_size:=1 # 0 small, 1 medium (default), 2 large: for players who need bigger text
 ## HIGH is the authored look (the build 16 picture); FAST is for older phones.
 var quality_high:=true
+## Picture look ("filter"), chosen in Settings. 0 REALISTIC is the default: a stronger warm sun,
+## a cool, darker sky fill so shade really reads as shade, full-strength shadows, soft bloom on
+## bright things and AgX tone mapping (the Photon-shader kind of look). 1 CLASSIC is the old
+## softer picture, 2 CINEMA is warm light / teal shade with lower saturation, 3 VIVID is punchy.
+var look_mode:=0
+const LOOK_COUNT:=4
+const LOOKS:=[
+	{"sun":1.6,"sun_tint":Color("ffdcb0"),"amb":0.86,"amb_tint":Color("b4c6e0"),"fill":0.8,"shadow":1.0,
+		"agx":true,"exposure":1.28,"glow":0.35,"contrast":1.06,"saturation":1.16,"brightness":1.0},
+	{"sun":1.0,"sun_tint":Color.WHITE,"amb":1.0,"amb_tint":Color.WHITE,"fill":1.0,"shadow":0.76,
+		"agx":false,"exposure":1.0,"glow":0.0,"contrast":1.0,"saturation":1.0,"brightness":1.0},
+	{"sun":1.45,"sun_tint":Color("ffcf96"),"amb":0.88,"amb_tint":Color("9cc4c8"),"fill":0.8,"shadow":0.96,
+		"agx":false,"exposure":1.18,"glow":0.30,"contrast":1.10,"saturation":0.88,"brightness":1.0},
+	{"sun":1.3,"sun_tint":Color("fff0d8"),"amb":0.95,"amb_tint":Color("d4e0ff"),"fill":0.9,"shadow":0.92,
+		"agx":false,"exposure":1.06,"glow":0.30,"contrast":1.08,"saturation":1.35,"brightness":1.02},
+]
+const LOOK_NAMES:={
+	"en":["REALISTIC","CLASSIC","CINEMA","VIVID","LOOK"],
+	"zh_CN":["写实","经典","电影","鲜艳","滤镜"],
+	"zh_TW":["寫實","經典","電影","鮮豔","濾鏡"],
+	"ja":["リアル","クラシック","シネマ","ビビッド","フィルター"],
+	"ko":["사실적","클래식","시네마","선명","필터"],
+	"es":["REALISTA","CLÁSICO","CINE","VIVO","FILTRO"],
+	"fr":["RÉALISTE","CLASSIQUE","CINÉMA","VIF","FILTRE"],
+	"de":["REALISTISCH","KLASSISCH","KINO","LEBHAFT","FILTER"],
+	"pt":["REALISTA","CLÁSSICO","CINEMA","VIVO","FILTRO"],
+	"ru":["РЕАЛИЗМ","КЛАССИКА","КИНО","ЯРКИЙ","ФИЛЬТР"],
+	"ar":["واقعي","كلاسيكي","سينمائي","زاهٍ","الفلتر"],
+	"hi":["यथार्थ","क्लासिक","सिनेमा","चटक","फ़िल्टर"],
+}
+func look_label() -> String:
+	var names: Array=LOOK_NAMES.get(language_code,LOOK_NAMES["en"])
+	var sep: String="：" if language_code in ["zh_CN","zh_TW","ja"] else ": "
+	return str(names[4])+sep+str(names[look_mode])
+
+## Applies the parts of the look that do not change with the hour or the weather.
+func _apply_look() -> void:
+	if world_env==null: return
+	var L: Dictionary=LOOKS[clampi(look_mode,0,LOOK_COUNT-1)]
+	world_env.tonemap_mode=Environment.TONE_MAPPER_AGX if bool(L.agx) else Environment.TONE_MAPPER_ACES
+	var g: float=float(L.glow)
+	world_env.glow_enabled=g>0.0
+	if g>0.0:
+		world_env.glow_intensity=g; world_env.glow_strength=0.9; world_env.glow_bloom=0.04
+		world_env.glow_hdr_threshold=1.05; world_env.glow_blend_mode=Environment.GLOW_BLEND_MODE_SCREEN
+		# only the three finest glow levels: the mobile renderer's glow chain has too few mipmaps for
+		# the wide ones at phone resolutions and fails every frame
+		for lv in range(7): world_env.set_glow_level(lv, (1.0 if lv < 3 else 0.0))
+	var adj: bool=not (is_equal_approx(float(L.contrast),1.0) and is_equal_approx(float(L.saturation),1.0))
+	world_env.adjustment_enabled=adj
+	world_env.adjustment_contrast=float(L.contrast); world_env.adjustment_saturation=float(L.saturation)
+	world_env.adjustment_brightness=float(L.brightness)
+	if is_instance_valid(sun_light): sun_light.shadow_opacity=float(L.shadow)
+	_apply_day_night()
 var lobby_toast:=0.0
 ## Second currency (券), bought in the store; nothing spends it yet.
 var bank_vouchers:=0
@@ -471,7 +525,8 @@ const PAUSE_BUTTON:=Rect2(476,8,58,58)
 ## Settings -> Control layout. The two rows sit above the play field, away from
 ## every control the player is dragging underneath.
 const CTRL_RESET:=Rect2(66,152,196,58)
-const SETTINGS_QUALITY:=Rect2(66,700,408,70)
+const SETTINGS_QUALITY:=Rect2(66,700,198,70)
+const SETTINGS_LOOK:=Rect2(276,700,198,70)
 const SETTINGS_DEV_TAP:=Rect2(0,60,540,70)   # the heading itself
 var settings_dev_taps:=0
 const CTRL_SAVE:=Rect2(278,152,196,58)
@@ -522,6 +577,7 @@ func _ready() -> void:
 	BootTrace.mark("main: setup_world")
 	view_cull_end=VIEW_CULL_END_HIGH if quality_high else VIEW_CULL_END_FAST
 	_apply_quality()
+	_apply_look()
 	BootTrace.mark("main: quality")
 	# Every screen is drawn for a 9:16 portrait rectangle. A tall phone (the iPhone 15
 	# Plus is 19.5:9) used to EXPAND the canvas, so the lobby grew a dead black band
@@ -2338,17 +2394,20 @@ func _apply_day_night() -> void:
 		if is_instance_valid(sound): sound.night_fell()
 	elif night_amount<0.4: night_announced=false
 	var flash: float=float(weather_base.get("flash",0.0))
-	world_env.tonemap_exposure=float(weather_base.exposure)*lerpf(1.0,0.96,night_amount)+flash*2.4
-	world_env.ambient_light_color=(weather_base.ambient_color as Color).lerp(Color("657c9c"),night_amount*0.68)
-	world_env.ambient_light_energy=float(weather_base.ambient)*lerpf(1.0,0.62,night_amount)+flash*1.2
+	var L: Dictionary=LOOKS[clampi(look_mode,0,LOOK_COUNT-1)]
+	# the look darkens the shade by day; at night the old balance comes back so nothing goes black
+	var amb_mul: float=lerpf(float(L.amb),1.0,night_amount*0.7)
+	world_env.tonemap_exposure=float(weather_base.exposure)*float(L.exposure)*lerpf(1.0,0.96,night_amount)+flash*2.4
+	world_env.ambient_light_color=((weather_base.ambient_color as Color)*(L.amb_tint as Color)).lerp(Color("657c9c"),night_amount*0.68)
+	world_env.ambient_light_energy=float(weather_base.ambient)*amb_mul*lerpf(1.0,0.62,night_amount)+flash*1.2
 	world_env.fog_light_color=(weather_base.fog_color as Color).lerp(Color("172335"),night_amount*0.88)
 	world_env.background_energy_multiplier=float(weather_base.sky_energy)*lerpf(1.0,0.58,night_amount)
 	if sun_light:
 		sun_light.rotation_degrees=Vector3(lerpf(-34.0,34.0,night_amount),-155,0)
-		sun_light.light_energy=float(weather_base.sun)*(1.0-night_amount)+flash*2.4
-		sun_light.light_color=(weather_base.sun_color as Color).lerp(Color("a9c4e4"),night_amount).lerp(Color("e8f0ff"),flash)
+		sun_light.light_energy=float(weather_base.sun)*float(L.sun)*(1.0-night_amount)+flash*2.4
+		sun_light.light_color=((weather_base.sun_color as Color)*(L.sun_tint as Color)).lerp(Color("a9c4e4"),night_amount).lerp(Color("e8f0ff"),flash)
 	if fill_light:
-		fill_light.light_energy=lerpf(0.14,0.32,night_amount)+flash*1.4
+		fill_light.light_energy=lerpf(0.14*float(L.fill),0.32,night_amount)+flash*1.4
 		fill_light.light_color=Color("d0dbe2").lerp(Color("8caed6"),night_amount)
 	if sky_material:
 		sky_material.set_shader_parameter("daylight_blend",1.0-2.0*night_amount)
@@ -6496,6 +6555,7 @@ func _pointer_down(pos: Vector2) -> bool:
 		if Rect2(66,524,408,70).has_point(pos): text_size=(text_size+1)%3; _save(); return true
 		if Rect2(66,612,408,70).has_point(pos): ctrl_drag=""; state="controls"; return true
 		if SETTINGS_QUALITY.has_point(pos): quality_high=not quality_high; _apply_quality(); _save(); return true
+		if SETTINGS_LOOK.has_point(pos): look_mode=(look_mode+1)%LOOK_COUNT; _apply_look(); _save(); return true
 		if Rect2(66,810,408,64).has_point(pos): state=settings_return_state; return true
 	elif state=="controls":
 		if CTRL_RESET.has_point(pos):
@@ -6580,7 +6640,7 @@ func _load_save() -> void:
 	for f in ["--smoke-test","--soak-test","--lootbox-test","--stamina-test","--capture","--capture-medic","--capture-bike"]:
 		if f in OS.get_cmdline_user_args(): isolated=true; break
 	if not isolated and (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK):
-		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
+		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); look_mode=clampi(int(c.get_value("display","look",0)),0,LOOK_COUNT-1); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
 		if owned_vehicle=="CAR": owned_vehicle="CRUISER" # old save name for the third bike
 		owned_characters=_dict_or_empty(c.get_value("chars","owned",{})); owned_skins=_dict_or_empty(c.get_value("chars","skins",{}))
 		terms_accepted=bool(c.get_value("legal","terms_premium_v1",false))   # own key: an acceptance stored by the old in-app-purchase build does not count for this one
@@ -6654,7 +6714,7 @@ func _read_muted() -> bool:
 	return bool(c.get_value("audio","muted",false)) if (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK) else false
 func _save() -> void:
 	if "--smoke-test" in OS.get_cmdline_user_args() or "--soak-test" in OS.get_cmdline_user_args() or "--lootbox-test" in OS.get_cmdline_user_args() or "--stamina-test" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_user_args() or "--capture-medic" in OS.get_cmdline_user_args() or "--capture-bike" in OS.get_cmdline_user_args(): return # test and capture runs must never touch the player's real save
-	var c:=ConfigFile.new(); c.set_value("misc","loadout_v2","done"); c.set_value("run","best",best_distance); c.set_value("run","character",character_choice); c.set_value("run","skins",skin_choice); c.set_value("run","pet",pet_choice); c.set_value("run","pet_equipped",pet_equipped); c.set_value("pets","owned",owned_pets); c.set_value("pets","rules",2); c.set_value("chars","owned",owned_characters); c.set_value("chars","skins",owned_skins); c.set_value("vehicles","owned",owned_vehicle); c.set_value("run","loadout_on",loadout_on); c.set_value("puzzle","pieces",puzzle_pieces); c.set_value("pass","owned",passes); c.set_value("pass","days",pass_days); c.set_value("pass","all_access",all_access); c.set_value("mail","claimed",mail_claimed); c.set_value("airdrop","day",airdrop_day); c.set_value("run","intro_seen",intro_seen); c.set_value("run","ad_run_used",ad_run_used); c.set_value("gameplay","auto_reload_v4",auto_reload); c.set_value("display","text_size",text_size); c.set_value("display","quality_high",quality_high); c.set_value("audio","music_volume",sound.music_volume if is_instance_valid(sound) else 0.8); c.set_value("audio","sfx_volume",sound.sfx_volume if is_instance_valid(sound) else 1.0)
+	var c:=ConfigFile.new(); c.set_value("misc","loadout_v2","done"); c.set_value("run","best",best_distance); c.set_value("run","character",character_choice); c.set_value("run","skins",skin_choice); c.set_value("run","pet",pet_choice); c.set_value("run","pet_equipped",pet_equipped); c.set_value("pets","owned",owned_pets); c.set_value("pets","rules",2); c.set_value("chars","owned",owned_characters); c.set_value("chars","skins",owned_skins); c.set_value("vehicles","owned",owned_vehicle); c.set_value("run","loadout_on",loadout_on); c.set_value("puzzle","pieces",puzzle_pieces); c.set_value("pass","owned",passes); c.set_value("pass","days",pass_days); c.set_value("pass","all_access",all_access); c.set_value("mail","claimed",mail_claimed); c.set_value("airdrop","day",airdrop_day); c.set_value("run","intro_seen",intro_seen); c.set_value("run","ad_run_used",ad_run_used); c.set_value("gameplay","auto_reload_v4",auto_reload); c.set_value("display","text_size",text_size); c.set_value("display","quality_high",quality_high); c.set_value("display","look",look_mode); c.set_value("audio","music_volume",sound.music_volume if is_instance_valid(sound) else 0.8); c.set_value("audio","sfx_volume",sound.sfx_volume if is_instance_valid(sound) else 1.0)
 	c.set_value("ui","language",language_code); c.set_value("wallet","coins",bank_coins); c.set_value("wallet","silver",bank_silver); c.set_value("wallet","vouchers",bank_vouchers); c.set_value("store","owned",store_owned.keys()); c.set_value("store","remove_ads",remove_ads); c.set_value("store","ads_offer_shows",ads_offer_shows); c.set_value("store","iap_ledger",iap_ledger.keys()); c.set_value("legal","terms_premium_v1",terms_accepted)
 	c.set_value("can_ads","day",can_ad_day); c.set_value("can_ads","count",can_ad_count)
 	c.set_value("crates","day",airdrop_day); c.set_value("crates","count",airdrop_count_today);
