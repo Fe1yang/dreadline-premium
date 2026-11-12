@@ -3,8 +3,8 @@ const ModelFix=preload("res://scripts/model_fix.gd")
 
 const GunGripIK=preload("res://scripts/gun_grip_ik.gd")
 
-var health := 100.0
-var max_health := 100.0
+var health := 60.0
+var max_health := 60.0
 var damage := 24.0
 var fire_interval := 0.24
 var projectile_count := 1
@@ -974,7 +974,7 @@ func _load_muzzle_flash() -> void:
 
 func reset() -> void:
 	dismount_vehicle()
-	max_health = 100.0
+	max_health = 60.0
 	health = max_health
 	projectile_count = 1
 	gun_level = 1
@@ -1088,7 +1088,7 @@ func set_helmet(equipped: bool) -> void:
 			helmet_model.position = Vector3(0, 0.030 - hb.get_center().y * (0.34 / maxf(widest, 0.001)), 0.010)
 
 func apply_meta(upgrades: Dictionary) -> void:
-	max_health=100.0+int(upgrades.get("medical",0))*15.0
+	max_health=60.0+int(upgrades.get("medical",0))*10.0
 	health=max_health
 	# The ammo case is permanent: the extra reserve is re-applied by set_weapon every
 	# time a gun is (re)loaded, so picking up a crate gun never wipes the purchase.

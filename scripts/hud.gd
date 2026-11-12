@@ -371,8 +371,11 @@ func _heart_points(center: Vector2,size: float) -> PackedVector2Array:
 		pts.append(center+Vector2(x,-y)*size/34.0)
 	return pts
 
+## One cell is 20 HP (a third of the 60 HP base), so the strip still shows three cells; max-HP
+## upgrades append cells exactly as they used to.
+const HP_PER_CELL := 20.0
 func _health_rows() -> int:
-	var count:=int(ceil(game.player.max_health/(100.0/3.0)-0.001))
+	var count:=int(ceil(game.player.max_health/HP_PER_CELL-0.001))
 	return maxi(1,(count+3)/4)
 
 ## Deterministic grime: a few soft dark speckles per cell, seeded by the cell index so
@@ -389,7 +392,7 @@ func _draw_hearts(origin: Vector2) -> void:
 	# shows exactly three. Max-HP upgrades append rectangles — a fractional boost (+1/2,
 	# +1/4 ...) shows as a rectangle only that wide. Four rectangles per row; extra rows
 	# stack downward along the left edge instead of squeezing the strip thinner.
-	var per: float=100.0/3.0
+	var per: float=HP_PER_CELL
 	var segs: float=game.player.max_health/per
 	var count: int=int(ceil(segs-0.001))
 	var step: float=36.0
