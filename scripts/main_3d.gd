@@ -4874,8 +4874,6 @@ func _buff_useful(id: String,rarity: int) -> bool:
 		"reserve": return player.can_use_reserve()
 		"dmg_reduce": return player.dmg_reduce<0.6
 		"move": return player.move_mult<1.4
-		"regen": return player.regen<PlayerScript.REGEN_MAX
-		"kill_heal": return player.kill_heal<PlayerScript.KILL_HEAL_MAX
 		"reload": return player.reload_scale>0.3
 		"shield": return player.shield<200.0
 		"explode": return player.explode_chance<0.6

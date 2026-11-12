@@ -32,10 +32,6 @@ var split_bonus := 0          # extra bullets from gates, kept when changing gun
 # picking up a new gun (set_weapon re-reads the base stats of each gun).
 var shield := 0.0             # absorbs damage before health
 var regen := 0.0              # HP per second
-## Hard caps on passive healing: stacking regen used to make the survivor immortal while
-## the player did nothing.
-const REGEN_MAX := 1.6
-const KILL_HEAL_MAX := 5.0
 var kill_heal := 0.0          # HP per kill
 var dmg_reduce := 0.0         # 0..0.6 of incoming damage removed
 var move_mult := 1.0          # forward run and side-step speed, up to 1.4
@@ -1289,8 +1285,8 @@ func apply_upgrade(id: String,value:=-1.0) -> void:
 			split_bonus += n; projectile_count = mini(9 if weapon=="SHOTGUN" else 5,projectile_count+n); gun_level += 1
 		"heal": health = minf(max_health,health+(15.0 if value<0 else value)*heal_scale())
 		"max_hp": max_health += value; health = minf(max_health,health+value)
-		"regen": regen = minf(REGEN_MAX, regen + value)
-		"kill_heal": kill_heal = minf(KILL_HEAL_MAX, kill_heal + value)
+		"regen": regen += value
+		"kill_heal": kill_heal += value
 		"dmg_reduce": dmg_reduce = minf(0.6,dmg_reduce+value/100.0)
 		"shield": shield = minf(200.0,shield+value)
 		"move": move_mult = minf(1.4,move_mult*(1.0+value/100.0))
