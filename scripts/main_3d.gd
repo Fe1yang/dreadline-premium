@@ -474,7 +474,9 @@ func _release_crate(c) -> void:
 		return
 	var id := String(c.weapon_id)
 	var bag: Array = crate_pool.get(id, [])
-	if bag.size() < 4:
+	# a rolling barrel carries a whole pet / vehicle model: keep one spare per item, not four
+	var cap: int = 1 if c.has_method("is_roller") else 4
+	if bag.size() < cap:
 		c.park()
 		bag.append(c)
 		crate_pool[id] = bag
@@ -1328,8 +1330,19 @@ func _frame_probe(_delta: float) -> void:
 		effects.size(), crates.size(), barrels.size(), dc, ob, pr])
 
 
+## The lobby room (animated survivor and dog, flickering lights), the supply truck, the case
+## opening and the map table stay in the tree when hidden. Their scripts and animation players
+## kept ticking all through a run -- skeletons posed every frame for nobody to see. Hidden now
+## means asleep; they wake the frame they are shown again.
+func _sleep_hidden_scenes() -> void:
+	for n in [lobby, shop_truck, lootbox_scene, map_scene]:
+		if not is_instance_valid(n): continue
+		var want: int = Node.PROCESS_MODE_INHERIT if n.visible else Node.PROCESS_MODE_DISABLED
+		if n.process_mode != want: n.process_mode = want
+
 func _process(delta: float) -> void:
 	if booting: return   # still being put together behind the loading screen
+	_sleep_hidden_scenes()
 	_frame_probe(delta)
 	elapsed+=delta
 	lobby_swallow_tap=maxf(0.0,lobby_swallow_tap-delta)
@@ -5237,7 +5250,8 @@ func _spawn_blood_pool(pos: Vector3,size_m: float,life: float,splash:=false,dir:
 func _tick_blood(delta: float) -> void:
 	for i in range(blood_pools.size()-1,-1,-1):
 		var pool=blood_pools[i]
-		if pool.tick(delta):
+		# gone once it has dried up -- or as soon as the road has carried it behind the camera
+		if pool.tick(delta) or pool.position.z>14.0:
 			blood_pools.remove_at(i); pool.disarm(); blood_free.append(pool)
 
 func _blood_spray(pos: Vector3,count: int) -> void:
@@ -6289,13 +6303,19 @@ func _tick_pickups(delta: float) -> void:
 		elif p.position.z>13: pickups.remove_at(i); p.queue_free()
 
 ## ---- Pooled effects -----------------------------------------------------------------
+## Spare effects kept per pool. The pools used to keep every node a big fight ever needed, so
+## hundreds of hidden effect nodes piled up over a long run; past this the extra one is freed.
+const FX_POOL_CAP:=32
 func _fx_release(e) -> void:
 	e.disarm()
+	var pool: Array
 	match String(e.get_meta("fx_kind","")):
-		"spark": fx_sparks[int(e.get_meta("fx_bucket",0))].append(e)
-		"drop": fx_drops[int(e.get_meta("fx_bucket",0))].append(e)
-		"ring": fx_rings.append(e)
-		_: fx_labels.append(e)
+		"spark": pool=fx_sparks[int(e.get_meta("fx_bucket",0))]
+		"drop": pool=fx_drops[int(e.get_meta("fx_bucket",0))]
+		"ring": pool=fx_rings
+		_: pool=fx_labels
+	if pool.size()<FX_POOL_CAP: pool.append(e)
+	else: e.queue_free()
 
 func _fx_spark_at(pos: Vector3,color: Color,size: float,vel: Vector3,grav: float,seconds: float) -> void:
 	var b: int=0 if size<0.052 else (1 if size<0.072 else 2)
@@ -6371,7 +6391,7 @@ func _tick_effects(delta: float) -> void:
 		# Without this, a barrel explosion stayed at a fixed z and travelled with the player.
 		e.position.z += 3.5 * delta
 		e.tick(delta)
-		if e.life<=0:
+		if e.life<=0 or e.position.z>15.0:   # behind the camera nobody sees the rest of it
 			effects.remove_at(i)
 			if e.has_meta("fx_kind"): _fx_release(e)
 			else: e.queue_free()                     # blasts, shocks and body parts are rare
