@@ -2524,14 +2524,14 @@ var armory_drag := false
 
 ## Damage / rate / magazine for every weapon, taken from the same table set_weapon uses.
 const ARMORY_STATS := {
-	"PISTOL":   {"damage": 32.0, "rate": 0.42, "mag": 12},
-	"MAKAROV":  {"damage": 27.0, "rate": 0.36, "mag": 8},
-	"SUOMI":    {"damage": 15.0, "rate": 0.085, "mag": 70},
-	"SMG":      {"damage": 16.0, "rate": 0.095, "mag": 36},
-	"SHOTGUN":  {"damage": 40.0, "rate": 0.72, "mag": 8},
-	"SNIPER":   {"damage": 125.0, "rate": 0.85, "mag": 5},
-	"LAUNCHER": {"damage": 235.0, "rate": 1.0, "mag": 4},
-	"FLAME":    {"damage": 29.0, "rate": 0.12, "mag": 100},
+	"PISTOL":   {"damage": 24.0, "rate": 0.42, "mag": 12},
+	"MAKAROV":  {"damage": 20.0, "rate": 0.36, "mag": 8},
+	"SUOMI":    {"damage": 11.0, "rate": 0.085, "mag": 70},
+	"SMG":      {"damage": 12.0, "rate": 0.095, "mag": 36},
+	"SHOTGUN":  {"damage": 30.0, "rate": 0.72, "mag": 8},
+	"SNIPER":   {"damage": 95.0, "rate": 0.85, "mag": 5},
+	"LAUNCHER": {"damage": 180.0, "rate": 1.0, "mag": 4},
+	"FLAME":    {"damage": 22.0, "rate": 0.12, "mag": 100},
 }
 
 ## A tiny 3D stage that renders the selected weapon for the armory panel.

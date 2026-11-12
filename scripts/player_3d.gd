@@ -1110,15 +1110,15 @@ func weapon_bonus(id: String) -> float:
 ## set_weapon and apply_meta so a bought level always lands exactly once.
 func base_damage(id: String) -> float:
 	match id:
-		"MAKAROV": return 112.0*damage_scale
-		"SUOMI": return 21.0*damage_scale
-		"FLAME": return 8.0*damage_scale
-		"SMG": return 16.0*damage_scale
-		"SNIPER": return 125.0*damage_scale
-		"SHOTGUN": return 40.0*damage_scale
-		"PISTOL": return 32.0*damage_scale
-		"LAUNCHER": return 235.0*damage_scale
-		_: return 27.0*damage_scale
+		"MAKAROV": return 85.0*damage_scale
+		"SUOMI": return 16.0*damage_scale
+		"FLAME": return 6.0*damage_scale
+		"SMG": return 12.0*damage_scale
+		"SNIPER": return 95.0*damage_scale
+		"SHOTGUN": return 30.0*damage_scale
+		"PISTOL": return 24.0*damage_scale
+		"LAUNCHER": return 180.0*damage_scale
+		_: return 20.0*damage_scale
 
 func set_weapon(id: String) -> void:
 	# A gun swap must also stop the nozzle: the flame jet kept burning out of whatever
@@ -1133,31 +1133,31 @@ func set_weapon(id: String) -> void:
 	fire_mode = false
 	match weapon:
 		"MAKAROV":
-			magazine_size = 8; damage = 112.0*damage_scale; fire_interval = 0.55*rate_scale
+			magazine_size = 8; damage = 85.0*damage_scale; fire_interval = 0.55*rate_scale
 			bullet_speed = 44.0; pierce = 1; reload_duration = 1.45; reserve_ammo = 40
 		"SUOMI":
-			magazine_size = 50; damage = 21.0*damage_scale; fire_interval = 0.10*rate_scale
+			magazine_size = 50; damage = 16.0*damage_scale; fire_interval = 0.10*rate_scale
 			bullet_speed = 30.0; pierce = 0; reload_duration = 1.55; reserve_ammo = 150
 		"FLAME":
-			magazine_size = 100; damage = 8.0*damage_scale; fire_interval = 0.12*rate_scale
+			magazine_size = 100; damage = 6.0*damage_scale; fire_interval = 0.12*rate_scale
 			bullet_speed = 20.0; pierce = 0; reload_duration = 1.4; reserve_ammo = 200
 		"SMG":
-			magazine_size = 36; damage = 16.0*damage_scale; fire_interval = 0.095*rate_scale
+			magazine_size = 36; damage = 12.0*damage_scale; fire_interval = 0.095*rate_scale
 			bullet_speed = 31.0; pierce = 0; reload_duration = 1.35; reserve_ammo = 108
 		"SNIPER":
-			magazine_size = 5; damage = 125.0*damage_scale; fire_interval = 0.85*rate_scale
+			magazine_size = 5; damage = 95.0*damage_scale; fire_interval = 0.85*rate_scale
 			bullet_speed = 48.0; pierce = 2; reload_duration = 1.80; reserve_ammo = 25
 		"SHOTGUN":
-			magazine_size = 8; damage = 40.0*damage_scale; fire_interval = 0.72*rate_scale; projectile_count = 7
+			magazine_size = 8; damage = 30.0*damage_scale; fire_interval = 0.72*rate_scale; projectile_count = 7
 			bullet_speed = 30.0; pierce = 0; reload_duration = 1.65; reserve_ammo = 48
 		"PISTOL":
-			magazine_size = 12; damage = 32.0*damage_scale; fire_interval = 0.42*rate_scale
+			magazine_size = 12; damage = 24.0*damage_scale; fire_interval = 0.42*rate_scale
 			bullet_speed = 30.0; pierce = 0; reload_duration = 1.10; reserve_ammo = 72
 		"LAUNCHER":
-			magazine_size = 4; damage = 235.0*damage_scale; fire_interval = 1.0*rate_scale
+			magazine_size = 4; damage = 180.0*damage_scale; fire_interval = 1.0*rate_scale
 			bullet_speed = 14.0; pierce = 0; reload_duration = 2.0; reserve_ammo = 16
 		_:
-			weapon = "RIFLE"; magazine_size = 30; damage = 27.0*damage_scale; fire_interval = 0.30*rate_scale
+			weapon = "RIFLE"; magazine_size = 30; damage = 20.0*damage_scale; fire_interval = 0.30*rate_scale
 			bullet_speed = 28.0; pierce = 0; reload_duration = 1.25; reserve_ammo = 90
 	damage = base_damage(weapon)*weapon_bonus(weapon)
 	# The ammo case bought in the supply truck is never lost to a weapon swap.
