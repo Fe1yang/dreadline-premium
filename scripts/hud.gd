@@ -2573,7 +2573,9 @@ func _draw_new_record() -> void:
 	var pop: float=clampf(t/0.35,0.0,1.0)
 	var scale: float=lerpf(2.2,1.0,1.0-pow(1.0-pop,3.0))+0.06*sin(t*5.0)*float(pop>=1.0)
 	var title: String=ProgressCatalog.text(lang,"new_record")
-	_clean_center(bold,c+Vector2(0,18),title,int(54*scale),Color("ffd36b"))
+	# the pop starts at 2.2x: cap it so the word can never be wider than the screen
+	var title_px: int = clampi(int(54.0*scale), 24, 88)
+	_clean_center(bold,c+Vector2(0,18),title,title_px,Color("ffd36b"))
 	var best: String=ProgressCatalog.text(lang,"best").replace("%d",_grouped(game.best_distance))
 	_clean_center(bold,Vector2(270,214),best,24,WHITE)
 	# twinkles around the title

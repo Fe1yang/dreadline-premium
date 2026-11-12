@@ -4205,14 +4205,18 @@ func _end_run() -> void:
 	# A new personal best (not on the very first run, which has nothing to beat).
 	if int(distance)>run_start_best: new_record=true
 	best_distance=maxi(best_distance,int(distance)); _save()
-	sound.play("game_over")
-	if new_record: sound.play("gate")
+	if new_record:
+		# the results screen owns the record moment: fanfare instead of the plain death sting
+		sound.record_fanfare()
+	else:
+		sound.play("game_over")
 
 ## The moment the survivor passes their old best mid-run: banner, confetti burst, sound.
 func _check_record(delta: float) -> void:
 	record_banner=maxf(0.0,record_banner-delta)
-	if new_record or int(distance)<=run_start_best: return
-	# a brand-new save has best 0, so the first run sets a record the moment it moves
+	# The first run has nothing to beat (best is 0), so it must NOT pop a banner at 0 m; its record is
+	# shown on the results screen instead. Mid-run banners are for beating an existing best.
+	if new_record or run_start_best<=0 or int(distance)<=run_start_best: return
 	new_record=true; record_banner=3.0; sound.record_fanfare()
 
 func record_metres_left() -> int:
