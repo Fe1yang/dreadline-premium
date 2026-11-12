@@ -5,12 +5,12 @@ const LANGUAGES=[
 	{"code":"zh_TW","native":"繁體中文"},{"code":"ja","native":"日本語"},
 	{"code":"ko","native":"한국어"},{"code":"es","native":"Español"},
 	{"code":"fr","native":"Français"},{"code":"de","native":"Deutsch"},
-	{"code":"pt","native":"Português"},{"code":"ru","native":"Russian"},
-	{"code":"ar","native":"Arabic"},{"code":"hi","native":"Hindi"},
+	{"code":"pt","native":"Português"},{"code":"ru","native":"Русский"},
+	{"code":"ar","native":"العربية"},{"code":"hi","native":"हिन्दी"},
 	{"code":"id","native":"Bahasa Indonesia"},{"code":"it","native":"Italiano"},
 	{"code":"tr","native":"Türkçe"},{"code":"nl","native":"Nederlands"},
-	{"code":"pl","native":"Polski"},{"code":"th","native":"Thai"},
-	{"code":"vi","native":"Tiếng Việt"},{"code":"uk","native":"Ukrainian"}
+	{"code":"pl","native":"Polski"},{"code":"th","native":"ไทย"},
+	{"code":"vi","native":"Tiếng Việt"},{"code":"uk","native":"Українська"}
 ]
 
 const STRINGS={

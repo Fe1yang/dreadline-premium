@@ -96,7 +96,16 @@ func _ready() -> void:
 	# None of those resolve on iOS, so every non-bold Chinese label drew nothing -- that is
 	# why the pause menu showed empty buttons while the bold "resume" label was fine.
 	# Keep the bundled CJK face in the chain so it can never fall through to nothing.
-	display.fallbacks=[cjk_black,cjk,system]
+	# Thai, Devanagari, Arabic and Cyrillic have no glyphs in the poster face and no reliable
+	# system name on iOS, so the picker read blank for those languages. Bundle Noto for them.
+	var script_fonts: Array = []
+	for _fp in ["res://assets/fonts/NotoSansThai-Regular.ttf", "res://assets/fonts/NotoSansDevanagari-Regular.ttf",
+			"res://assets/fonts/NotoSansArabic-Regular.ttf", "res://assets/fonts/NotoSans-Regular.ttf"]:
+		var _f = load(_fp)
+		if _f != null:
+			script_fonts.append(_f)
+	display.fallbacks=[cjk_black,cjk]+script_fonts+[system]
+	bold_base.fallbacks=[cjk_black,cjk]+script_fonts+[system]
 	var heavy:=FontVariation.new(); heavy.base_font=bold_base; heavy.variation_embolden=0.35; bold=heavy
 	# Worn paint look on every bright stroke (see shaders/ui_grunge.gdshader).
 	var grunge:=ShaderMaterial.new(); grunge.shader=GrungeShader
