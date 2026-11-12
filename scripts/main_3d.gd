@@ -821,7 +821,24 @@ func _build_district(i: int) -> void:
 	_apply_cull_range(road)
 	_randomize_zebra(road)
 	_setup_streetlamp(road,i)
+	_matte_district(road)
 	if road.has_meta("watcher"): watchers.append(road.get_meta("watcher"))
+
+## The stray white dots on the buildings: with MSAA on, the specular highlight is evaluated at a
+## sample that lies just outside a triangle along its edge, and a street lamp or the low sun turns
+## that one pixel white. The facades are made of thousands of separate flat boxes, so every panel
+## edge threw a dotted line of them, and they scrolled down the screen with the street like snow.
+## Proven on a frozen frame: dots with MSAA + specular, none with either one off. The facades are
+## flat painted colours, so they lose nothing visible by having no specular highlight.
+func _matte_district(road: Node3D) -> void:
+	for mi in road.find_children("*","MeshInstance3D",true,false):
+		var m:=mi as MeshInstance3D
+		if m==null or m.mesh==null or m.skin!=null: continue   # skinned = a roadside zombie, leave it
+		for s in range(m.mesh.get_surface_count()):
+			var mat=m.get_active_material(s)
+			if mat is StandardMaterial3D and (mat.metallic_specular>0.0 or mat.metallic>0.0):
+				mat.metallic_specular=0.0
+				mat.metallic=0.0
 
 
 ## Builds whatever is still missing. Called once at startup; a run normally arrives here with the
@@ -1078,6 +1095,9 @@ func _process(delta: float) -> void:
 	if state!="playing":
 		_warm_up_tick()
 		_prewarm_step()
+		# fill the pools in the background while the player is in the menus (one item a frame),
+		# but not during the intro shot or a pause, where a slow frame would be seen
+		if warmup_done and state in ["lobby","cover","terms","character_select","shop","armory","settings","gameover"]: _prefill_tick()
 	var from_pause: bool=(state=="settings" or state=="controls") and settings_return_state=="paused"
 	if (state=="paused" or from_pause)!=_visuals_frozen: _freeze_visuals(state=="paused" or from_pause)
 	if state=="gameover": gameover_time+=delta
@@ -1505,6 +1525,103 @@ func _render_warmup() -> void:
 			h.queue_free()
 
 
+## ---- Run prefill -------------------------------------------------------------------
+## What made the FIRST run of a launch stutter: every zombie, crate, gate, wreck and explosion
+## was built from scratch the moment it appeared (40-300 ms each, measured), and because nothing
+## kept the model files in memory they were read from disk again each time. From the second run
+## on the pools were full, which is why only the first run was rough.
+## This fills the pools and pins the model files behind the loading bar / while the player is
+## in the lobby, one item per frame, so the road never has to build anything it has not seen.
+var prefill_queue: Array = []
+var prefill_started := false
+var prefill_done := false
+var pinned_scenes: Dictionary = {}   # path -> PackedScene, held for the life of the app
+var prefill_trash: Array = []
+const PREFILL_PARK := Vector3(0.0, -60.0, -600.0)
+
+func _pin_scenes(n: Node) -> void:
+	var path := n.scene_file_path
+	if path != "" and not pinned_scenes.has(path) and ResourceLoader.exists(path):
+		pinned_scenes[path] = load(path)
+	for c in n.get_children():
+		_pin_scenes(c)
+
+func _prefill_begin() -> void:
+	prefill_started = true
+	for kind in ZOMBIE_POOL_KINDS:
+		for i in 4:
+			prefill_queue.append("zombie:" + String(kind))
+	for kind in ["jockey", "brute", "banshee", "bomber", "bomber_female", "spitter"]:
+		prefill_queue.append("special:" + kind)
+	var ids: Array = CRATE_WEAPONS.duplicate()
+	for extra in ["ARMOR", "HELMET", "FUEL", "BIKE", "SPORT", "CRUISER", "SEDAN"]:
+		if not ids.has(extra): ids.append(extra)
+	if is_instance_valid(lobby):
+		for i in range(lobby.PETS.size()): ids.append("PET_%d" % i)
+	for id in ids:
+		prefill_queue.append("crate:" + String(id))
+	for kind in ["car", "police", "cone", "fence", "corpse_pile"]:
+		prefill_queue.append("obstacle:" + kind)
+	for kind in ["medkit", "armor", "helmet", "ammo", "grenade", "flashbang", "launcher", "fire_round", "coin", "silver_coin"]:
+		prefill_queue.append("pickup:" + kind)
+	# One gate per buff: the gate's big outlined lettering is drawn glyph by glyph the first time
+	# each character is needed, which is what made every new gate cost a slow frame.
+	for id in BuffCatalog.BUFFS.keys():
+		prefill_queue.append("gate:" + String(id))
+	for item in ["barrel", "roller", "explosion", "audio"]:
+		prefill_queue.append(item)
+
+func _prefill_tick() -> void:
+	if prefill_done: return
+	for old in prefill_trash:
+		if is_instance_valid(old): old.queue_free()
+	prefill_trash.clear()
+	if not prefill_started: _prefill_begin()
+	if prefill_queue.is_empty():
+		prefill_done = true
+		return
+	var item: String = String(prefill_queue.pop_front())
+	var n: Node3D = null
+	var keep := false
+	if item.begins_with("zombie:"):
+		var kind := item.trim_prefix("zombie:")
+		var have := 0
+		for p in zombie_pool:
+			if is_instance_valid(p) and String(p.kind) == kind: have += 1
+		if have >= 4 or zombie_pool.size() >= ZOMBIE_POOL_MAX: return
+		n = ZombieScript.new(); n.position = PREFILL_PARK; add_child(n); n.configure(kind, 1.0)
+		_pin_scenes(n); n.park(); zombie_pool.append(n); keep = true
+	elif item.begins_with("special:"):
+		n = ZombieScript.new(); n.position = PREFILL_PARK; add_child(n); n.configure(item.trim_prefix("special:"), 1.0)
+	elif item.begins_with("crate:"):
+		var id := item.trim_prefix("crate:")
+		if not (crate_pool.get(id, []) as Array).is_empty(): return
+		n = WeaponCrateScript.new(); n.setup(id, 1); n.position = PREFILL_PARK; add_child(n)
+		_pin_scenes(n); _release_crate(n); keep = true
+	elif item.begins_with("obstacle:"):
+		n = RoadObstacleScript.new(); n.kind = item.trim_prefix("obstacle:"); n.position = PREFILL_PARK; add_child(n)
+	elif item.begins_with("pickup:"):
+		n = PickupScript.new(); n.kind = item.trim_prefix("pickup:"); n.position = PREFILL_PARK; add_child(n)
+	elif item.begins_with("gate:"):
+		var gid := item.trim_prefix("gate:")
+		n = GateScript.new(); n.position = PREFILL_PARK
+		n.setup([_gate_option(gid, 0), _gate_option(gid, 2), _gate_option(gid, 3)], language_code); add_child(n)
+	elif item == "barrel":
+		n = BarrelScript.new(); n.position = PREFILL_PARK; add_child(n)
+	elif item == "roller":
+		n = BarrelRollScript.new(); n.setup("SMG", 1); n.position = PREFILL_PARK; add_child(n)
+	elif item == "explosion":
+		n = ExplosionScript.new(); n.position = PREFILL_PARK; add_child(n)
+	elif item == "audio":
+		# the night and storm themes used to be read from disk at the moment night fell
+		if is_instance_valid(sound):
+			if sound.night_stream == null and ResourceLoader.exists(sound.NIGHT_TRACK): sound.night_stream = load(sound.NIGHT_TRACK)
+			if sound.storm_stream == null and ResourceLoader.exists(sound.STORM_TRACK): sound.storm_stream = load(sound.STORM_TRACK)
+	if n != null and not keep:
+		_pin_scenes(n)
+		prefill_trash.append(n)   # freed on the next step, after it has had a frame to build its text
+
+
 func _finish_loading() -> void:
 	if state!="loading": return
 	_teardown_warmup()
@@ -1538,11 +1655,12 @@ func _tick_loading(delta: float) -> void:
 		districts_ready = true
 	if loading_target=="run":
 		_warm_up_tick()
+		_prefill_tick()
 	var prewarm_part: float = float(mini(district_prewarm_i, DISTRICTS_NEEDED)) / float(DISTRICTS_NEEDED)
 	var road_part: float = float(roads.size()) / float(ROAD_COUNT) if loading_target=="run" else 0.0
 	loading_progress = minf(0.98, maxf(maxf(loading_time/maxf(loading_duration,0.01), prewarm_part if loading_target=="run" else 0.0), road_part))
 	# same random image from start to finish, no switching
-	if loading_time>=loading_duration and districts_ready and (loading_target!="run" or warmup_done or warmup_queue.is_empty()):
+	if loading_time>=loading_duration and districts_ready and (loading_target!="run" or ((warmup_done or warmup_queue.is_empty()) and prefill_done)):
 		_finish_loading()
 
 func start_run(free_with_ad:=false,no_cost:=false) -> void:
@@ -3889,7 +4007,7 @@ func _spawn_zombie(at_z:=-85.0,forced_kind:="") -> void:
 	if _pooled != null:
 		z.free()                       # never added to the tree, so this is free
 		z = _pooled
-		add_child(z)
+		if z.get_parent() == null: add_child(z)   # a parked body is normally still in the tree
 		z.reuse(kind,difficulty)
 	else:
 		add_child(z); z.configure(kind,difficulty)
@@ -3990,8 +4108,8 @@ func _fire_flame() -> bool:
 			_explode(barrel)
 		hit += 1
 	sound.play("flame")
-	if hit > 0:
-		_burst(origin + flat_fwd_of(fwd) * 1.2, Color("ff9b35"), 3)
+	# No spark burst in front of the nozzle on a hit: three orange sparks born on one spot every
+	# tick read as a glowing ball sitting at the muzzle. Burning zombies already show the hit.
 	return true
 
 func flat_fwd_of(v: Vector3) -> Vector3:
@@ -4196,6 +4314,8 @@ func _detonate_ordnance(projectile: Node3D) -> void:
 ## It keeps coming for ~1.2 s, so standing still in it hurts and stepping aside dodges it.
 func _start_venom_stream(z: Node3D) -> void:
 	venom_streams.append({"z":z, "t":0.0, "dur":1.25, "aim":player.position+Vector3(0,0.9,0), "tick":0.0, "shown":false})
+	# the first of it hits the road straight away and starts to pool
+	_spawn_blood_pool(Vector3(player.position.x,0.0,player.position.z),rng.randf_range(0.9,1.2),7.0,false,Vector3.ZERO,true)
 
 func _tick_venom(delta: float) -> void:
 	if venom_streams.is_empty(): return
@@ -4208,7 +4328,8 @@ func _tick_venom(delta: float) -> void:
 			_venom_splash(s["aim"] as Vector3)
 			venom_streams.remove_at(i)
 			continue
-		var mouth: Vector3=z.position+Vector3(0,1.52,-0.22)
+		# the walk clip carries the head low and ahead of the feet (zombies face +Z, the survivor)
+		var mouth: Vector3=z.position+Vector3(0,1.30,0.32)
 		var aim: Vector3=s["aim"] as Vector3
 		var dir: Vector3=(aim-mouth).normalized()
 		# Thick, uneven, yellow-green: drops for the spray and small chunks for the body of it.
@@ -4238,6 +4359,10 @@ func _venom_splash(at: Vector3) -> void:
 		_fx_drop_at(at+Vector3(randf_range(-0.5,0.5),0.1,randf_range(-0.4,0.4)),
 			Color("8fbf35").lerp(Color("557c17"),randf()),randf_range(0.06,0.1),
 			Vector3(randf_range(-2.2,2.2),randf_range(1.6,3.4),randf_range(-1.2,1.2)),-10.0,randf_range(0.4,0.7))
+	# what is left on the tarmac: one wide pool and a few flung drops, riding the road like blood
+	_spawn_blood_pool(Vector3(at.x,0.0,at.z),rng.randf_range(1.7,2.2),9.0,false,Vector3.ZERO,true)
+	for k in range(4):
+		_spawn_blood_pool(Vector3(at.x+rng.randf_range(-1.3,1.3),0.0,at.z+rng.randf_range(-1.1,1.1)),rng.randf_range(0.25,0.55),7.0,false,Vector3.ZERO,true)
 	shake=maxf(shake,0.18)
 	if _flat_distance(player.position,at)<1.15 and revive_invulnerable<=0.0:
 		_hurt_player(7.0)
@@ -4405,6 +4530,17 @@ func _hit_zombie(z: Node3D,amount: float,part:="torso",hit_position:=Vector3.ZER
 			# It must NOT also go into dying_zombies: that list pushes bodies along at road speed
 			# (meant for bodies parented to the world), which moved a shot watcher at twice the
 			# speed of the pavement under it -- the corpse skated down the sidewalk.
+			# A sitting watcher was lowered 0.40 m and had its legs laid flat by a modifier so it
+			# could slump on the kerb. The death clip starts from standing, so with both still in
+			# place the body fell straight through the pavement: undo them first.
+			if bool(z.get_meta("sitting",false)) and is_instance_valid(z.model):
+				z.model.position.y+=0.40
+				z.set_meta("sitting",false)
+				var w_skel:=z.model.find_child("Skeleton3D",true,false) as Skeleton3D
+				if w_skel!=null:
+					for mod in w_skel.get_children():
+						if mod is SkeletonModifier3D and mod.get_script()!=null and String(mod.get_script().resource_path).ends_with("legs_out.gd"):
+							mod.queue_free()
 			z.die()
 			get_tree().create_timer(1.15).timeout.connect(func():
 				if is_instance_valid(z): z.queue_free())
@@ -4475,7 +4611,7 @@ func _blood_splatter(pos: Vector3,size_m: float,kill: bool) -> void:
 			var d:=dir.rotated(Vector3.UP,rng.randf_range(-0.6,0.6))
 			_spawn_blood_pool(pos+d*rng.randf_range(0.9,2.8),rng.randf_range(0.18,0.5),9.0)
 
-func _spawn_blood_pool(pos: Vector3,size_m: float,life: float,splash:=false,dir:=Vector3.ZERO) -> void:
+func _spawn_blood_pool(pos: Vector3,size_m: float,life: float,splash:=false,dir:=Vector3.ZERO,venom:=false) -> void:
 	if blood_pools.size()>=MAX_BLOOD_POOLS:
 		var oldest=blood_pools.pop_front()
 		if is_instance_valid(oldest): oldest.disarm(); blood_free.append(oldest)
@@ -4488,7 +4624,7 @@ func _spawn_blood_pool(pos: Vector3,size_m: float,life: float,splash:=false,dir:
 	pool.position=Vector3(pos.x,base_y+0.0008*(blood_pools.size()%12),pos.z)
 	# Splash textures spray toward +U; turn that onto the spray direction. Droplets spin freely.
 	pool.rotation.y=atan2(-dir.z,dir.x) if splash and dir!=Vector3.ZERO else rng.randf()*TAU
-	pool.setup(size_m,rng.randi(),life,splash); blood_pools.append(pool)
+	pool.setup(size_m,rng.randi(),life,splash,venom); blood_pools.append(pool)
 
 func _tick_blood(delta: float) -> void:
 	for i in range(blood_pools.size()-1,-1,-1):
@@ -5056,7 +5192,16 @@ func _tick_dying_zombies(delta: float) -> void:
 func _tick_crates(delta: float) -> void:
 	var hand: Vector3=player.position+Vector3(0,1.25,0.1)
 	for i in range(crates.size()-1,-1,-1):
-		var c=crates[i]; c.scroll_speed=world_speed; c.tick(delta,hand)
+		var c=crates[i]
+		var z_before: float=c.position.z
+		c.scroll_speed=world_speed; c.tick(delta,hand)
+		# A rolling barrel travels faster than the road, so it used to roll right into a buff
+		# gate and sit inside the coloured panels. It now queues up behind a gate that is still
+		# ahead of it and follows it down the road instead of passing through.
+		if c.has_method("is_roller"):
+			for g in gates:
+				if is_instance_valid(g) and z_before<g.position.z-1.0 and c.position.z>g.position.z-2.2:
+					c.position.z=g.position.z-2.2
 		# A rolling barrel is solid: it hurts like a wreck or a crater, then rolls on.
 		if c.has_method("is_roller") and not c.broken:
 			c.contact_tick(delta)
@@ -5419,11 +5564,11 @@ func _blast_sphere(pos: Vector3,color: Color,size: float,smoke: bool) -> void:
 	_fx_ring_at(pos,color,size,0.38 if not smoke else 0.9,smoke)
 
 func _fire_spray(pos: Vector3) -> void:
+	# Pooled drops: building 36 fresh nodes in one frame was the stall on every explosion.
 	for i in range(36):
-		var angle:=rng.randf_range(0,TAU); var e:=EffectScript.new(); e.position=pos
-		e.velocity=Vector3(cos(angle)*rng.randf_range(1.2,5.0),rng.randf_range(0.8,4.5),sin(angle)*rng.randf_range(1.2,5.0))
-		e.gravity=-5.5; e.life=rng.randf_range(0.35,0.75); e.total_life=e.life; add_child(e)
-		e.make_drop(Color("ffd56a") if i%3==0 else Color("f05a28"),rng.randf_range(0.045,0.12)); effects.append(e)
+		var angle:=rng.randf_range(0,TAU)
+		var vel:=Vector3(cos(angle)*rng.randf_range(1.2,5.0),rng.randf_range(0.8,4.5),sin(angle)*rng.randf_range(1.2,5.0))
+		_fx_drop_at(pos,Color("ffd56a") if i%3==0 else Color("f05a28"),rng.randf_range(0.045,0.12),vel,-5.5,rng.randf_range(0.35,0.75))
 
 func _spawn_pickup(kind: String,at_z:=-38.0) -> void:
 	var pickup:=PickupScript.new(); pickup.kind=kind

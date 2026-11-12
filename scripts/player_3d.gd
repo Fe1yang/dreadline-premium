@@ -73,6 +73,12 @@ var vehicle_mirror: Node3D
 ## True once the weapon model has been turned around: MUZZLE_POINTS live in the un-flipped
 ## model space, so the point has to be flipped with it or bullets leave from the stock.
 var weapon_flipped := false
+## The point of the weapon (in its own space) that belongs in the firing palm: measured from the
+## mesh in normalise_weapon_model(), so every gun seats itself instead of relying on where the
+## artist happened to leave the model's origin.
+var weapon_seat_local := Vector3.ZERO
+## Optional hand-tuned trim on top of the measured seat (skeleton space: +y up, +z to the muzzle).
+var weapon_nudge := Vector3.ZERO
 var armor_model: Node3D
 var helmet_model: Node3D
 var helmet_attachment: BoneAttachment3D
@@ -596,37 +602,46 @@ func _build_flame_jet() -> void:
 	if is_instance_valid(flame_jet):
 		return
 	var ramp := Gradient.new()
-	ramp.set_color(0, Color(1.0, 1.0, 1.0, 0.0))
-	ramp.add_point(0.05, Color(1.0, 0.84, 0.38, 0.35))
-	ramp.add_point(0.20, Color(1.0, 0.72, 0.22, 0.80))
-	ramp.add_point(0.45, Color(1.0, 0.72, 0.22, 0.80))
-	ramp.add_point(0.72, Color(1.0, 0.50, 0.10, 0.45))
-	ramp.set_color(3, Color(0.85, 0.34, 0.06, 0.0))
+	# Like a real flamethrower: white-hot where it leaves the nozzle, then yellow, orange, and
+	# red at the far, cooling end. (The old ramp set its "fade out" colour on the wrong point: it
+	# punched a transparent hole in the middle of the stream and left the tip opaque white.)
+	ramp.set_color(0, Color(1.0, 0.98, 0.90, 0.0))
+	ramp.set_color(1, Color(0.55, 0.06, 0.02, 0.0))
+	# It fades in over its first metre, so the head of a fresh stream is a tapering lance and
+	# not a ball popping out of the nozzle.
+	ramp.add_point(0.02, Color(1.0, 0.98, 0.90, 0.30))
+	ramp.add_point(0.07, Color(1.0, 0.97, 0.84, 0.95))
+	ramp.add_point(0.15, Color(1.0, 0.90, 0.50, 0.95))
+	ramp.add_point(0.28, Color(1.0, 0.72, 0.20, 0.90))
+	ramp.add_point(0.50, Color(1.0, 0.42, 0.07, 0.85))
+	ramp.add_point(0.76, Color(0.86, 0.16, 0.03, 0.60))
 	var jet := CPUParticles3D.new()
-	jet.amount = 520
-	jet.lifetime = 0.75
-	jet.preprocess = 0.12
+	# Dense enough that the puffs merge into one body of fire instead of reading as separate dots.
+	jet.amount = 1000
+	jet.lifetime = 0.85
+	jet.preprocess = 0.0
 	jet.local_coords = false
 	jet.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	jet.emission_sphere_radius = 0.07
+	jet.emission_sphere_radius = 0.03
 	jet.direction = Vector3(0, 0, -1)
-	jet.spread = 3.0
+	jet.spread = 3.2
 	jet.gravity = Vector3(0, 0.6, 0)
-	jet.initial_velocity_min = 15.0
-	jet.initial_velocity_max = 24.0
+	jet.initial_velocity_min = 13.0
+	jet.initial_velocity_max = 19.0
 	jet.angular_velocity_min = -60.0
 	jet.angular_velocity_max = 60.0
-	jet.scale_amount_min = 0.75
-	jet.scale_amount_max = 1.55
-	# flame grows as it leaves the nozzle, then thins out while it cools
+	jet.scale_amount_min = 0.85
+	jet.scale_amount_max = 1.45
+	# a thin lance at the nozzle that swells into a rolling body of fire
 	var grow := Curve.new()
-	grow.add_point(Vector2(0.0, 0.10))
-	grow.add_point(Vector2(0.45, 1.0))
-	grow.add_point(Vector2(1.0, 0.85))
+	grow.add_point(Vector2(0.0, 0.16))
+	grow.add_point(Vector2(0.10, 0.34))
+	grow.add_point(Vector2(0.50, 1.0))
+	grow.add_point(Vector2(1.0, 1.25))
 	jet.scale_amount_curve = grow
 	jet.color_ramp = ramp
 	var quad := QuadMesh.new()
-	quad.size = Vector2(0.26, 0.26)
+	quad.size = Vector2(0.50, 0.50)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = load("res://assets/vfx/flame_particle.png")
 	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
@@ -635,7 +650,7 @@ func _build_flame_jet() -> void:
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.vertex_color_use_as_albedo = true
 	# additive at a third brightness: bright enough to read as fire, not a white sheet
-	mat.albedo_color = Color(1.0, 1.0, 1.0, 0.35)
+	mat.albedo_color = Color(1.0, 1.0, 1.0, 0.17)
 	mat.no_depth_test = false
 	quad.material = mat
 	jet.mesh = quad
@@ -648,21 +663,35 @@ func _build_flame_jet() -> void:
 	flame_glow = null
 
 
+## Puts the jet out. CPUParticles3D.restart() turns emission back ON, so the old "emitting = false,
+## then restart() to clear the cloud" kept the flamethrower burning after a gun swap and, called
+## every frame, held every particle at its birth point -- the glowing ball at the muzzle. Hiding
+## the node clears the cloud instantly instead.
+func _stop_flame_jet() -> void:
+	flame_jet_timer = 0.0
+	if is_instance_valid(flame_jet):
+		flame_jet.emitting = false
+		flame_jet.visible = false
+	if is_instance_valid(flame_glow):
+		flame_glow.light_energy = 0.0
+
 func pulse_flame() -> void:
+	if weapon != "FLAME":
+		return
 	_build_flame_jet()
 	if not is_instance_valid(flame_jet):
 		return
 	flame_jet_timer = 0.20
-	if not flame_jet.emitting:
-		flame_jet.restart()
+	# No restart() here. Restarting throws every particle back onto the nozzle for a frame, and
+	# auto-fire starts and stops the stream constantly: that pile of particles was the glowing
+	# ball at the muzzle. Simply switching emission back on lets the stream grow out naturally.
+	flame_jet.visible = true
 	flame_jet.emitting = true
 	if is_instance_valid(flame_glow):
 		flame_glow.light_energy = 0.35
 	var from := muzzle_position()
 	var dir := aim_direction if aim_direction.length() > 0.01 else Vector3.FORWARD
-	# Born 0.45 m down the stream: a particle that pops on the nozzle fills the screen with one
-	# bright disc, which is the white dot the player kept seeing.
-	flame_jet.global_position = from + dir.normalized() * 0.45
+	flame_jet.global_position = from + dir.normalized() * 0.30
 	flame_jet.look_at(from + dir * 6.0, Vector3.UP)
 
 
@@ -687,6 +716,7 @@ func _load_weapon_model() -> void:
 const WEAPON_LENGTHS := {"MAKAROV": 0.26, "SUOMI": 0.72, "FLAME": 0.78, "PISTOL": 0.26, "SMG": 0.58, "SHOTGUN": 0.95, "SNIPER": 1.15, "RIFLE": 0.86, "LAUNCHER": 0.85}
 func normalise_weapon_model() -> void:
 	if not is_instance_valid(weapon_model): return
+	weapon_seat_local = Vector3.ZERO
 	var pts := weapon_points()
 	if pts.size() == 0: return
 	# Length: scale so the longest side matches a real weapon.
@@ -725,7 +755,22 @@ func normalise_weapon_model() -> void:
 			gx += q.x; gz += q.z; n += 1
 	if n > 0:
 		gx /= float(n); gz /= float(n)
-	weapon_model.position = Vector3(-gx, -bb.position.y, -gz)
+	# Seat: under the grip/magazine sideways and lengthways. In height a handgun is held by the
+	# upper part of its grip; a long gun is clasped around its body line (the median height of
+	# the mesh, which ignores a magazine or pistol grip hanging underneath).
+	weapon_seat_local = Vector3(gx, bb.position.y + bb.size.y * 0.42, gz)
+	if float(WEAPON_LENGTHS.get(weapon, 0.5)) > 0.4:
+		# Long guns: the lowest part is often the butt of the stock, not the grip, so the seat is
+		# taken a fixed way along the gun instead (grips sit roughly 36% from the butt), on the
+		# body line. Measured in the survivor's frame, where +z is toward the muzzle.
+		var basis := weapon_model.transform.basis
+		var xs: Array = []; var ys: Array = []; var z_lo := 1.0e9; var z_hi := -1.0e9
+		for q in pts:
+			var o: Vector3 = basis * (q as Vector3)
+			xs.append(o.x); ys.append(o.y); z_lo = minf(z_lo, o.z); z_hi = maxf(z_hi, o.z)
+		xs.sort(); ys.sort()
+		var mid := xs.size() / 2
+		weapon_seat_local = basis.inverse() * Vector3(float(xs[mid]), float(ys[mid]), z_lo + (z_hi - z_lo) * 0.36)
 
 ## True when the thinner end of the weapon (the muzzle) is on the -Z side.
 func _muzzle_points_forward(pts: Array, bb: AABB) -> bool:
@@ -834,18 +879,12 @@ func weapon_points() -> Array:
 func _load_muzzle_flash() -> void:
 	if is_instance_valid(flash):
 		flash.get_parent().remove_child(flash); flash.queue_free()
-	if weapon == "FLAME":
-		# the nozzle has no flash; this scene was the white disc in front of the barrel.
-		# Keep a silent placeholder rather than null: the tick writes flash.visible every frame.
-		flash = Node3D.new()
-		flash.visible = false
-		add_child(flash)
-		return
-	var scene_path: String="res://assets/BinbunVFX/muzzle_flash/effects/"+str(FLASH_SCENES.get(weapon,FLASH_SCENES["PISTOL"]))
-	flash=load(scene_path).instantiate() as Node3D
-	flash.set("autoplay",false); flash.set("one_shot",true); flash.set("light_enable",false)
-	flash.scale=Vector3.ONE*float(FLASH_SCALES.get(weapon,0.20))
-	flash.visible=false
+	# No gun shows a muzzle flash any more (it read as a glowing ball), so the flash effect scene
+	# is not loaded at all: reading and building it on every weapon pick-up was a stall for
+	# something that is never drawn. A silent placeholder stays because the tick writes
+	# flash.visible every frame.
+	flash = Node3D.new()
+	flash.visible = false
 	add_child(flash)
 
 func reset() -> void:
@@ -978,10 +1017,7 @@ func base_damage(id: String) -> float:
 func set_weapon(id: String) -> void:
 	# A gun swap must also stop the nozzle: the flame jet kept burning out of whatever
 	# was picked up, so fire and bullets came out at the same time.
-	if is_instance_valid(flame_jet):
-		flame_jet.emitting = false
-		flame_jet.restart()
-	flame_jet_timer = 0.0
+	_stop_flame_jet()
 
 	weapon = id
 	_refresh_crit()
@@ -1063,8 +1099,13 @@ func _update_weapon_transform() -> void:
 	elif is_instance_valid(grip) and grip.grip_point!=Vector3.ZERO and grip.support_point!=Vector3.ZERO:
 		# Both IK points refer to the visible palms, not the possibly misaligned hand bones.
 		# Center every survivor's weapon between those palms instead of hanging it off hand_r.
-		var between_hands: Vector3=(grip.grip_point+grip.support_point)*0.5
-		hand_position=model.global_transform.affine_inverse()*skeleton.global_transform*between_hands
+		# Sideways the gun sits between the two palms; height and depth come from the firing
+		# hand alone, so a long gun's grip stays in that hand instead of sliding to the midpoint.
+		var seat:=Vector3((grip.grip_point.x+grip.support_point.x)*0.5,grip.grip_point.y,grip.grip_point.z)+weapon_nudge
+		# Maya's hand mesh hangs lower than its measured centre says (her gloves' cuffs pull the
+		# average up), so her guns rode about 8 cm above her palms.
+		if character==3: seat.y-=0.08
+		hand_position=model.global_transform.affine_inverse()*skeleton.global_transform*seat
 	elif is_instance_valid(hand_anchor) and is_instance_valid(grip) and hand_anchor.is_inside_tree():
 		hand_position=model.global_transform.affine_inverse()*(hand_anchor.global_transform*(grip.hand_offset["r"] as Vector3))
 	elif is_instance_valid(grip) and grip.grip_point!=Vector3.ZERO:
@@ -1073,7 +1114,7 @@ func _update_weapon_transform() -> void:
 		var hand_global:=skeleton.to_global(skeleton.get_bone_global_pose(right_hand).origin)
 		hand_position=model.global_transform.affine_inverse()*hand_global
 	var weapon_scale:=float(WEAPON_SCALES.get(weapon,0.5))
-	weapon_model.position=hand_position
+	weapon_model.position=hand_position-weapon_model.transform.basis*weapon_seat_local
 	weapon_model.force_update_transform()
 	var muzzle:=to_local(muzzle_position())
 	if is_instance_valid(light): light.position=muzzle
@@ -1116,28 +1157,18 @@ func _build_flash_quad() -> void:
 func tick(delta: float) -> void:
 	# The jet and its glow belong to the flamethrower. Picking up another gun changes the weapon
 	# without a pulse, and the leftover glow sat on the road as a bright orb.
-	if is_instance_valid(flame_jet) and weapon != "FLAME":
-		if flame_jet.emitting:
-			flame_jet.emitting = false
-			flame_jet.restart()
-		flame_jet_timer = 0.0
-		if is_instance_valid(flame_glow):
-			flame_glow.light_energy = 0.0
+	if weapon != "FLAME" and is_instance_valid(flame_jet) and (flame_jet.emitting or flame_jet.visible):
+		_stop_flame_jet()
 	if is_instance_valid(flame_jet) and flame_jet.emitting:
 		# The stream rides the muzzle and points where the survivor aims, every frame, so turning
 		# does not leave a bent trail behind.
 		var from2 := muzzle_position()
 		var dir2 := aim_direction if aim_direction.length() > 0.01 else Vector3.FORWARD
-		flame_jet.global_position = from2 + dir2.normalized() * 0.45
+		flame_jet.global_position = from2 + dir2.normalized() * 0.30
 		flame_jet.look_at(from2 + dir2 * 6.0, Vector3.UP)
 		flame_jet_timer = maxf(0.0, flame_jet_timer - delta)
 		if flame_jet_timer <= 0.0:
-			flame_jet.emitting = false
-			# Clear the cloud instead of letting the tail die: a paused tail froze in place and
-			# read as a still picture of fire hanging in the air.
-			flame_jet.restart()
-			if is_instance_valid(flame_glow):
-				flame_glow.light_energy = 0.0
+			_stop_flame_jet()
 	_tick_vehicle_visual(delta)
 	instinct_boost=maxf(0.0,instinct_boost-delta)
 	position.x = move_toward(position.x,target_x,delta*6.8*effective_move_mult()*vehicle_side())

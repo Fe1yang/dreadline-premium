@@ -18,6 +18,8 @@ const BUFFS:={
 	"damage":      {"values":[8,16,28,50],    "unit":"%",  "min":0, "group":"gun"},
 	"rate":        {"values":[6,12,20,35],    "unit":"%",  "min":0, "group":"gun"},
 	"bullet_speed":{"values":[10,20,35,60],   "unit":"%",  "min":0, "group":"gun"},
+	"range":       {"values":[12,22,35,55],   "unit":"%",  "min":0, "group":"gun"},   # bullet reach (cap +180%)
+	"strafe":      {"values":[8,14,22,35],    "unit":"%",  "min":0, "group":"survival"}, # side-step only (cap +60%)
 	"crit_chance": {"values":[1,3,6,12],       "unit":"%",  "min":0, "group":"gun"},   # common 1%, cap 100%
 	"crit_damage": {"values":[8,15,30,60],    "unit":"%",  "min":0, "group":"gun"},   # only once crit chance > 0
 	"magazine":    {"values":[15,30,50,100],  "unit":"%",  "min":0, "group":"gun"},
@@ -43,7 +45,7 @@ const TEXT:={
 	"en":{
 		"max_hp":"TOUGH SKIN|MAX HP","heal":"FIELD MEDIC|HP","regen":"ADRENALINE|REGEN","kill_heal":"BLOODLUST|HP PER KILL",
 		"dmg_reduce":"HARDENED|DAMAGE TAKEN","shield":"RIOT SHIELD|SHIELD","move":"LIGHT FEET|SPEED",
-		"damage":"HEAVY ROUNDS|DAMAGE","rate":"FAST TRIGGER|FIRE RATE","bullet_speed":"HOT LOADS|BULLET SPEED",
+		"damage":"HEAVY ROUNDS|DAMAGE","rate":"FAST TRIGGER|FIRE RATE","bullet_speed":"HOT LOADS|BULLET SPEED","range":"LONG BARREL|RANGE","strafe":"QUICK FEET|SIDE STEP",
 		"crit_chance":"MARKSMAN|CRIT CHANCE","crit_damage":"HOLLOW POINT|CRIT DAMAGE","magazine":"EXTENDED MAG|MAGAZINE",
 		"reserve":"AMMO CACHE|MAGAZINES","reload":"SPEED LOADER|RELOAD","pierce":"AP ROUNDS|PIERCE",
 		"multishot":"TWIN BARREL|BULLETS","split":"FRAG ROUNDS|FRAGMENTS","explode":"HE ROUNDS|BLAST CHANCE",
@@ -52,7 +54,7 @@ const TEXT:={
 	"zh_CN":{
 		"max_hp":"强韧体魄|生命上限","heal":"战地医疗|生命","regen":"肾上腺素|回血","kill_heal":"嗜血|击杀回血",
 		"dmg_reduce":"硬化皮肤|受伤","shield":"防暴护盾|护盾","move":"轻装上阵|移速",
-		"damage":"重型弹药|伤害","rate":"快速扳机|射速","bullet_speed":"高压弹药|弹速",
+		"damage":"重型弹药|伤害","rate":"快速扳机|射速","bullet_speed":"高压弹药|弹速","range":"长管|射程","strafe":"轻步|横移速度",
 		"crit_chance":"神射手|暴击率","crit_damage":"空尖弹|暴击伤害","magazine":"扩容弹匣|弹匣",
 		"reserve":"弹药补给|备用弹匣","reload":"快速装填|换弹","pierce":"穿甲弹|穿透",
 		"multishot":"双联枪管|弹丸","split":"破片弹|分裂","explode":"高爆弹|爆炸几率",
@@ -61,7 +63,7 @@ const TEXT:={
 	"zh_TW":{
 		"max_hp":"強韌體魄|生命上限","heal":"戰地醫療|生命","regen":"腎上腺素|回血","kill_heal":"嗜血|擊殺回血",
 		"dmg_reduce":"硬化皮膚|受傷","shield":"防暴護盾|護盾","move":"輕裝上陣|移速",
-		"damage":"重型彈藥|傷害","rate":"快速扳機|射速","bullet_speed":"高壓彈藥|彈速",
+		"damage":"重型彈藥|傷害","rate":"快速扳機|射速","bullet_speed":"高壓彈藥|彈速","range":"長管|射程","strafe":"輕步|橫移速度",
 		"crit_chance":"神射手|暴擊率","crit_damage":"空尖彈|暴擊傷害","magazine":"擴容彈匣|彈匣",
 		"reserve":"彈藥補給|備用彈匣","reload":"快速裝填|換彈","pierce":"穿甲彈|穿透",
 		"multishot":"雙聯槍管|彈丸","split":"破片彈|分裂","explode":"高爆彈|爆炸機率",
@@ -79,7 +81,7 @@ const TEXT:={
 	"ko":{
 		"max_hp":"강인한 체력|최대 체력","heal":"야전 의료|체력","regen":"아드레날린|재생","kill_heal":"피의 갈증|처치 회복",
 		"dmg_reduce":"경화 피부|받는 피해","shield":"진압 방패|보호막","move":"경량 장비|이동 속도",
-		"damage":"중형 탄약|피해","rate":"속사 방아쇠|발사 속도","bullet_speed":"고압탄|탄속",
+		"damage":"중형 탄약|피해","rate":"속사 방아쇠|발사 속도","bullet_speed":"고압탄|탄속","range":"긴 총열|사거리","strafe":"경보|측면 이동",
 		"crit_chance":"명사수|치명타 확률","crit_damage":"할로포인트|치명타 피해","magazine":"확장 탄창|탄창",
 		"reserve":"탄약 보급|예비 탄창","reload":"스피드 로더|재장전","pierce":"철갑탄|관통",
 		"multishot":"쌍열 총신|탄환","split":"파편탄|분열","explode":"고폭탄|폭발 확률",
