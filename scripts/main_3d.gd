@@ -36,7 +36,12 @@ const BloodPoolScript=preload("res://scripts/blood_pool_3d.gd")
 const MAX_BLOOD_POOLS:=60
 ## Concurrent zombies are capped: every one is a skinned model, and 26 at once is what a
 ## phone cannot do. The wave quota still arrives, just in two or three ranks.
+## Hard cap on bodies on screen. It used to be a flat 14, which is why the street looked empty
+## late in a run; it now opens up with distance (14 -> 34) while the distance culling still keeps
+## the draw call count bounded.
 const MAX_ALIVE_ZOMBIES:=14
+func _max_alive() -> int:
+	return clampi(16+int(distance/240.0),16,44)
 ## The city loop is 384 m and the run looks straight down it, so the whole loop used to be
 ## submitted every frame. Blocks fade out at the preset distance instead.
 const VIEW_CULL_END_HIGH:=150.0
@@ -1452,12 +1457,12 @@ func _process(delta: float) -> void:
 	if surge and wave_quota>0:
 		spawn_timer-=delta
 		if spawn_timer<=0:
-			if _living_zombies()>=MAX_ALIVE_ZOMBIES:
+			if _living_zombies()>=_max_alive():
 				spawn_timer=0.2   # hold the pack back until the road thins out
 			else:
 				_spawn_zombie(); wave_quota-=1
 				# One pack: ~0.4 s apart early, ~0.2 s deep in the run.
-				spawn_timer=lerpf(0.42,0.22,ramp)*rng.randf_range(0.85,1.15)
+				spawn_timer=lerpf(0.30,0.13,ramp)*rng.randf_range(0.85,1.15)
 	gate_timer-=delta
 	if gate_timer<=0:
 		# a gate every 12-15 s (was 7.5-11 s): fewer steps up per run, each one worth having
@@ -1493,6 +1498,7 @@ func _process(delta: float) -> void:
 	_cleanup_companions()
 	for dog in companion_pets:
 		if is_instance_valid(dog): dog.tick(delta)
+	_tick_fallen_pets(delta)
 	_scroll_extra(delta)
 	var _t0 := Time.get_ticks_usec(); _tick_bullets(delta); _profile_tick("_tick_bullets(delta)", _t0)
 	var _t1 := Time.get_ticks_usec(); _tick_ordnance(delta); _profile_tick("_tick_ordnance(delta)", _t1)
@@ -2042,7 +2048,7 @@ func start_run(free_with_ad:=false,no_cost:=false) -> void:
 	revive_used=false; revive_count=0; revive_pending=false; revive_invulnerable=0.0; jockey_introduced=false; banshee_introduced=false; banshee_warning=0.0
 	_chase_reset()
 	spawn_timer=1.6; gate_timer=9.0; barrel_timer=32.0; crate_timer=20.0; obstacle_timer=24.0; pickup_timer=12.0; shot_timer=0; growl_timer=3.5; hint_time=7; damage_flash=0; new_gate_index=0; gates_since_epic=0
-	surge=false; phase_timer=4.5; wave_quota=0; wave_timeout=0.0; wave_clear_banner=0.0  # a calm opening before the first 尸潮
+	surge=false; phase_timer=1.6; wave_quota=0; wave_timeout=0.0; wave_clear_banner=0.0  # a calm opening before the first 尸潮
 	aim_direction=Vector3.FORWARD; aim_target=null; left_stick=Vector2.ZERO; right_stick=Vector2.ZERO; _release_touches()
 	shop_truck.visible=false; player.visible=true; camera.fov=52; camera.position=Vector3(0,6.4,13.5)
 	runs_this_launch+=1; runs_total+=1; run_start_best=best_distance; new_record=false; record_banner=0.0
@@ -2091,6 +2097,27 @@ func _spawn_companion() -> void:
 	# loadout_on here silently dropped the dog whenever that leftover flag was false.
 	if not companion_pets.is_empty() or not pet_equipped or not pet_owned(pet_choice): return
 	_recruit_pet(pet_choice,player.position+(load("res://scripts/pet_companion_3d.gd") as GDScript).follow_offset(0))
+
+## A dog that fell stays where it dropped: the road carries it away behind the survivor and it
+## is freed out of sight. Its slot in the pack opens at once for a new dog.
+var fallen_pets: Array=[]
+const PET_DOWN_TEXT:={"zh_CN":"伙伴倒下了","zh_TW":"夥伴倒下了","ja":"相棒が倒れた","ko":"동료가 쓰러졌다"}
+func _tick_fallen_pets(delta: float) -> void:
+	for i in range(companion_pets.size()-1,-1,-1):
+		var dog=companion_pets[i]
+		if is_instance_valid(dog) and bool(dog.get("dead")):
+			companion_pets.remove_at(i); fallen_pets.append(dog)
+			_popup(dog.position+Vector3(0,1.6,0),String(PET_DOWN_TEXT.get(String(language_code),"COMPANION DOWN")),Color("ff8a6a"))
+			# the rest close ranks: formation slots follow pack order
+			for k in range(companion_pets.size()):
+				if is_instance_valid(companion_pets[k]): companion_pets[k].slot_index=k
+			companion_pet=companion_pets[0] as Node3D if not companion_pets.is_empty() else null
+	for i in range(fallen_pets.size()-1,-1,-1):
+		var f=fallen_pets[i]
+		if not is_instance_valid(f): fallen_pets.remove_at(i); continue
+		f.position.z+=world_speed*delta
+		if f.position.z>14.0 or float(f.get("dead_time"))>12.0:
+			fallen_pets.remove_at(i); f.queue_free()
 
 ## Drops freed dogs from the pack and keeps companion_pet pointing at the first dog.
 func _cleanup_companions() -> void:
@@ -4181,9 +4208,9 @@ func _clear_world() -> void:
 	venoms.clear()
 	_clear_venom()
 	if is_instance_valid(chaser): chaser.queue_free(); chaser=null
-	for dog in companion_pets:
+	for dog in companion_pets+fallen_pets:
 		if is_instance_valid(dog): dog.queue_free()
-	companion_pets.clear(); companion_pet=null
+	companion_pets.clear(); fallen_pets.clear(); companion_pet=null
 	for collection in [zombies,bullets,ordnance,gates,barrels,crates,blood_pools,obstacles,pickups,effects]:
 		for node in collection:
 			if is_instance_valid(node): node.queue_free()
@@ -4274,9 +4301,9 @@ func _count_zombie_kind(type: String) -> int:
 ## Waves beat a flat trickle: a burst you can clean out, then a real breather. The quota
 ## grows by two per wave and stops at 26, so late waves are dense but still clearable.
 func _wave_size() -> int:
-	# Lower cap than before (26): with damage up, the same threat fits in fewer bodies, and the
-	# draw/physics cost of a packed horde was the main stutter risk on older phones.
-	return clampi(4+wave*2,6,18)
+	# The horde has to fill the street late: it grows two per wave up to 44, and the alive cap
+	# (MAX_ALIVE_ZOMBIES) is what actually keeps the frame rate safe on phones.
+	return clampi(6+wave*2,8,44)
 
 ## Zombie toughness grows with the distance run, slowly at first and faster later:
 ## x1.16 at 500 m, x1.37 at 1000 m, x1.9 at 2000 m, x2.5 at 3000 m, x3.8 at 5000 m, x7.6 at
@@ -4310,7 +4337,7 @@ func _begin_wave(ramp: float) -> void:
 func _end_wave(ramp: float) -> void:
 	surge=false; wave_quota=0
 	wave_clear_banner=2.2
-	phase_timer=lerpf(6.5,3.8,ramp)*rng.randf_range(0.9,1.1)
+	phase_timer=lerpf(2.6,1.4,ramp)*rng.randf_range(0.9,1.1)
 	# Clean sweep: a small patch-up, so a good wave pushes the run forward instead of only
 	# draining it. Deep in a run the breather - and the heal - are smaller.
 	if is_instance_valid(player):
