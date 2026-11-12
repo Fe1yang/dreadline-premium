@@ -558,10 +558,11 @@ func _draw_loading() -> void:
 	if game.loading_order.size()>0 and loading_art.size()>0:
 		var idx: int=int(game.loading_order[game.loading_idx % game.loading_order.size()])
 		if idx>=0 and idx<loading_art.size() and loading_art[idx]:
-			# draw the art at its own size, centred: never stretched, never zoomed
+			# Cover-fit: scale so the art fills the whole screen on every aspect ratio, centred.
+			# The edges crop on unusual screens instead of leaving black bars.
 			var tex:=loading_art[idx]
 			var tw:=float(tex.get_width()); var th:=float(tex.get_height())
-			var k:=minf(540.0/tw,game.ui_h/th)
+			var k:=maxf(540.0/tw,game.ui_h/th)
 			var sz:=Vector2(tw*k,th*k)
 			_box(Rect2(0,0,540,game.ui_h),INK)
 			clean_ops.append(["texture",tex,Rect2((Vector2(540,game.ui_h)-sz)*0.5,sz)])
