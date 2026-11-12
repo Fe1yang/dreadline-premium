@@ -691,9 +691,13 @@ func _apply_quality() -> void:
 	# image, so the HUD text stays sharp.
 	if vp: vp.screen_space_aa=Viewport.SCREEN_SPACE_AA_FXAA
 	if is_instance_valid(sun_light):
-		sun_light.directional_shadow_max_distance=180.0 if quality_high else 90.0
-		sun_light.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if quality_high else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		# Shadows were three quarters of everything drawn: with 4 cascades out to 180 m the whole
+		# street was rendered five times a frame (3.8 million triangles, measured). Two cascades
+		# to 120 m plus coarser far-away meshes bring that to 2.1 million with the same street.
+		sun_light.directional_shadow_max_distance=120.0 if quality_high else 90.0
+		sun_light.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 		sun_light.shadow_blur=1.45 if quality_high else 1.1
+	if vp: vp.mesh_lod_threshold=3.0 if quality_high else 4.0
 	for road in roads:
 		if is_instance_valid(road): _apply_cull_range(road)
 
@@ -1195,7 +1199,7 @@ func _process(delta: float) -> void:
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): axis-=1
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): axis+=1
 	if touch_controls: axis=clampf(axis+left_stick.x,-1,1)
-	if axis!=0: player.target_x=clampf(player.target_x+axis*5.0*player.effective_move_mult()*delta,-3.15,3.15)
+	if axis!=0: player.target_x=clampf(player.target_x+axis*5.0*player.effective_move_mult()*player.strafe_mult*delta,-3.15,3.15)
 	if right_stick.length()>0.16:
 		aim_direction=Vector3(right_stick.x,0,right_stick.y).normalized()
 	elif not touch_controls:
@@ -1543,8 +1547,28 @@ func _pin_scenes(n: Node) -> void:
 	var path := n.scene_file_path
 	if path != "" and not pinned_scenes.has(path) and ResourceLoader.exists(path):
 		pinned_scenes[path] = load(path)
+	_pin_node_materials(n)
 	for c in n.get_children():
 		_pin_scenes(c)
+
+## The engine throws a shader away when the last material using it is freed, and builds it again
+## (20 ms on a PC, far more on a phone) the next time a material of that kind is made. Gates,
+## explosions, blood and tracers are all made of throwaway materials, so each new gate or blast
+## paid that again and again -- that was the stutter that kept coming back all through a run.
+## Holding on to one material of every kind keeps its shader alive for good.
+var pinned_materials: Array = []
+func _pin_node_materials(n: Node) -> void:
+	if n is GeometryInstance3D:
+		if n.material_override != null: pinned_materials.append(n.material_override)
+		if n.material_overlay != null: pinned_materials.append(n.material_overlay)
+	var mesh: Mesh = null
+	if n is MeshInstance3D: mesh = n.mesh
+	elif n is CPUParticles3D: mesh = n.mesh
+	if mesh != null:
+		for i in range(mesh.get_surface_count()):
+			var m: Material = mesh.surface_get_material(i)
+			if m != null: pinned_materials.append(m)
+			if n is MeshInstance3D and n.get_surface_override_material(i) != null: pinned_materials.append(n.get_surface_override_material(i))
 
 func _prefill_begin() -> void:
 	prefill_started = true
@@ -1568,6 +1592,7 @@ func _prefill_begin() -> void:
 	# each character is needed, which is what made every new gate cost a slow frame.
 	for id in BuffCatalog.BUFFS.keys():
 		prefill_queue.append("gate:" + String(id))
+		prefill_queue.append("gate2:" + String(id))   # two-panel gates letter at another size
 	for item in ["barrel", "roller", "explosion", "audio"]:
 		prefill_queue.append(item)
 
@@ -1580,7 +1605,35 @@ func _prefill_tick() -> void:
 	if prefill_queue.is_empty():
 		prefill_done = true
 		return
-	var item: String = String(prefill_queue.pop_front())
+	_prefill_make(String(prefill_queue.pop_front()), PREFILL_PARK)
+
+## Second pass, loading screen only: building a thing is half the cost, the other half is paid the
+## first time it is actually DRAWN (its shaders are compiled and its textures and lettering are
+## sent to the graphics chip). So one of each is put in front of the camera for a frame while the
+## loading picture covers the screen.
+var view_queue: Array = []
+var view_started := false
+var view_done := false
+func _view_warm_tick() -> void:
+	if view_done: return
+	for old in prefill_trash:
+		if is_instance_valid(old): old.queue_free()
+	prefill_trash.clear()
+	if not view_started:
+		view_started = true
+		for kind in ["walker", "runner", "jockey", "brute", "banshee", "bomber", "bomber_female", "spitter"]:
+			view_queue.append("special:" + kind)
+		for kind in ["car", "police", "cone", "fence", "corpse_pile"]:
+			view_queue.append("obstacle:" + kind)
+		for item in ["gate2:damage", "gate:heal", "gate2:rate", "barrel", "roller", "explosion", "showcrate:SMG", "showcrate:BIKE", "showcrate:PET_0", "pickup:medkit", "pickup:coin", "burst"]:
+			view_queue.append(item)
+	if view_queue.is_empty():
+		view_done = true
+		return
+	var fwd: Vector3 = -camera.global_transform.basis.z
+	_prefill_make(String(view_queue.pop_front()), camera.global_position + fwd * 14.0 - Vector3(0.0, 1.0, 0.0))
+
+func _prefill_make(item: String, at: Vector3) -> void:
 	var n: Node3D = null
 	var keep := false
 	if item.begins_with("zombie:"):
@@ -1589,29 +1642,50 @@ func _prefill_tick() -> void:
 		for p in zombie_pool:
 			if is_instance_valid(p) and String(p.kind) == kind: have += 1
 		if have >= 4 or zombie_pool.size() >= ZOMBIE_POOL_MAX: return
-		n = ZombieScript.new(); n.position = PREFILL_PARK; add_child(n); n.configure(kind, 1.0)
+		n = ZombieScript.new(); n.position = at; add_child(n); n.configure(kind, 1.0)
 		_pin_scenes(n); n.park(); zombie_pool.append(n); keep = true
 	elif item.begins_with("special:"):
-		n = ZombieScript.new(); n.position = PREFILL_PARK; add_child(n); n.configure(item.trim_prefix("special:"), 1.0)
+		n = ZombieScript.new(); n.position = at; add_child(n); n.configure(item.trim_prefix("special:"), 1.0)
 	elif item.begins_with("crate:"):
 		var id := item.trim_prefix("crate:")
 		if not (crate_pool.get(id, []) as Array).is_empty(): return
-		n = WeaponCrateScript.new(); n.setup(id, 1); n.position = PREFILL_PARK; add_child(n)
+		n = WeaponCrateScript.new(); n.setup(id, 1); n.position = at; add_child(n)
 		_pin_scenes(n); _release_crate(n); keep = true
 	elif item.begins_with("obstacle:"):
-		n = RoadObstacleScript.new(); n.kind = item.trim_prefix("obstacle:"); n.position = PREFILL_PARK; add_child(n)
+		n = RoadObstacleScript.new(); n.kind = item.trim_prefix("obstacle:"); n.position = at; add_child(n)
 	elif item.begins_with("pickup:"):
-		n = PickupScript.new(); n.kind = item.trim_prefix("pickup:"); n.position = PREFILL_PARK; add_child(n)
-	elif item.begins_with("gate:"):
-		var gid := item.trim_prefix("gate:")
-		n = GateScript.new(); n.position = PREFILL_PARK
-		n.setup([_gate_option(gid, 0), _gate_option(gid, 2), _gate_option(gid, 3)], language_code); add_child(n)
+		n = PickupScript.new(); n.kind = item.trim_prefix("pickup:"); n.position = at; add_child(n)
+	elif item.begins_with("gate:") or item.begins_with("gate2:"):
+		var gid := item.get_slice(":", 1)
+		n = GateScript.new(); n.position = at
+		if item.begins_with("gate2:"): n.setup([_gate_option(gid, 0), _gate_option(gid, 1)], language_code)
+		else: n.setup([_gate_option(gid, 0), _gate_option(gid, 2), _gate_option(gid, 3)], language_code)
+		add_child(n)
 	elif item == "barrel":
-		n = BarrelScript.new(); n.position = PREFILL_PARK; add_child(n)
+		n = BarrelScript.new(); n.position = at; add_child(n)
 	elif item == "roller":
-		n = BarrelRollScript.new(); n.setup("SMG", 1); n.position = PREFILL_PARK; add_child(n)
+		n = BarrelRollScript.new(); n.setup("SMG", 1); n.position = at; add_child(n)
 	elif item == "explosion":
-		n = ExplosionScript.new(); n.position = PREFILL_PARK; add_child(n)
+		n = ExplosionScript.new(); n.position = at; add_child(n)
+	elif item.begins_with("showcrate:"):
+		n = WeaponCrateScript.new(); n.setup(item.trim_prefix("showcrate:"), 1); n.position = at; add_child(n)
+	elif item == "burst":
+		# sparks, fire drops and a blood pool: the small effects every kill and blast throws out
+		_burst(at, Color("ffd275"), 6); _fire_spray(at)
+		_spawn_blood_pool(at * Vector3(1, 0, 1), 0.8, 0.4)
+		_spawn_blood_pool(at * Vector3(1, 0, 1), 0.8, 0.4, true, Vector3.FORWARD)
+		_spawn_blood_pool(at * Vector3(1, 0, 1), 0.8, 0.4, false, Vector3.ZERO, true)
+		for fx in effects: if is_instance_valid(fx): _pin_scenes(fx)
+		for bp in blood_pools: if is_instance_valid(bp): _pin_scenes(bp)
+		# the rarer effect shapes: blast ball, shock ring, floating text
+		for k in range(3):
+			var fx2 = EffectScript.new(); fx2.position = at + Vector3(-1.0 + float(k), 0.5, 0.0); add_child(fx2); fx2.life = 0.2; fx2.total_life = 1.0
+			match k:
+				0: fx2.make_blast(Color("8e1d12"), 0.6)
+				1: fx2.make_shockwave(Color("ffd27a"), 0.4)
+				_: fx2.make_text("0", Color.WHITE)
+			_pin_scenes(fx2); prefill_trash.append(fx2)
+		var shot = BulletScript.new(); shot.position = at; add_child(shot); _pin_scenes(shot); prefill_trash.append(shot)
 	elif item == "audio":
 		# the night and storm themes used to be read from disk at the moment night fell
 		if is_instance_valid(sound):
@@ -1625,6 +1699,9 @@ func _prefill_tick() -> void:
 func _finish_loading() -> void:
 	if state!="loading": return
 	_teardown_warmup()
+	for old in prefill_trash:   # the last thing shown to the camera during loading
+		if is_instance_valid(old): old.queue_free()
+	prefill_trash.clear()
 	# _render_warmup() measured no gain: the stalls are engine pipeline compiles that a
 	# two-frame draw does not avoid, and it added loading time. Kept for reference.
 	var target:=loading_target
@@ -1656,11 +1733,12 @@ func _tick_loading(delta: float) -> void:
 	if loading_target=="run":
 		_warm_up_tick()
 		_prefill_tick()
+		if prefill_done: _view_warm_tick()
 	var prewarm_part: float = float(mini(district_prewarm_i, DISTRICTS_NEEDED)) / float(DISTRICTS_NEEDED)
 	var road_part: float = float(roads.size()) / float(ROAD_COUNT) if loading_target=="run" else 0.0
 	loading_progress = minf(0.98, maxf(maxf(loading_time/maxf(loading_duration,0.01), prewarm_part if loading_target=="run" else 0.0), road_part))
 	# same random image from start to finish, no switching
-	if loading_time>=loading_duration and districts_ready and (loading_target!="run" or ((warmup_done or warmup_queue.is_empty()) and prefill_done)):
+	if loading_time>=loading_duration and districts_ready and (loading_target!="run" or ((warmup_done or warmup_queue.is_empty()) and prefill_done and view_done)):
 		_finish_loading()
 
 func start_run(free_with_ad:=false,no_cost:=false) -> void:
@@ -4132,6 +4210,8 @@ func _fire() -> bool:
 	for i in range(count):
 		var b:=BulletScript.new(); b.position=origin; b.velocity=base.rotated(Vector3.UP,(i-(count-1)/2.0)*0.075)*player.bullet_speed
 		b.damage=player.damage; b.pierce=player.pierce
+		# "range" buff: a round only flies as far as the gun reaches
+		b.life=minf(b.life,player.bullet_reach()/maxf(1.0,player.bullet_speed))
 		if player.crit_chance>0.0 and rng.randf()<player.crit_chance: b.damage*=player.crit_mult; b.set_meta("crit",true)
 		# Shots aimed at the Banshee punch through two zombies in the way, so she can be reached.
 		if is_instance_valid(aim_target) and zombies.has(aim_target) and aim_target.kind=="banshee": b.pierce+=2
@@ -4834,23 +4914,12 @@ func _spawn_gate() -> void:
 const THREE_GATE_DISTANCE:=500.0
 const PITY_GATES:=8
 const RARITY_WEIGHTS:=[64.0,25.0,9.0,2.0]
-## Early gates are almost always common; the rare tiers only open up deep into a run, so a fresh
-## run is not handed an epic on the second gate.
-const RARITY_CURVE:={0:[84.0,14.0,1.8,0.2], 1:[46.0,36.0,13.0,5.0], 2:[16.0,40.0,30.0,14.0]}
 var gates_since_epic:=0
 
 func _roll_rarity() -> int:
-	# distance 0 -> all common; about 1200 m -> mid; 2600 m and beyond -> the late table.
-	var t: float=clampf(distance/2600.0,0.0,1.0)
-	var k: float=t*t                                # slow at first, steep later
-	var a: Array=RARITY_CURVE[0]
-	var b: Array=RARITY_CURVE[1]
-	var c: Array=RARITY_CURVE[2]
-	var w: Array=[]
-	for i in range(4):
-		var lo: float=lerpf(a[i],b[i],clampf(k*2.0,0.0,1.0))
-		var hi: float=c[i]
-		w.append(lerpf(lo,hi,clampf((k-0.5)*2.0,0.0,1.0)))
+	var w: Array=RARITY_WEIGHTS.duplicate()
+	var late: float=clampf(distance/1500.0,0.0,1.0) # a little luckier deeper into a run
+	w[2]+=3.0*late; w[3]+=2.0*late
 	var total:=0.0
 	for x in w: total+=x
 	var r:=rng.randf()*total
@@ -4874,6 +4943,8 @@ func _buff_useful(id: String,rarity: int) -> bool:
 		"reserve": return player.can_use_reserve()
 		"dmg_reduce": return player.dmg_reduce<0.6
 		"move": return player.move_mult<1.4
+		"range": return player.range_mult<player.RANGE_CAP
+		"strafe": return player.strafe_mult<player.STRAFE_CAP
 		"reload": return player.reload_scale>0.3
 		"shield": return player.shield<200.0
 		"explode": return player.explode_chance<0.6
@@ -5205,7 +5276,10 @@ func _tick_crates(delta: float) -> void:
 	for i in range(crates.size()-1,-1,-1):
 		var c=crates[i]
 		var z_before: float=c.position.z
-		c.scroll_speed=world_speed; c.tick(delta,hand)
+		# Base road speed only. The part of the speed that comes from a speed buff or a vehicle is
+		# added to EVERYTHING on the road by _scroll_extra(); feeding world_speed in here counted
+		# it twice, so on a bike the crates and platforms outran the buff gates and drove through them.
+		c.scroll_speed=3.5; c.tick(delta,hand)
 		# A rolling barrel travels faster than the road, so it used to roll right into a buff
 		# gate and sit inside the coloured panels. It now queues up behind a gate that is still
 		# ahead of it and follows it down the road instead of passing through.
@@ -5293,7 +5367,7 @@ func _tick_barrels(delta: float) -> void:
 	for i in range(barrels.size()-1,-1,-1):
 		var b=barrels[i]
 		if b.dead: barrels.remove_at(i); b.queue_free(); continue
-		b.position.z += world_speed * delta
+		b.position.z += 3.5 * delta   # base speed; _scroll_extra() adds the vehicle / buff part once
 		b.tick(delta)
 		if b.position.z>13: barrels.remove_at(i); b.queue_free()
 
@@ -6814,6 +6888,7 @@ func _smoke_test() -> void:
 		"max_hp":func(): return pp.max_health, "regen":func(): return pp.regen, "kill_heal":func(): return pp.kill_heal,
 		"dmg_reduce":func(): return pp.dmg_reduce, "shield":func(): return pp.shield, "move":func(): return pp.move_mult,
 		"damage":func(): return pp.damage, "rate":func(): return -pp.fire_interval, "bullet_speed":func(): return pp.bullet_speed,
+		"range":func(): return pp.range_mult, "strafe":func(): return pp.strafe_mult,
 		"crit_chance":func(): return pp.crit_chance, "magazine":func(): return pp.magazine_size, "reserve":func(): return pp.reserve_ammo,
 		"reload":func(): return -pp.reload_duration, "pierce":func(): return pp.pierce, "multishot":func(): return pp.projectile_count,
 		"split":func(): return pp.bullet_split, "explode":func(): return pp.explode_chance, "burn":func(): return pp.burn_dps,

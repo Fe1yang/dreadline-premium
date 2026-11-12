@@ -7,13 +7,16 @@ const SPLASH_VARIANTS := 8
 const SPREAD_TIME := 0.45
 static var textures: Array[Texture2D] = []
 static var splash_textures: Array[Texture2D] = []
+## The spitter's acid uses the same pool shapes in yellow-green.
+const VENOM_VARIANTS := 3
+static var venom_textures: Array[Texture2D] = []
 
 var age := 0.0
 var lifetime := 9.0
 var full_scale := 1.0
 var mat: StandardMaterial3D
 
-static func _make_texture(seed_value: int) -> Texture2D:
+static func _make_texture(seed_value: int,rim:=Color("7a0d10"),deep:=Color("3a0306")) -> Texture2D:
 	var size := 128
 	var img := Image.create(size,size,false,Image.FORMAT_RGBA8)
 	var noise := FastNoiseLite.new(); noise.seed = seed_value; noise.frequency = 0.045
@@ -36,7 +39,7 @@ static func _make_texture(seed_value: int) -> Texture2D:
 			if v <= 0.0: continue
 			# Darker, thicker centre; brighter thin rim.
 			var depth := clampf(1.0-r*1.2,0.0,1.0)
-			var col := Color("7a0d10").lerp(Color("3a0306"),depth)
+			var col := rim.lerp(deep,depth)
 			col.a = v*(0.88+0.12*depth)
 			img.set_pixel(x,y,col)
 	return ImageTexture.create_from_image(img)
@@ -94,11 +97,17 @@ static func _splash(index: int) -> Texture2D:
 static func _texture(index: int) -> Texture2D:
 	if textures.is_empty():
 		for i in range(VARIANTS): textures.append(_make_texture(9100+i*37))
+		# built alongside the blood so the first spit of a run does not stall a frame
+		for i in range(VENOM_VARIANTS): venom_textures.append(_make_texture(7300+i*53,Color("a9d83c"),Color("4a7a18")))
 	return textures[index%VARIANTS]
+
+static func _venom(index: int) -> Texture2D:
+	if venom_textures.is_empty(): _texture(0)
+	return venom_textures[index%VENOM_VARIANTS]
 
 ## The mesh and the material are built once (main_3d pools these pools), every later
 ## use only swaps the decal texture, so a kill no longer allocates a material.
-func setup(size_m: float,variant: int,life: float,splash:=false) -> void:
+func setup(size_m: float,variant: int,life: float,splash:=false,venom:=false) -> void:
 	full_scale = size_m
 	lifetime = life
 	age = 0.0
@@ -115,7 +124,8 @@ func setup(size_m: float,variant: int,life: float,splash:=false) -> void:
 		mat.render_priority = -1
 		material_override = mat
 		cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mat.albedo_texture = _splash(variant) if splash else _texture(variant)
+	if venom: mat.albedo_texture = _venom(variant)
+	else: mat.albedo_texture = _splash(variant) if splash else _texture(variant)
 	mat.albedo_color = Color(1,1,1,1)
 	scale = Vector3.ONE*0.05
 

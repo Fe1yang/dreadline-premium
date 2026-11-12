@@ -36,6 +36,16 @@ var kill_heal := 0.0          # HP per kill
 var dmg_reduce := 0.0         # 0..0.6 of incoming damage removed
 var move_mult := 1.0          # forward run and side-step speed, up to 1.4
 var bullet_speed_scale := 1.0
+## "range" gate buff: how far a round flies. BULLET_REACH is the reach with no buff.
+var range_mult := 1.0
+const RANGE_CAP := 2.8        # +180%
+const BULLET_REACH := {"SNIPER":80.0, "RIFLE":50.0}
+const BULLET_REACH_DEFAULT := 40.0
+## "strafe" gate buff: side-step speed only (the run speed is the "move" buff).
+var strafe_mult := 1.0
+const STRAFE_CAP := 1.6       # +60%
+func bullet_reach() -> float:
+	return float(BULLET_REACH.get(weapon, BULLET_REACH_DEFAULT)) * range_mult
 var crit_chance := 0.0        # total 0..1.0: weapon base + gate buffs
 var crit_bonus := 0.0         # the part that comes from gates
 ## Every weapon crits a little on its own; precision guns a lot more.
@@ -895,6 +905,7 @@ func reset() -> void:
 	gun_level = 1
 	split_bonus = 0
 	shield = 0.0; regen = 0.0; kill_heal = 0.0; dmg_reduce = 0.0; move_mult = 1.0
+	range_mult = 1.0; strafe_mult = 1.0
 	bullet_speed_scale = 1.0; crit_chance = 0.0; crit_bonus = 0.0; crit_mult = 1.5; mag_scale = 1.0; reload_scale = 1.0
 	pierce_bonus = 0; bullet_split = 0; explode_chance = 0.0; burn_dps = 0.0; poison_dps = 0.0
 	shock_chance = 0.0; coin_mult = 1.0; drop_chance = 0.0; ammo_return = 0.0; pickup_bonus = 0.0
@@ -1171,7 +1182,7 @@ func tick(delta: float) -> void:
 			_stop_flame_jet()
 	_tick_vehicle_visual(delta)
 	instinct_boost=maxf(0.0,instinct_boost-delta)
-	position.x = move_toward(position.x,target_x,delta*6.8*effective_move_mult()*vehicle_side())
+	position.x = move_toward(position.x,target_x,delta*6.8*effective_move_mult()*strafe_mult*vehicle_side())
 	position.x = clampf(position.x,-3.15,3.15)
 	walk_time += delta*6.6
 	if is_instance_valid(animation_player) and animation_player.current_animation==run_clip:
@@ -1290,6 +1301,8 @@ func apply_upgrade(id: String,value:=-1.0) -> void:
 		"dmg_reduce": dmg_reduce = minf(0.6,dmg_reduce+value/100.0)
 		"shield": shield = minf(200.0,shield+value)
 		"move": move_mult = minf(1.4,move_mult*(1.0+value/100.0))
+		"range": range_mult = minf(RANGE_CAP,range_mult*(1.0+value/100.0))
+		"strafe": strafe_mult = minf(STRAFE_CAP,strafe_mult*(1.0+value/100.0))
 		"bullet_speed":
 			var f:=1.0+value/100.0
 			bullet_speed_scale *= f; bullet_speed *= f

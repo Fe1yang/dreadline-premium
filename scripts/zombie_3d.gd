@@ -39,15 +39,23 @@ var dead := false
 var death_played := false
 var model: Node3D
 var animation_player: AnimationPlayer
-## Quadruped jockey: it is bound to the four-legged dog skeleton, so its legs are posed by the
-## same procedural gallop the pets use (the humanoid Jockey_Quad_Run clip cannot drive that rig).
-const DogGallop=preload("res://scripts/dog_gallop.gd")
-var gait: RefCounted
+## Quadruped jockey: its mesh is skinned to the Labrador pack skeleton (same rig as the pets) and
+## it runs on the pack's baked Gallop. One driver only: no procedural gait on top of the clip.
+const JOCKEY_RUN_CLIP:="Gallop"
+const JOCKEY_RUN_RATE:=1.7
+## The locomotion clip configure() chose; reuse() restarts it when a pooled zombie comes back.
+var run_clip:=""
+## The pack has one zombie walk, so the shamblers each get a posture and a cadence of their own.
+const ZombiePosture=preload("res://scripts/zombie_posture.gd")
+const POSTURE_KINDS:=["walker","walker_b","walker_c","runner","runner_b","spitter"]
+var posture: SkeletonModifier3D
+var gait_rate:=1.0
 ## Set when no walk clip could be found: tick() poses a simple waddle so the body is not static.
 var needs_waddle:=false
 var meshes: Array[MeshInstance3D] = []
 var bar: MeshInstance3D
 var bar_fill: MeshInstance3D
+var bar_frac_shown := -1.0
 var flash_material: StandardMaterial3D
 var flames: CPUParticles3D
 var embers: CPUParticles3D
@@ -73,6 +81,12 @@ func _apply_stats(type: String, difficulty: float) -> void:
 
 ## Pooled zombie: park() hides it and stops it ticking, reuse() brings it back with fresh numbers
 ## and a stopped model, so no new mesh, material or skeleton is built.
+## A fresh posture and stride rate, so no two shamblers in a row move alike.
+func _roll_posture() -> void:
+	if posture==null: return
+	posture.variant=randi()%ZombiePosture.count()
+	gait_rate=randf_range(0.86,1.16)
+
 func park() -> void:
 	dead = true
 	visible = false
@@ -114,7 +128,13 @@ func reuse(type: String, difficulty: float) -> void:
 		bar_fill.scale = Vector3(1.0, 1.0, 1.0)
 	if animation_player != null:
 		var list := animation_player.get_animation_list()
-		if list.size() > 0:
+		_roll_posture()
+		if run_clip != "" and animation_player.has_animation(run_clip):
+			# back from the pool: run again on the clip configure() picked, not on whatever
+			# happens to be first in the list (a pooled jockey used to come back biting the air)
+			animation_player.play(run_clip)
+			animation_player.seek(randf()*animation_player.get_animation(run_clip).length,true)
+		elif list.size() > 0:
 			var pick: String = "Idle" if animation_player.has_animation("Idle") else String(list[0])
 			animation_player.play(pick)
 
@@ -146,20 +166,9 @@ func configure(type: String, difficulty: float) -> void:
 	ModelFix.double_sided(model)
 	_collect(model)
 	animation_player=model.find_child("AnimationPlayer",true,false) as AnimationPlayer
-	if kind=="jockey":
-		var sk:=model.find_child("Skeleton3D",true,false) as Skeleton3D
-		if sk!=null: gait=DogGallop.new(sk,{"amp":0.95,"spine":1.05})
-	if kind=="spitter":
-		# Static Tripo mesh: fit it to the same 2 m the rigged walkers occupy and turn it so
-		# the head leads toward the survivor.
-		var lo:=1.0e9; var hi:=-1.0e9
-		for mi in model.find_children("*","MeshInstance3D",true,false):
-			var m2:=mi as MeshInstance3D
-			if m2==null or m2.mesh==null: continue
-			var b2: AABB=m2.transform*m2.get_aabb()
-			lo=minf(lo,b2.position.y); hi=maxf(hi,b2.end.y)
-		if hi>lo+0.01: model.scale*=1.95/(hi-lo)
-		model.rotation.y=PI
+	# The spitter is rigged to the same skeleton as the walkers now (it used to be a static mesh
+	# that was turned half a circle and hopped along), so it faces the survivor and shambles on
+	# the zombie walk like everything else.
 	if kind=="jockey":
 		model.scale *= JOCKEY_SCALE
 	var clip_name := "Zombie_Walk_Fwd"
@@ -172,7 +181,7 @@ func configure(type: String, difficulty: float) -> void:
 		var borrowed:=AnimLibrary.borrow(animation_player,"Walk","ual1",{},BRUTE_ARM_BONES)
 		AnimLibrary.pin_to_bind_pose(model,BRUTE_ARM_BONES)
 		if borrowed!="": clip_name=borrowed
-	if kind=="jockey": clip_name="Dog_Run"  # the only locomotion clip the asset ships
+	if kind=="jockey": clip_name=JOCKEY_RUN_CLIP
 	elif kind=="banshee": clip_name="Banshee_Walk"
 	# Mixamo/UAL clips animate the pelvis through space (root motion). The game moves the
 	# zombie itself, so keeping that track made the body slide backwards - most visible on
@@ -193,17 +202,22 @@ func configure(type: String, difficulty: float) -> void:
 			"bomber": rate=_brute_stride_rate()
 			"bomber_female": rate=_brute_stride_rate()
 			"jockey":
-				# the jockey sprints at 7.4 m/s on a dog run cycle; at ~1.2x it skated along
-				rate = clampf(1.35 + (speed - 3.5) * 0.22, 1.35, 2.6)
+				rate = JOCKEY_RUN_RATE
 			"banshee": rate=0.72
 		animation_player.speed_scale=rate
+		run_clip=clip_name
 		animation_player.play(clip_name)
 		animation_player.seek(randf()*clip.length,true)
-	elif kind!="spitter":
+	else:
 		push_error("Zombie animation missing: "+clip_name+" in "+asset)
 	if kind=="jockey":
 		# No hand-authored lean: the quadruped clip is the crawl. Only lift it clear of the road.
 		model.transform=Transform3D(model.basis,Vector3(0,JOCKEY_DROP,0))
+	if kind in POSTURE_KINDS:
+		var posture_sk:=model.find_child("Skeleton3D",true,false) as Skeleton3D
+		if posture_sk!=null:
+			posture=ZombiePosture.new(); posture_sk.add_child(posture)
+			_roll_posture()
 	flash_material = StandardMaterial3D.new()
 	flash_material.albedo_color = Color(1,0.95,0.75,0.7)
 	flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -223,7 +237,11 @@ func _make_health_bar() -> void:
 	if kind=="banshee": height=2.72
 	elif kind=="jockey": height=1.20
 	bar.position = Vector3(0,height,0)
-	bar_fill.position = bar.position+Vector3(0,0,0.012)
+	# Same spot as the frame, drawn after it: an offset along the zombie's own z put the fill
+	# behind the frame whenever the zombie faced away.
+	bar_fill.position = bar.position
+	(bar_fill.material_override as StandardMaterial3D).render_priority = 1
+	(bar_fill.material_override as StandardMaterial3D).no_depth_test = false
 	add_child(bar); add_child(bar_fill)
 	bar.visible = kind in ["brute","banshee"] or kind.begins_with("bomber"); bar_fill.visible = bar.visible
 	# No bile sacs: user rejected the yellow-white pustules as ugly. Bomber reads via
@@ -354,22 +372,10 @@ func tick(delta: float) -> void:
 	hit_flash=maxf(0,hit_flash-delta)
 	for mesh in meshes: mesh.material_overlay=flash_material if hit_flash>0 else null
 	if kind=="spitter":
-		# No skeleton to animate: a hop and a forward lean stand in for a walk, and the body
-		# rears back right before it spits.
-		if is_instance_valid(model):
-			var hop: float=absf(sin(age*5.4))
-			var wind: float=1.0 if spit_timer<0.45 else 0.0
-			model.position.y=hop*0.13+wind*0.06
-			model.rotation.x=lerpf(model.rotation.x,-0.10-hop*0.09+wind*0.18,1.0-exp(-delta*9.0))
 		spit_timer-=delta
 		if spit_timer<=0.0:
 			spit_timer=randf_range(2.9,4.2)
 			spit_ready=true
-	if gait!=null:
-		# speed-matched stride so the paws stay planted on the scrolling road
-		var want:float=gait.stride_for_speed(3.5+speed*move_scale)
-		gait.stride=want
-		gait.step(delta,1.0)
 	if needs_waddle and is_instance_valid(model):
 		# fat zombie shuffle: rock the body and bob with each step
 		var w:=sin(age*6.2)
@@ -377,8 +383,8 @@ func tick(delta: float) -> void:
 		model.rotation.z=lerpf(model.rotation.z,w*0.10,1.0-exp(-delta*8.0))
 		model.position.y=absf(w)*0.055
 	if is_instance_valid(animation_player):
-		var base_rate:=speed/3.7
-		if kind=="jockey": base_rate=1.22
+		var base_rate:=speed/3.7*gait_rate
+		if kind=="jockey": base_rate=JOCKEY_RUN_RATE
 		elif kind=="brute" or kind.begins_with("bomber"): base_rate=_brute_stride_rate()
 		elif kind=="banshee": base_rate=clampf(banshee_ground_speed/2.3,0.6,1.7)
 		animation_player.speed_scale = 0.0 if stun_timer>0.0 else maxf(0.55,base_rate*(1.30 if frenzy else 1.0))
@@ -387,11 +393,16 @@ func tick(delta: float) -> void:
 	if is_instance_valid(embers): embers.emitting=flames.emitting
 	bar.visible=kind in ["brute","banshee"] or kind.begins_with("bomber") or health<max_health
 	bar_fill.visible=bar.visible
-	# The fill shrinks from the LEFT edge. Scaling a billboard quad shrinks it around its centre,
-	# which made the bar look like it was not moving at all.
+	# The bar is a billboard, and a billboard material throws the node's scale away: scaling the
+	# fill did nothing on screen, so the bar stayed full until the zombie dropped. The quad itself
+	# is resized instead, and shifted in the mesh (camera space) so it drains from the right and
+	# stays pinned to the left edge whichever way the zombie is facing.
 	var frac: float = clampf(health/max_health, 0.0, 1.0)
-	bar_fill.scale.x = frac
-	bar_fill.position.x = bar.position.x - 0.39 + 0.78 * frac * 0.5
+	if not is_equal_approx(frac, bar_frac_shown):
+		bar_frac_shown = frac
+		var fill_mesh := bar_fill.mesh as QuadMesh
+		fill_mesh.size = Vector2(maxf(0.78 * frac, 0.001), 0.045)
+		fill_mesh.center_offset = Vector3(-0.39 * (1.0 - frac), 0.0, 0.0)
 	# (bile sacs removed — no pustule throb)
 
 ## The Banshee keeps her distance: she walks backwards ahead of the survivor as fast as the

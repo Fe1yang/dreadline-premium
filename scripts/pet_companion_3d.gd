@@ -11,10 +11,11 @@ extends Node3D
 
 const LobbyScene=preload("res://scripts/lobby_scene_3d.gd")
 const ModelFix=preload("res://scripts/model_fix.gd")
-## Bite damage climbs with the breed (doberman, shepherd, wolfdog, mastiff). Only the mastiff
-## takes a fresh walker down in one bite, and no bite ever finishes a Juggernaut ("brute"):
-## the dog wears it down and the survivor has to shoot it dead.
-const BITE_DAMAGE_BY_BREED:=[16.0,26.0,40.0,72.0,1000000.0,1000000.0]  # 4 = white tiger, 5 = lion: one bite kills
+## Bite damage by index into LobbyScene.PETS: doberman 16, shepherd 26, wolfdog 40, mastiff 72,
+## labrador 33 (between the shepherd and the wolfdog), white tiger and lion kill in one bite.
+## Only the mastiff of the dogs takes a fresh walker down in one bite, and no bite ever finishes
+## a Juggernaut ("brute"): the pet wears it down and the survivor has to shoot it dead.
+const BITE_DAMAGE_BY_BREED:=[16.0,26.0,40.0,72.0,33.0,1000000.0,1000000.0]
 static func bite_damage(breed_index: int) -> float:
 	return BITE_DAMAGE_BY_BREED[clampi(breed_index,0,BITE_DAMAGE_BY_BREED.size()-1)]
 const BITE_INTERVAL:=1.35
@@ -35,7 +36,6 @@ const IDLE_CLIP:="Idle"
 const BITE_CLIPS:=["Bite","Attack"]
 const BITE_ANIM_TIME:=0.46   # how long the bite clip owns the body
 const BITE_ANIM_RATE:=2.6    # the clip is 1.46 s; the snap has to land inside the window
-const MAX_LEAN:=1.15         # radians: the pet never turns its nose back toward the camera
 const LOOPING:=["Idle","Walk","Trot","Gallop"]
 
 ## Barking: only now and then, so it never nags. Near the survivor the close bark plays (one or
@@ -150,7 +150,7 @@ static func heading_for(dir: Vector3) -> float:
 	return atan2(-dir.x,-dir.z)
 
 func _turn_to(want: float,delta: float) -> void:
-	heading=lerp_angle(heading,clampf(want,-MAX_LEAN,MAX_LEAN),1.0-exp(-delta*7.0))
+	heading=lerp_angle(heading,want,1.0-exp(-delta*7.0))
 	rotation=Vector3(0,heading,0)
 	model.position=Vector3(0,base_y,0)
 	model.rotation=Vector3(0,MODEL_YAW,0)
@@ -229,12 +229,13 @@ func tick(delta: float) -> void:
 			position+=flat_delta/distance*minf(distance,speed*delta)
 		position.x=clampf(position.x,-3.25,3.25)
 		position.y=0.0
-	# Heading: straight down the road in formation; lean toward a target or toward the slot
-	# when it is far off to one side. Dropping back never turns the pet around: the road is
-	# scrolling, so it keeps its nose forward and lets the ground carry it.
+	# Heading: straight down the road in formation. Whenever it really has somewhere to go --
+	# a target, or its slot when it is more than a couple of steps away (a freshly recruited pet
+	# running back from its crate) -- it turns its nose toward where it is running, all the way
+	# round if need be, and swings forward again once it has arrived.
 	var want:=0.0
-	if distance>0.35 and (attacking or distance>1.2):
-		want=heading_for(Vector3(flat_delta.x,0,-absf(flat_delta.z)-0.6))
+	if distance>0.35 and (attacking or distance>1.6):
+		want=heading_for(flat_delta)
 	_turn_to(want,delta)
 	_animate(delta,attacking)
 	_tick_bark(delta)

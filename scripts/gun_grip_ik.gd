@@ -10,8 +10,14 @@ extends SkeletonModifier3D
 @export var support_drop:=0.03
 @export var grip_drop:=0.10       # how far below shoulder height the gun is held
 @export var straightness:=0.965   # fraction of full arm length used to reach the grip
-@export var palm_roll_r:=0.0     # wrist roll around the forearm (0 = palm down under the gun)
-@export var palm_roll_l:=0.0
+## Wrist roll around the forearm. 0 = palm down (the gun then floats above two flat hands);
+## a quarter turn each way stands the palms up facing each other, clasped around the grip.
+@export var palm_roll_r:=PI*0.5
+@export var palm_roll_l:=-PI*0.5
+## Distance between the two palms in the clasp. <=0 falls back to the old wide flat-hand gaps.
+@export var clasp_gap:=0.08
+## >=0 replaces the per-character clavicle relaxation (0 = keep the clip's shoulders, 1 = rest).
+@export var shoulder_override:=-1.0
 @export var weight:=1.0
 ## Character-specific posture trim: Mason, Riley, Darius, Maya. The shared run clip
 ## pushes the chest and clavicles too far forward; correct it before solving the arms.
@@ -78,6 +84,7 @@ func _process_modification() -> void:
 	# the survivors look hunched (worst on the female rigs, whose neck is longer).
 	if b.neck_01>=0: _trim_euler(sk,b.neck_01,NECK_PITCH_KEEP,NECK_TWIST_KEEP)
 	if b.Head>=0: _trim_euler(sk,b.Head,0.55,0.35)
+	if shoulder_override>=0.0: shoulder=shoulder_override
 	_relax_to_rest(sk,b.clavicle_r,shoulder)
 	_relax_to_rest(sk,b.clavicle_l,shoulder)
 	# Darius' bare right biceps/triceps fan out under the shared run twist. Trim only
@@ -136,8 +143,9 @@ func _process_modification() -> void:
 		reach_r=(float(lengths.r[0])+float(lengths.r[1]))*arm_reach
 		depth=sqrt(maxf(0.01,reach_r*reach_r-lateral*lateral-grip_drop*grip_drop))
 	var want_r:=chest+fwd*(depth+forward_push)+down*grip_drop-side_axis*firing_side
+	if clasp_gap>0.0 and not single_hand: hand_gap=clasp_gap
 	var want_l:=want_r+fwd*support_reach+down*support_level+side_axis*hand_gap
-	grip_point=_reach(sk,"r",want_r,-side_axis*0.8+down*0.6,palm_roll_r,fwd)
+	grip_point=_reach(sk,"r",want_r,-side_axis*0.8+down*0.6,0.0 if single_hand else palm_roll_r,fwd)
 	if single_hand:
 		# the support hand keeps whatever the animation is doing, and the weapon only rides the
 		# firing hand, so the gun ends up exactly in the visible palm

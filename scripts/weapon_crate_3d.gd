@@ -17,7 +17,14 @@ const CRATE_SCALE := 2.9
 const ITEM_BOOST := 1.75
 ## Every ride in the game, and the length it is drawn at on a crate.
 const VEHICLE_IDS := ["BIKE", "SPORT", "CRUISER", "SEDAN", "GOLDCAR"]
-const VEHICLE_LENGTH := 2.0
+## How long a vehicle looks while it floats over a barrel or stands on a platform. One rule for
+## every vehicle, measured on the model as it actually sits in the world, so a GLB authored in
+## centimetres (the gold car is 97 units long) and one authored in metres come out the same.
+## Motorbikes are shown at 1.7 m, the size the dogs come out at on the same barrel. The two cars
+## (sedan, gold sports car) are shown at twice that: at pet size a car read as a toy.
+const VEHICLE_SHOW := 1.7
+const CAR_SHOW := 3.4
+const CAR_IDS := ["SEDAN", "GOLDCAR", "CAR"]
 const CRATE_ITEM_SCALE := 1.5   # helmets keep their size
 ## Height of the concrete platform the drop stands on (the two platforms the crates
 ## have always been placed on, left and right of the lane).
@@ -157,29 +164,29 @@ func _ready() -> void:
 		if raw_span > 2.0:
 			# authored in centimetres or metres: bring it to ~1 m before the table scale
 			weapon_model.scale = Vector3.ONE * (1.0 / raw_span)
-		if weapon_id in VEHICLE_IDS:
-			# Vehicles are sized by real length: the bikes came out toy-sized on the platform.
-			var lane_span := _model_span(weapon_model) * weapon_model.scale.x
-			if lane_span > 0.01:
-				weapon_model.scale *= VEHICLE_LENGTH / lane_span
-		else:
+		var is_vehicle: bool = weapon_id in VEHICLE_IDS or weapon_id == "CAR"
+		if not is_vehicle:
 			# every drop is half again bigger than before, except the helmet which already reads well
 			var boost: float = 1.0 if weapon_id=="HELMET" else CRATE_ITEM_SCALE
 			weapon_model.scale *= Vector3.ONE*(float(WEAPON_SCALES.get(weapon_id,0.6))*boost)
-		if weapon_id!="HELMET":
-			# a small prop (a vest, a can) otherwise reads as an empty barrel from a few metres away
-			var shown := _model_span(weapon_model) * weapon_model.scale.x
-			if shown > 0.01 and shown < 0.85:
-				weapon_model.scale *= 0.85 / shown
+			if weapon_id!="HELMET":
+				# a small prop (a vest, a can) otherwise reads as an empty barrel from a few metres away
+				var shown := _model_span(weapon_model) * weapon_model.scale.x
+				if shown > 0.01 and shown < 0.85:
+					weapon_model.scale *= 0.85 / shown
 		# Bike/Car models are already upright; no X tilt (that laid them on their side).
 		weapon_pivot.add_child(weapon_model)
 		_center_model(weapon_model)
-		# The cruiser ships in its own units, which left it about five centimetres wide on the
-		# platform: normalise every vehicle drop to a readable size.
-		if weapon_id in ["BIKE", "SPORT", "CRUISER", "SEDAN", "CAR"]:
-			var real := _world_span(weapon_model)
+		if is_vehicle:
+			# Measured without the scene tree: setup() runs before the crate is added to the
+			# world, where a global transform is not available yet (the old code measured there
+			# and got the unscaled model, which is why every vehicle came out a different size).
+			var real := _shown_span(weapon_model)
 			if real > 0.001:
-				weapon_model.scale *= 1.25 / real
+				weapon_model.scale *= (CAR_SHOW if weapon_id in CAR_IDS else VEHICLE_SHOW) / real
+			# Centre it again after scaling. A model that is not centred on the pivot swings
+			# round it as the drop spins -- nearer, farther, nearer -- instead of turning on the spot.
+			_center_model(weapon_model)
 	glow_ring = MeshInstance3D.new(); var torus := TorusMesh.new()
 	torus.inner_radius = 0.56; torus.outer_radius = 0.68; torus.rings = 32; torus.ring_segments = 8; glow_ring.mesh = torus
 	var glow_mat := StandardMaterial3D.new(); glow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -238,6 +245,17 @@ func _model_span(node: Node3D) -> float:
 		return 0.0
 	return maxf(box.size.x, maxf(box.size.y, box.size.z))
 
+
+## Largest side of the model as displayed (its own scale included), in the pivot's space.
+func _shown_span(m: Node3D) -> float:
+	var box := AABB(); var first := true
+	for mi in m.find_children("*","MeshInstance3D",true,false):
+		var local: Transform3D = m.transform.affine_inverse()*_relative(mi as Node3D,m.get_parent())
+		var b: AABB = local*(mi as MeshInstance3D).get_aabb()
+		box = b if first else box.merge(b); first = false
+	if first: return 0.0
+	var size: Vector3 = box.size*m.scale
+	return maxf(size.x,maxf(size.y,size.z))
 
 func _center_model(m: Node3D) -> void:
 	# Weapon glbs are authored around the grip; shift so the spin axis runs through the middle.
