@@ -19,6 +19,11 @@ const BITE_DAMAGE_BY_BREED:=[16.0,26.0,40.0,72.0,33.0,1000000.0,1000000.0]
 static func bite_damage(breed_index: int) -> float:
 	return BITE_DAMAGE_BY_BREED[clampi(breed_index,0,BITE_DAMAGE_BY_BREED.size()-1)]
 const BITE_INTERVAL:=1.35
+## The white tiger and the lion still kill whatever they bite, but they take their time:
+## one kill every 5 s instead of every 1.35 s, so they thin the horde rather than erase it.
+const BIG_CAT_BITE_INTERVAL:=5.0
+func bite_interval() -> float:
+	return BIG_CAT_BITE_INTERVAL if (breed==TIGER_BREED or breed==LION_BREED) else BITE_INTERVAL
 const FOLLOW_SPEED:=7.0
 const ATTACK_SPEED:=9.5
 const ACQUIRE_RANGE:=10.0
@@ -215,7 +220,7 @@ func tick(delta: float) -> void:
 	var bite_range: float=0.72+(float(target.radius) if attacking else 0.0)
 	if attacking and distance<=bite_range:
 		if cooldown<=0.0:
-			cooldown=BITE_INTERVAL
+			cooldown=bite_interval()
 			_start_bite()
 			var hit_at: Vector3=target.global_position+Vector3(0,0.82 if target.kind!="brute" else 1.35,0)
 			var dmg: float=bite_damage(breed)
