@@ -79,6 +79,9 @@ var loading_switch:=0.0
 var intro_time:=0.0
 ## Grace period after the intro starts: the tap that began the run must not skip it.
 var intro_swallow:=0.0
+## Set when the player picks a new language: the strings are built at boot.
+var lang_restart_pending:=false
+var lang_notice_return:="character_select"
 var intro_horde_offsets: Array[Vector3]=[]
 var chaser: Node3D # the giant Chaser that leads the opening pursuit
 const CHASER_OFFSET:=Vector3(0,0,8.2)
@@ -4200,7 +4203,7 @@ func _end_run() -> void:
 	state="gameover"; revive_pending=false; _release_touches(); gameover_time=0.0
 	chase_active=false # a run that ends mid-chase keeps the beast standing as a corpse shot
 	# A new personal best (not on the very first run, which has nothing to beat).
-	if run_start_best>0 and int(distance)>run_start_best: new_record=true
+	if int(distance)>run_start_best: new_record=true
 	best_distance=maxi(best_distance,int(distance)); _save()
 	sound.play("game_over")
 	if new_record: sound.play("gate")
@@ -4208,7 +4211,8 @@ func _end_run() -> void:
 ## The moment the survivor passes their old best mid-run: banner, confetti burst, sound.
 func _check_record(delta: float) -> void:
 	record_banner=maxf(0.0,record_banner-delta)
-	if new_record or run_start_best<=0 or int(distance)<=run_start_best: return
+	if new_record or int(distance)<=run_start_best: return
+	# a brand-new save has best 0, so the first run sets a record the moment it moves
 	new_record=true; record_banner=3.0; sound.record_fanfare()
 
 func record_metres_left() -> int:
@@ -5076,6 +5080,8 @@ func _crit_word() -> String:
 ## into small pictures; each crit is then laid out from those, with a glint sweeping across.
 const CRIT_GLYPH_PAD := 22      # px of rim room on each side of a glyph picture
 const CRIT_GLYPH_H := 128
+## Crit word palette: 0 gold, 1 rainbow, 2 pale rainbow.
+const CRIT_GRADIENT_MODE := 0
 var crit_glyph_cache := {}
 var crit_glyph_building := false
 func _crit_glyphs() -> Variant:
@@ -5098,7 +5104,8 @@ func _build_crit_glyphs(key: String) -> void:
 	var vp := SubViewport.new(); vp.transparent_bg = true; vp.size = Vector2i(total, CRIT_GLYPH_H)
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS; add_child(vp)
 	var grad := ShaderMaterial.new(); grad.shader = load("res://shaders/crit_gradient.gdshader")
-	grad.set_shader_parameter("top_y", 22.0); grad.set_shader_parameter("bottom_y", 102.0)
+	grad.set_shader_parameter("mode", CRIT_GRADIENT_MODE)
+	grad.set_shader_parameter("end_y", float(CRIT_GLYPH_H))
 	var x := 0
 	for i in range(items.size()):
 		for layer in [0, 1]:
@@ -6586,6 +6593,8 @@ func _pointer_down(pos: Vector2) -> bool:
 	if state=="loading":
 		_finish_loading()
 		return true
+	if state=="lang_notice":
+		lang_restart_pending=false; state=lang_notice_return; return true
 	if state=="intro":
 		# the tap that started the run often arrives twice (iOS sends an emulated click)
 		if intro_swallow<=0.0: _finish_intro()
@@ -6757,7 +6766,12 @@ func _pointer_down(pos: Vector2) -> bool:
 	elif state=="language":
 		for i in range(Localization.LANGUAGES.size()):
 			var rect:=Rect2(30+(i%2)*245,150+floori(i/2.0)*62,235,50)
-			if rect.has_point(pos): language_code=Localization.LANGUAGES[i].code; _save(); return true
+			if rect.has_point(pos):
+				var _was := String(language_code)
+				language_code=Localization.LANGUAGES[i].code; _save()
+				if String(language_code)!=_was:
+					lang_restart_pending=true; lang_notice_return=String(state); state="lang_notice"
+				return true
 		if Rect2(66,840,408,60).has_point(pos): state="settings"; return true
 	elif state=="playing":
 		if PAUSE_BUTTON.has_point(pos):

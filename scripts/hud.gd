@@ -195,6 +195,7 @@ func _draw() -> void:
 	elif game.state=="gameover": _draw_hud(); clean_ops.clear(); _draw_gameover()
 	elif game.state=="shop": _draw_shop()
 	elif game.state=="armory": _draw_armory()
+	elif game.state=="lang_notice": _draw_lang_restart()
 	elif game.state=="lootbox": _draw_lootbox()
 	elif game.state=="map": _draw_map()
 	elif game.state=="language": _draw_languages()
@@ -2541,6 +2542,17 @@ func _draw_tasks() -> void:
 ## A white flash, a gold title that pops in, light rays turning behind it, sparkles, and confetti
 ## that keeps drifting down over the whole screen.
 const CONFETTI_COLORS:=[Color("c4a56a"),Color("a94b43"),Color("d8d4ca"),Color("8b6a4d")]
+
+
+## Shown right after the player picks a new language: the strings are built at boot.
+func _draw_lang_restart() -> void:
+	var lang := String(game.language_code)
+	_box(Rect2(0, 0, 540, game.ui_h), Color(0, 0, 0, 0.55))
+	var box := Rect2(50, game.ui_h * 0.5 - 100, 440, 200)
+	_panel(box, Color(0.05, 0.055, 0.06, 0.98), Color(LINE, 1.0), 0)
+	_text_center(UiText.text(lang, "lang_restart"), Vector2(270, box.position.y + 62), 18, WHITE)
+	_text_center(UiText.text(lang, "lang_restart2"), Vector2(270, box.position.y + 96), 13, MUTED)
+	_button(Rect2(150, box.end.y - 64, 240, 46), UiText.text(lang, "ok"), true)
 
 func _draw_new_record() -> void:
 	var t: float=game.gameover_time
