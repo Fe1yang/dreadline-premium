@@ -23,14 +23,14 @@ const BUFFS:={
 	"bullet_speed":{"values":[8,15,22,35],   "unit":"%",  "min":0, "group":"gun"},
 	"range":       {"values":[10,15,22,35],   "unit":"%",  "min":0, "group":"gun"},   # bullet reach (cap +180%)
 	"strafe":      {"values":[5,8,12,18],    "unit":"%",  "min":0, "group":"survival"}, # side-step only (cap +60%)
-	"crit_chance": {"values":[2,3,5,8],       "unit":"%",  "min":0, "group":"gun"},   # common 1%, cap 100%
+	"crit_chance": {"values":[2,4,6,10],       "unit":"%",  "min":0, "group":"gun"},   # common 1%, cap 100%
 	"crit_damage": {"values":[10,15,25,40],    "unit":"%",  "min":0, "group":"gun"},   # only once crit chance > 0
 	"magazine":    {"values":[15,25,40,60],  "unit":"%",  "min":0, "group":"gun"},
 	"reserve":     {"values":[1,1,2,3],       "unit":"",   "min":0, "group":"gun"},   # spare magazines; only with a non-pistol gun
 	"reload":      {"values":[8,12,18,25],    "unit":"%",  "min":0, "group":"gun"},   # faster reload (cap 70%)
 	"pierce":      {"values":[1,1,1,1],       "unit":"",   "min":2, "group":"gun"},
 	"multishot":   {"values":[1,1,1,1],       "unit":"",   "min":3, "group":"gun"},   # more bullets per shot
-	"split":       {"values":[1,1,1,1],       "unit":"",   "min":2, "group":"gun"},   # a hit bursts into fragments
+	"split":       {"values":[1,1,1,2],       "unit":"",   "min":1, "group":"gun"},   # a hit bursts into fragments
 	# --- on-hit effects ---
 	"explode":     {"values":[6,10,15,22],    "unit":"%",  "min":2, "group":"effect"}, # chance of a small blast
 	"burn":        {"values":[3,5,8,12],     "unit":"/s", "min":0, "group":"effect"}, # hits set zombies on fire (2.5 s)

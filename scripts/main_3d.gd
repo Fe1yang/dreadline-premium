@@ -5117,7 +5117,7 @@ func _buff_useful(id: String,rarity: int) -> bool:
 	if rarity<int(BuffCatalog.BUFFS[id].min): return false
 	match id:
 		"heal": return player.health<player.max_health*0.9
-		"crit_damage": return player.crit_chance>0.0
+		"crit_damage": return player.crit_chance>0.0 and player.crit_mult<player.CRIT_MULT_CAP
 		"crit_chance": return player.crit_bonus<player.CRIT_BONUS_CAP
 		"reserve": return player.can_use_reserve()
 		"dmg_reduce": return player.dmg_reduce<player.DMG_REDUCE_CAP

@@ -1287,9 +1287,10 @@ func _refresh_crit() -> void:
 ## second and guaranteed crits: everything died in one shot and the rest of the run was a walk.
 const RATE_SCALE_MIN := 0.69      # fire rate at most ~45% faster
 const MULTISHOT_CAP := 1          # one extra bullet per shot, ever
-const SPLIT_CAP := 1              # one fragment burst
+const SPLIT_CAP := 3              # up to three fragments (each does 40% and never re-hits its zombie)
 const PIERCE_CAP := 2
-const CRIT_BONUS_CAP := 0.30
+const CRIT_BONUS_CAP := 0.60      # on top of the gun's own crit (sniper 25% -> up to 85%)
+const CRIT_MULT_CAP := 2.5        # a crit hits for at most x2.5
 const RELOAD_SCALE_MIN := 0.55
 const REGEN_CAP := 4.0
 const KILL_HEAL_CAP := 5.0
@@ -1329,7 +1330,7 @@ func apply_upgrade(id: String,value:=-1.0) -> void:
 			var f:=1.0+value/100.0
 			bullet_speed_scale *= f; bullet_speed *= f
 		"crit_chance": crit_bonus = minf(CRIT_BONUS_CAP,crit_bonus+value/100.0); _refresh_crit()
-		"crit_damage": crit_mult += value/100.0
+		"crit_damage": crit_mult = minf(CRIT_MULT_CAP,crit_mult+value/100.0)
 		"magazine":
 			var f:=1.0+value/100.0
 			mag_scale *= f
