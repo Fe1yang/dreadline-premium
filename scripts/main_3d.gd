@@ -89,7 +89,19 @@ var chase_cam_weight:=0.0  # 0 = normal runner camera, 1 = framed for the pursue
 var chase_time:=0.0          # seconds left in the current segment
 var chase_gap:=0.0           # metres between the beast and the survivor
 var chase_growl:=0.0
-var next_chase_at:=8000.0    # run distance of the next ambush (none early in a run)
+var next_chase_at:=INF       # run distance of the next ambush, once one has been rolled
+## The beast is a rare event, not a fixture: every 10 000 m stretch of a run has a
+## CHASE_BLOCK_CHANCE of one ambush, at a random point inside that stretch, so nobody can
+## count down to it. Never before 10 000 m.
+const CHASE_BLOCK := 10000.0
+const CHASE_BLOCK_CHANCE := 0.35
+var chase_block_start:=CHASE_BLOCK
+func _plan_chase_block() -> void:
+	if rng.randf()<CHASE_BLOCK_CHANCE:
+		next_chase_at=chase_block_start+rng.randf_range(1500.0,8500.0)
+	else:
+		next_chase_at=INF
+	chase_block_start+=CHASE_BLOCK
 const CHASE_DURATION:=13.0
 const CHASE_START_GAP:=16.0
 const CHASE_CATCH:=2.6       # within reach: it starts mauling
@@ -431,7 +443,9 @@ var wave_banner:=0.0
 var hint_time:=7.0
 var new_gate_index:=0
 var elapsed:=0.0
-var auto_reload:=true
+## Manual by default: the player reloads (R / the reload button). Auto-reload is an option in
+## Settings for those who do not want to.
+var auto_reload:=false
 var touch_controls:=false
 ## A tap that moves the player from one screen to the next (pause -> lobby) must not
 ## also press whatever button happens to sit under the same finger on the new screen.
@@ -499,9 +513,16 @@ func _ready() -> void:
 	Engine.max_fps=60
 	rng.randomize()
 	stamina=StaminaScript.new(); add_child(stamina); _load_save(); stamina.changed.connect(_save)
+	BootTrace.mark("main: save")
+	# Start-up runs a step per frame behind the loading screen (scenes/boot.tscn) instead of in
+	# one block before the first frame -- that block was the long wait on the engine logo.
+	booting=true
+	_boot_progress(1); await get_tree().process_frame
 	_setup_world()  # the street is built by the run's loading screen, one district per frame
+	BootTrace.mark("main: setup_world")
 	view_cull_end=VIEW_CULL_END_HIGH if quality_high else VIEW_CULL_END_FAST
 	_apply_quality()
+	BootTrace.mark("main: quality")
 	# Every screen is drawn for a 9:16 portrait rectangle. A tall phone (the iPhone 15
 	# Plus is 19.5:9) used to EXPAND the canvas, so the lobby grew a dead black band
 	# under it and the camera staged a frame the design never had. Keep the original
@@ -511,31 +532,51 @@ func _ready() -> void:
 	ui_w=get_viewport().get_visible_rect().size.x
 	_pin_sticks()
 	touch_controls=OS.has_feature("mobile")
+	_boot_progress(2); await get_tree().process_frame
 	sound=SoundScript.new(); sound.muted=_read_muted(); _read_volumes(); add_child(sound)
+	BootTrace.mark("main: sound")
 	# Every test/capture run is fully muted — the owner's machine stays silent.
 	var _targs:=OS.get_cmdline_user_args()
 	for _f in ["--smoke-test","--soak-test","--lootbox-test","--stamina-test","--capture","--capture-medic","--capture-bike"]:
 		if _f in _targs: sound.muted=true; break
+	_boot_progress(3); await get_tree().process_frame
 	if PREMIUM_BUILD:
 		_apply_premium_unlocks()
 	iap=IapScript.new(); iap.ledger=iap_ledger; iap.grant=_iap_grant; add_child(iap)
 	iap.purchase_finished.connect(_on_purchase_finished)
+	BootTrace.mark("main: iap")
 	revival_ads=RevivalAdsScript.new(); add_child(revival_ads)
 	revival_ads.revive_rewarded.connect(_revive_after_reward)
 	revival_ads.revive_cancelled.connect(_revive_ad_cancelled)
 	revival_ads.ad_rewarded.connect(_on_ad_rewarded)
 	revival_ads.ad_cancelled.connect(_on_ad_cancelled)
+	BootTrace.mark("main: ads")
+	_boot_progress(4); await get_tree().process_frame
 	player=PlayerScript.new(); player.character=character_choice; add_child(player); player.reset()
+	BootTrace.mark("main: player")
+	_boot_progress(5); await get_tree().process_frame
 	shop_truck=ShopSceneScript.new()
 	add_child(shop_truck); shop_truck.visible=false; shop_items=ShopCatalog.items()
+	BootTrace.mark("main: shop")
+	_boot_progress(6); await get_tree().process_frame
 	lootbox_scene=LootboxSceneScript.new(); add_child(lootbox_scene); lootbox_scene.visible=false
-	map_scene=MapTableScript.new(); add_child(map_scene); map_scene.visible=false
+	BootTrace.mark("main: lootbox")
+	_boot_progress(7); await get_tree().process_frame
+	# the war-room map table (1.7 s to build, all procedural) is no longer built at start-up:
+	# it is made behind the first loading screen, or when the map is first opened
+	BootTrace.mark("main: map")
 	lobby=LobbySceneScript.new(); add_child(lobby); lobby.visible=false
+	BootTrace.mark("main: lobby")
+	_boot_progress(8); await get_tree().process_frame
 	_setup_weather_overlay()
+	BootTrace.mark("main: weather")
 	var layer:=CanvasLayer.new(); add_child(layer)
 	hud=HudScript.new(); hud.game=self; hud.mouse_filter=Control.MOUSE_FILTER_IGNORE; layer.add_child(hud)
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	BootTrace.mark("main: hud")
+	_boot_progress(9); await get_tree().process_frame
 	_menu_zombies(); _set_menu_scene(); _update_mouse_aim()
+	BootTrace.mark("main: menu_scene")
 	# Legal gate: on a real player's first launch the Terms of Use must be accepted before
 	# anything else is reachable. Test/capture runs skip it so the scripts keep working.
 	if not terms_accepted:
@@ -550,11 +591,51 @@ func _ready() -> void:
 	elif "--lootbox-test" in OS.get_cmdline_user_args(): call_deferred("_lootbox_test")
 	elif "--smoke-test" in OS.get_cmdline_user_args(): call_deferred("_smoke_test")
 	elif "--soak-test" in OS.get_cmdline_user_args(): call_deferred("_soak_test")
+	await _boot_prepare_everything()
 
 ## Default position of every movable control, in real viewport coordinates. The action
 ## buttons used to be shifted by hud._btn() for a taller phone; the layout stores the
 ## final point instead, so the HUD, the hit tests and the grab test share one value.
 ## Sticks sit a little higher than they used to: the old corners were a stretch.
+## ---- Start-up behind the loading screen ---------------------------------------------------
+var boot_screen: Node = null   # set by scenes/boot.tscn; null when main is opened on its own
+var booting := false
+const BOOT_STEPS := 10.0
+func _boot_progress(step: float) -> void:
+	if is_instance_valid(boot_screen): boot_screen.call("set_progress", step / BOOT_STEPS * 0.35)
+
+## After the scene is built: everything a first run would otherwise build or compile while
+## the player is looking -- zombie pools, crates, gates, pets, vehicles, sounds, the map table,
+## the older pipeline warm-up -- is done here while the bar is still up.
+func _boot_prepare_everything() -> void:
+	var automated := false
+	for f in ["--smoke-test","--soak-test","--lootbox-test","--stamina-test","--capture","--capture-medic","--capture-bike","--capture-car"]:
+		if f in OS.get_cmdline_user_args(): automated=true
+	if not automated:
+		var total := 0
+		var guard := 0
+		while not prefill_done and guard < 600:
+			_prefill_tick(); guard += 1
+			if total == 0 and prefill_queue.size() > 0: total = prefill_queue.size() + 1
+			if total > 0 and is_instance_valid(boot_screen):
+				boot_screen.call("set_progress", 0.35 + 0.45 * (1.0 - float(prefill_queue.size()) / float(total)))
+			await get_tree().process_frame
+		guard = 0
+		while not warmup_done and guard < 400:
+			_warm_up_tick(); guard += 1
+			if is_instance_valid(boot_screen): boot_screen.call("set_progress", 0.80 + 0.12 * minf(1.0, float(guard) / 60.0))
+			await get_tree().process_frame
+		_ensure_map()
+		if is_instance_valid(boot_screen): boot_screen.call("set_progress", 0.95)
+		await get_tree().process_frame
+	booting=false
+	BootTrace.mark("main: ready to play")
+	# a few frames of the real first screen drawn under the loading picture, so whatever it
+	# still has to compile happens out of sight
+	for i in range(3): await get_tree().process_frame
+	if is_instance_valid(boot_screen): boot_screen.call("finish")
+	boot_screen=null
+
 func default_touch_layout() -> Dictionary:
 	var dy:=ui_h-960.0
 	return {
@@ -1091,6 +1172,7 @@ func _frame_probe(_delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if booting: return   # still being put together behind the loading screen
 	_frame_probe(delta)
 	elapsed+=delta
 	lobby_swallow_tap=maxf(0.0,lobby_swallow_tap-delta)
@@ -1612,6 +1694,7 @@ func _prefill_tick() -> void:
 ## sent to the graphics chip). So one of each is put in front of the camera for a frame while the
 ## loading picture covers the screen.
 var view_queue: Array = []
+var warm_lamps: Node3D
 var view_started := false
 var view_done := false
 func _view_warm_tick() -> void:
@@ -1627,8 +1710,23 @@ func _view_warm_tick() -> void:
 			view_queue.append("obstacle:" + kind)
 		for item in ["gate2:damage", "gate:heal", "gate2:rate", "barrel", "roller", "explosion", "showcrate:SMG", "showcrate:BIKE", "showcrate:PET_0", "pickup:medkit", "pickup:coin", "burst"]:
 			view_queue.append(item)
+		for vid in ["SPORT", "CRUISER", "SEDAN", "TANK", "GOLD", "GOLD_CAR"]:
+			view_queue.append("vehicle:" + vid)
+		view_queue.append("map_table")
+		# Car lamps: the first spot / omni light the renderer ever sees makes it rebuild the
+		# shaders of everything in view -- the multi-second freeze the first time a car was
+		# boarded. A pair of lamps stays on in front of the camera for the whole of this pass,
+		# so every street, zombie and prop material is prepared with them, out of sight.
+		var fwd0: Vector3 = -camera.global_transform.basis.z
+		warm_lamps = Node3D.new(); add_child(warm_lamps)
+		warm_lamps.global_position = camera.global_position + fwd0 * 3.0
+		var spot := SpotLight3D.new(); spot.light_energy = 0.01; spot.spot_range = 40.0; spot.spot_angle = 60.0
+		warm_lamps.add_child(spot); spot.look_at(camera.global_position + fwd0 * 30.0)
+		var omni := OmniLight3D.new(); omni.light_energy = 0.01; omni.omni_range = 30.0
+		warm_lamps.add_child(omni)
 	if view_queue.is_empty():
 		view_done = true
+		if is_instance_valid(warm_lamps): warm_lamps.queue_free()
 		return
 	var fwd: Vector3 = -camera.global_transform.basis.z
 	_prefill_make(String(view_queue.pop_front()), camera.global_position + fwd * 14.0 - Vector3(0.0, 1.0, 0.0))
@@ -1669,6 +1767,14 @@ func _prefill_make(item: String, at: Vector3) -> void:
 		n = ExplosionScript.new(); n.position = at; add_child(n)
 	elif item.begins_with("showcrate:"):
 		n = WeaponCrateScript.new(); n.setup(item.trim_prefix("showcrate:"), 1); n.position = at; add_child(n)
+	elif item.begins_with("vehicle:"):
+		# the very model the player mounts (player.VEHICLE_MODELS), kept loaded and drawn once
+		var vpath := String(player.VEHICLE_MODELS.get(item.trim_prefix("vehicle:"), ""))
+		if vpath != "" and ResourceLoader.exists(vpath):
+			var vscene: PackedScene = load(vpath); pinned_scenes[vpath] = vscene
+			n = vscene.instantiate() as Node3D; n.position = at; add_child(n)
+	elif item == "map_table":
+		_ensure_map()
 	elif item == "burst":
 		# sparks, fire drops and a blood pool: the small effects every kill and blast throws out
 		_burst(at, Color("ffd275"), 6); _fire_spray(at)
@@ -1755,6 +1861,7 @@ func start_run(free_with_ad:=false,no_cost:=false) -> void:
 	# point in the day-night cycle, then the 20 km cycle carries on from there.
 	day_start_offset=rng.randf()*DAY_NIGHT_CYCLE_METRES
 	night_announced=false
+	legend_pet_run=rng.randf()<LEGEND_PET_RUN_CHANCE; legend_pet_given=false
 	_clear_world(); state="playing"; run_time=0; distance=0; kills=0; wave=0; run_coins=0; run_silver=0; run_double_bonus=0; run_double_silver=0; ad_pending=""; last_reward=0; last_silver_reward=0; survival_bonus=0
 	kill_counts.clear(); kill_coins.clear(); run_counted_distance=0.0; run_counted=false
 	for road in roads: _refresh_watcher(road)
@@ -1932,6 +2039,7 @@ func _chase_begin() -> void:
 
 func _tick_chase(delta: float) -> void:
 	if not chase_active:
+		if distance>=chase_block_start: _plan_chase_block()
 		if distance>=next_chase_at: _chase_begin()
 		return
 	if not is_instance_valid(chaser): chase_active=false; return
@@ -1955,7 +2063,7 @@ func _tick_chase(delta: float) -> void:
 
 func _chase_escape() -> void:
 	chase_active=false
-	next_chase_at=distance+rng.randf_range(7600.0,8400.0) # roughly every 8000 m
+	next_chase_at=INF   # at most one per 10 000 m stretch
 	run_coins+=CHASE_REWARD
 	sound.play("gate")
 	_popup(player.position+Vector3(0,3.1,0),RunText.text("escaped")+"  +%d"%CHASE_REWARD,Color("c9f54a"))
@@ -1967,7 +2075,7 @@ func _chase_escape() -> void:
 		tween.tween_callback(beast.queue_free)
 
 func _chase_reset() -> void:
-	chase_active=false; chase_time=0.0; chase_gap=0.0; next_chase_at=8000.0
+	chase_active=false; chase_time=0.0; chase_gap=0.0; next_chase_at=INF; chase_block_start=CHASE_BLOCK
 
 ## A hit during the chase is a stumble: the beast eats the lost ground at once.
 func _chase_stumble() -> void:
@@ -2421,8 +2529,13 @@ var map_toast:=0.0
 var map_toast_text:=""
 var map_press:=Vector2(-1,-1)
 var map_dragged:=false
+func _ensure_map() -> void:
+	if map_scene==null:
+		map_scene=MapTableScript.new(); add_child(map_scene); map_scene.visible=false
+
 func open_map() -> void:
 	if state=="map": return
+	_ensure_map()
 	map_return_state=state; map_toast=0.0
 	state="map"; _release_touches()
 	map_scene.visible=true; lobby.visible=false; shop_truck.visible=false; player.visible=false
@@ -2981,10 +3094,10 @@ func share_result() -> String:
 	for name in SHARE_SINGLETONS:
 		if Engine.has_singleton(name):
 			var sh=Engine.get_singleton(name)
-			if sh.has_method("share_image"): sh.share_image(img_path,"Dead Frontier",text,""); return "native"
-			if sh.has_method("sharePic"): sh.sharePic(img_path,"Dead Frontier","Dead Frontier",text); return "native"
-			if sh.has_method("share"): sh.share(text,"Dead Frontier",img_path); return "native"
-			if sh.has_method("shareText"): sh.shareText("Dead Frontier","Dead Frontier",text); return "native"
+			if sh.has_method("share_image"): sh.share_image(img_path,"Dreadline",text,""); return "native"
+			if sh.has_method("sharePic"): sh.sharePic(img_path,"Dreadline","Dreadline",text); return "native"
+			if sh.has_method("share"): sh.share(text,"Dreadline",img_path); return "native"
+			if sh.has_method("shareText"): sh.shareText("Dreadline","Dreadline",text); return "native"
 	DisplayServer.clipboard_set(text); share_toast=2.2
 	return "clipboard"
 const SIDE_BAG:=Rect2(470,198,70,76)    # backpack
@@ -3872,7 +3985,7 @@ func _clear_world() -> void:
 		if is_instance_valid(body): body.queue_free()
 	dying_zombies.clear()
 	venoms.clear()
-	venom_streams.clear()
+	_clear_venom()
 	if is_instance_valid(chaser): chaser.queue_free(); chaser=null
 	for dog in companion_pets:
 		if is_instance_valid(dog): dog.queue_free()
@@ -4030,6 +4143,16 @@ func _release_zombie(z) -> void:
 	else:
 		z.queue_free()
 
+## ---- When each kind of zombie first shows up (metres into a run) ------------------------
+## Most first runs end before 2000 m, a good one around 2500 m: the plain horde, the female
+## runner, the jockey and the juggernaut are what a new player sees; the banshee, the bomber
+## and, last of all, the spitter are things you earn by getting further. All seven by 8500 m.
+const UNLOCK_RUNNER := 400.0
+const UNLOCK_JOCKEY := 1000.0
+const UNLOCK_BRUTE := 1800.0
+const UNLOCK_BANSHEE := 3500.0
+const UNLOCK_BOMBER := 6000.0
+const UNLOCK_SPITTER := 8500.0
 func _spawn_zombie(at_z:=-85.0,forced_kind:="") -> void:
 	# Health steps up per wave and stops at 2.1 (see _wave_difficulty): the late game gets
 	# harder through numbers and specials, not through bullet sponges.
@@ -4038,31 +4161,29 @@ func _spawn_zombie(at_z:=-85.0,forced_kind:="") -> void:
 	var z:=ZombieScript.new(); var roll:=rng.randf(); var kind:=forced_kind
 	var _st1 := Time.get_ticks_usec()
 	if kind.is_empty():
-		# Unlock order: walker -> runner(female) -> jockey -> brute(juggernaut) -> banshee -> bomber.
-		# Each tier only appears after the previous one has been introduced.
-		if run_time>40.0 and not jockey_introduced: kind="jockey"
-		elif run_time>110.0 and not banshee_introduced and roll<0.02: kind="banshee"
+		# Each special zombie is unlocked by DISTANCE (see UNLOCK_*), so a new player meets the
+		# plain horde first and the rest one by one, the further they learn to get.
+		var d: float=distance
+		if d>=UNLOCK_JOCKEY and not jockey_introduced: kind="jockey"
+		elif d>=UNLOCK_BANSHEE and not banshee_introduced and roll<0.02: kind="banshee"
 		else:
 			kind="walker"
-			if run_time>20 and roll<minf(0.34,0.12+run_time*0.0015): kind="runner"
-			# brute after jockey has been seen
-			if jockey_introduced and run_time>30 and roll>maxf(0.80,0.94-run_time*0.0008): kind="brute"
-			# bomber only after banshee tier, deep into the run (time-based, not unreachable distance)
-			if run_time>150.0 and roll>0.11 and roll<0.17 and _count_zombie_kind("bomber")+_count_zombie_kind("bomber_female")<2:
+			if d>=UNLOCK_RUNNER and roll<minf(0.34,0.12+(d-UNLOCK_RUNNER)*0.00015): kind="runner"
+			if d>=UNLOCK_BRUTE and roll>maxf(0.80,0.94-(d-UNLOCK_BRUTE)*0.00008): kind="brute"
+			if d>=UNLOCK_BOMBER and roll>0.11 and roll<0.17 and _count_zombie_kind("bomber")+_count_zombie_kind("bomber_female")<2:
 				kind="bomber" if rng.randf()<0.5 else "bomber_female"
-			# Spitter: same late tier as the bomber, spits from a distance instead of closing in.
-			if run_time>95.0:
-				var spitter_p: float=clampf(0.05+(run_time-95.0)*0.0007,0.05,0.16)
+			# Spitter: spits from a distance instead of closing in.
+			if d>=UNLOCK_SPITTER:
+				var spitter_p: float=clampf(0.05+(d-UNLOCK_SPITTER)*0.00007,0.05,0.16)
 				if roll>0.52 and roll<0.52+spitter_p and _count_zombie_kind("spitter")<2: kind="spitter"
-			# Late game: plain walkers thin out, specials take over - but the walker never
-			# reaches zero, so the road still reads as a horde rather than a boss rush.
-			if run_time>150.0 and kind=="walker":
-				var special_bias: float=clampf((run_time-150.0)/240.0,0.0,0.45)
+			# Deep in a run plain walkers thin out and the specials take over - but the walker
+			# never reaches zero, so the road still reads as a horde rather than a boss rush.
+			if d>=UNLOCK_BANSHEE and kind=="walker":
+				var special_bias: float=clampf((d-UNLOCK_BANSHEE)/2500.0,0.0,0.45)
 				if rng.randf()<special_bias: kind="runner" if rng.randf()<0.55 else "jockey"
-			if jockey_introduced and run_time>50 and roll>0.36 and roll<0.43 and _count_zombie_kind("jockey")<2: kind="jockey"
-			# Banshee: rare at start, scales up with time. 1.5% at 110s -> up to ~8% late.
-			if run_time>110.0:
-				var banshee_p: float=clampf(0.015+(run_time-110.0)*0.00035,0.015,0.08)
+			if d>=UNLOCK_JOCKEY+150.0 and roll>0.36 and roll<0.43 and _count_zombie_kind("jockey")<2: kind="jockey"
+			if d>=UNLOCK_BANSHEE:
+				var banshee_p: float=clampf(0.015+(d-UNLOCK_BANSHEE)*0.000035,0.015,0.08)
 				if roll>1.0-banshee_p and _count_zombie_kind("banshee")<1: kind="banshee"
 	# Two male zombie bodies: roughly half of the plain walkers use the second model.
 	# Three male zombie bodies: plain, the second (black) and the third (Asian) model.
@@ -4214,7 +4335,7 @@ func _fire() -> bool:
 		b.life=minf(b.life,player.bullet_reach()/maxf(1.0,player.bullet_speed))
 		if player.crit_chance>0.0 and rng.randf()<player.crit_chance: b.damage*=player.crit_mult; b.set_meta("crit",true)
 		# Shots aimed at the Banshee punch through two zombies in the way, so she can be reached.
-		if is_instance_valid(aim_target) and zombies.has(aim_target) and aim_target.kind=="banshee": b.pierce+=2
+		if aim_on_banshee or (is_instance_valid(aim_target) and zombies.has(aim_target) and aim_target.kind=="banshee"): b.pierce+=2
 		add_child(b); bullets.append(b)
 	return true
 
@@ -4392,39 +4513,96 @@ func _detonate_ordnance(projectile: Node3D) -> void:
 
 ## Spitter venom: a thick stream of vomit hosed at the survivor, not a single lobbed glob.
 ## It keeps coming for ~1.2 s, so standing still in it hurts and stepping aside dodges it.
+## ---- Spitter venom -----------------------------------------------------------------
+## The spit is aimed at ONE spot -- where the survivor stands when the spitter stops to spit --
+## and that spot is marked with a red ring for a full second before anything lands. Step out of
+## the ring and it misses; only what is inside the ring gets hurt. Kill the spitter while the
+## ring is still only a warning and nothing lands at all.
+const VENOM_WARN := 1.0      # red ring only
+const VENOM_SPRAY := 0.7     # venom in the air and landing
+const VENOM_RADIUS := 1.05   # metres: the ring, and the only place it hurts
+var venom_ring_mesh: TorusMesh
+var venom_disc_mesh: CylinderMesh
+var venom_ring_mat: StandardMaterial3D
+var venom_disc_mat: StandardMaterial3D
+
+func _venom_ring(spot: Vector3) -> Node3D:
+	if venom_ring_mesh==null:
+		venom_ring_mesh=TorusMesh.new(); venom_ring_mesh.inner_radius=VENOM_RADIUS-0.07; venom_ring_mesh.outer_radius=VENOM_RADIUS+0.05
+		venom_disc_mesh=CylinderMesh.new(); venom_disc_mesh.top_radius=VENOM_RADIUS; venom_disc_mesh.bottom_radius=VENOM_RADIUS; venom_disc_mesh.height=0.01
+		venom_ring_mat=StandardMaterial3D.new(); venom_ring_mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		venom_ring_mat.albedo_color=Color(1.0,0.12,0.08,0.95); venom_ring_mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+		venom_disc_mat=StandardMaterial3D.new(); venom_disc_mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		venom_disc_mat.albedo_color=Color(1.0,0.10,0.06,0.22); venom_disc_mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	var root:=Node3D.new(); root.position=Vector3(spot.x,0.05,spot.z)
+	var ring:=MeshInstance3D.new(); ring.mesh=venom_ring_mesh; ring.material_override=venom_ring_mat
+	ring.scale=Vector3(1.0,0.25,1.0); ring.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; root.add_child(ring)
+	var disc:=MeshInstance3D.new(); disc.mesh=venom_disc_mesh; disc.material_override=venom_disc_mat
+	disc.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF; root.add_child(disc)
+	add_child(root)
+	return root
+
+func _end_venom_stream(i: int,land: bool) -> void:
+	var s: Dictionary=venom_streams[i]
+	if is_instance_valid(s.get("ring")): (s["ring"] as Node).queue_free()
+	if land: _venom_splash(s["spot"] as Vector3)
+	venom_streams.remove_at(i)
+
+func _clear_venom() -> void:
+	for s in venom_streams:
+		if is_instance_valid(s.get("ring")): (s["ring"] as Node).queue_free()
+	venom_streams.clear()
+
 func _start_venom_stream(z: Node3D) -> void:
-	venom_streams.append({"z":z, "t":0.0, "dur":1.25, "aim":player.position+Vector3(0,0.9,0), "tick":0.0, "shown":false})
-	# the first of it hits the road straight away and starts to pool
-	_spawn_blood_pool(Vector3(player.position.x,0.0,player.position.z),rng.randf_range(0.9,1.2),7.0,false,Vector3.ZERO,true)
+	var spot:=Vector3(player.position.x,0.0,player.position.z)
+	venom_streams.append({"z":z, "t":0.0, "spot":spot, "tick":0.0, "shown":false, "ring":_venom_ring(spot)})
+	if z.has_method("begin_spit"): z.begin_spit(VENOM_WARN+VENOM_SPRAY)
 
 func _tick_venom(delta: float) -> void:
 	if venom_streams.is_empty(): return
 	for i in range(venom_streams.size()-1,-1,-1):
 		var s: Dictionary=venom_streams[i]
-		var z: Node3D=s["z"] as Node3D
+		# The spitter may have been killed and freed while it was still spitting. Check BEFORE
+		# touching it: casting the dead reference raised an error on this line every frame from
+		# then on (the stream was never removed), and in a release build that is a crash --
+		# the "game quits when a Spitter shows up" bug.
+		var z_ref=s["z"]
 		s["t"]=float(s["t"])+delta
-		if not is_instance_valid(z) or float(s["t"])>float(s["dur"]):
-			# the last of it lands: acid splash where it was aimed
-			_venom_splash(s["aim"] as Vector3)
-			venom_streams.remove_at(i)
+		var t: float=float(s["t"])
+		var z: Node3D=null
+		if is_instance_valid(z_ref) and not bool(z_ref.get("dead")): z=z_ref
+		var ring=s.get("ring")
+		if is_instance_valid(ring):
+			# the warning beats faster and faster until the venom is in the air
+			var beat: float=0.5+0.5*sin(t*(9.0+t*10.0))
+			(ring as Node3D).scale=Vector3.ONE*(1.0+0.05*beat)
+		if z==null:
+			_end_venom_stream(i,t>=VENOM_WARN)   # killed during the warning: nothing lands
 			continue
+		if t>VENOM_WARN+VENOM_SPRAY:
+			_end_venom_stream(i,true)
+			continue
+		if t<VENOM_WARN: continue
+		var spot: Vector3=s["spot"] as Vector3
 		# the walk clip carries the head low and ahead of the feet (zombies face +Z, the survivor)
 		var mouth: Vector3=z.position+Vector3(0,1.30,0.32)
-		var aim: Vector3=s["aim"] as Vector3
-		var dir: Vector3=(aim-mouth).normalized()
+		var aim: Vector3=spot+Vector3(0,0.15,0)
+		var flat_d: float=maxf(1.0,_flat_distance(mouth,aim))
+		var speed: float=clampf(flat_d/0.45,8.0,26.0)   # lands on the ring whatever the distance
+		var fly: float=flat_d/speed
 		# Thick, uneven, yellow-green: drops for the spray and small chunks for the body of it.
 		for k in range(6):
-			var wobble:=Vector3(randf_range(-0.5,0.5), randf_range(-0.25,0.55), randf_range(-0.2,0.2))
-			var vel: Vector3=dir*randf_range(8.5,13.5)+wobble
+			var to: Vector3=aim+Vector3(randf_range(-0.55,0.55),0.0,randf_range(-0.55,0.55))-mouth
+			var vel: Vector3=Vector3(to.x/fly,(to.y+0.5*11.0*fly*fly)/fly,to.z/fly)
 			var hue: Color=Color("b9d94a").lerp(Color("6f9a1e"),randf())
 			_fx_drop_at(mouth+Vector3(randf_range(-0.14,0.14),randf_range(-0.06,0.06),0),hue,
-				randf_range(0.05,0.095),vel,-11.0,randf_range(0.32,0.52))
+				randf_range(0.05,0.095),vel,-11.0,fly*randf_range(0.95,1.1))
 			if k<2:
-				_fx_spark_at(mouth,hue.darkened(0.15),0.08,vel*0.85,-9.0,randf_range(0.3,0.45))
+				_fx_spark_at(mouth,hue.darkened(0.15),0.08,vel*0.9,-11.0,fly)
 		s["tick"]=float(s["tick"])+delta
-		if float(s["tick"])>=0.32:
+		if float(s["tick"])>=0.25:
 			s["tick"]=0.0
-			if _flat_distance(player.position,aim)<1.6 and revive_invulnerable<=0.0:
+			if _flat_distance(player.position,spot)<VENOM_RADIUS and revive_invulnerable<=0.0:
 				_hurt_player(4.0)
 				if not bool(s["shown"]):
 					s["shown"]=true
@@ -4444,7 +4622,7 @@ func _venom_splash(at: Vector3) -> void:
 	for k in range(4):
 		_spawn_blood_pool(Vector3(at.x+rng.randf_range(-1.3,1.3),0.0,at.z+rng.randf_range(-1.1,1.1)),rng.randf_range(0.25,0.55),7.0,false,Vector3.ZERO,true)
 	shake=maxf(shake,0.18)
-	if _flat_distance(player.position,at)<1.15 and revive_invulnerable<=0.0:
+	if _flat_distance(player.position,at)<VENOM_RADIUS and revive_invulnerable<=0.0:
 		_hurt_player(7.0)
 
 func _tick_zombies(delta: float) -> void:
@@ -4452,7 +4630,9 @@ func _tick_zombies(delta: float) -> void:
 		var z=zombies[i]; z.tick(delta)
 		if String(z.kind)=="spitter" and z.get("spit_ready")==true:
 			z.set("spit_ready",false)
-			if z.position.z<-2.0 and z.position.z>-34.0: _start_venom_stream(z as Node3D)
+			# only from a sensible spitting distance: not from the horizon, not point blank
+			if z.position.z<player.position.z-6.0 and z.position.z>player.position.z-26.0: _start_venom_stream(z as Node3D)
+			else: z.set("spit_timer",0.6)   # not in range yet: try again shortly
 		var burn_damage: float=z.consume_burn_damage_number()
 		if burn_damage>0.0: _damage_number(z,burn_damage,Color("ff8a4f"))
 		if z.dead:
@@ -4659,23 +4839,15 @@ func _bomber_blast(zp: Vector3) -> void:
 
 ## The crit word, per language. The old code printed a literal "??" placeholder.
 func _crit_word() -> String:
-	var lc := String(language_code).to_lower()
-	if lc.begins_with("zh_tw") or lc.begins_with("zh_hk"):
-		return "??"
-	if lc.begins_with("zh"):
-		return "??"
-	if lc.begins_with("ja"):
-		return "??"
-	if lc.begins_with("ko"):
-		return "???"
-	return "CRIT"
+	# from the translation table; the old hard-coded words had been saved as "??"
+	return RunText.text("crit")
 
 func _damage_number(z: Node3D,amount: float,_color: Color,crit:=false) -> void:
-	# A crit prints in acid yellow, a size up, and spells out the word: "?? -100".
+	# A crit prints in acid yellow, a size up, number first: "-100 暴击".
 	var col := Color("ffd63a") if crit else DAMAGE_RED
 	var big := crit
 	var body := "-%d" % maxi(1, roundi(amount))
-	var text := (_crit_word() + " " + body) if crit else body
+	var text := (body + " " + _crit_word()) if crit else body
 	_fx_label_at(z.global_position+Vector3(rng.randf_range(-0.24,0.24),2.78,rng.randf_range(-0.12,0.12)),
 		text,col,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,big)
 
@@ -5129,7 +5301,7 @@ func _spawn_crates() -> void:
 		var x: float=spots[si]
 		if not _crate_spot_clear(x,z): continue
 		var crate:=WeaponCrateScript.new(); var id: String=choices[used%choices.size()]; used+=1
-		if si==dog_spot: id="PET_%d"%rng.randi_range(0,lobby.PETS.size()-1)
+		if si==dog_spot: id="PET_%d"%_roll_road_pet()
 		elif (player.vehicle!="" or player.weapon=="FLAME") and rng.randf()<FUEL_CRATE_CHANCE:
 			id="FUEL"
 		elif rng.randf()<GEAR_CRATE_CHANCE:
@@ -5192,14 +5364,53 @@ func _spawn_rollers() -> void:
 		barrel.setup(id,_crate_hits(id))
 		barrel.position=Vector3(x,0,-48.0)
 		add_child(barrel); crates.append(barrel)
+## ---- How rare the road finds are -------------------------------------------------------
+## Every pet used to be equally likely, so the white tiger and the lion -- which kill anything in
+## one bite -- turned up in most runs, and with a pet on one barrel in five a single run could
+## collect the whole set. Now:
+##  * the road only ever offers the three starter dogs for free; a stronger pet (wolfdog,
+##    mastiff, tiger, lion) can turn up on the road only once the player has UNLOCKED it --
+##    earning those is what the progression is for;
+##  * the two big cats need NO unlock to turn up on the road -- but only in a "legend run",
+##    about 1 run in 50, and then only once (unlocking them is what lets you bring one along);
+##  * the same goes for vehicles: the plain motorbike is the only free road find, the better
+##    bikes and the car only ride a barrel for a player who owns them;
+##  * pets and vehicles ride far fewer barrels.
+const LEGEND_PET_RUN_CHANCE := 0.02          # 1 run in 50 may meet a tiger or a lion
+const LEGEND_PETS := [5, 6]                  # white tiger, lion (indexes into lobby.PETS)
+const ROAD_PET_WEIGHTS := {0: 32, 1: 26, 4: 22, 2: 14, 3: 6}   # doberman, shepherd, labrador, wolfdog, mastiff
+const STARTER_PETS := [0, 1, 4]              # free on the road for everyone
+const ROLLER_PET_CHANCE := 0.07              # was 0.20
+const ROLLER_VEHICLE_CHANCE := 0.12          # was 0.30
+var legend_pet_run := false
+var legend_pet_given := false
+func _roll_road_pet() -> int:
+	if legend_pet_run and not legend_pet_given and run_time>45.0:
+		legend_pet_given=true
+		return int(LEGEND_PETS[rng.randi_range(0,LEGEND_PETS.size()-1)])
+	var total:=0
+	for idx in ROAD_PET_WEIGHTS:
+		if int(idx) in STARTER_PETS or pet_owned(int(idx)): total+=int(ROAD_PET_WEIGHTS[idx])
+	var pick:=rng.randi_range(1,total)
+	for idx in ROAD_PET_WEIGHTS:
+		if not (int(idx) in STARTER_PETS or pet_owned(int(idx))): continue
+		pick-=int(ROAD_PET_WEIGHTS[idx])
+		if pick<=0: return int(idx)
+	return 0
+
 ## Pets, weapons and the paid bikes can ride a barrel. The tank never does.
 func _roller_id() -> String:
 	var roll:=rng.randf()
-	if roll<0.20:
-		return "PET_%d"%rng.randi_range(0,lobby.PETS.size()-1)
-	if roll<0.50 and player.vehicle=="":
-		var v: Array=["BIKE","SPORT","CRUISER","SEDAN"]
-		return String(v[rng.randi_range(0,v.size()-1)])
+	if roll<ROLLER_PET_CHANCE:
+		return "PET_%d"%_roll_road_pet()
+	if roll<ROLLER_PET_CHANCE+ROLLER_VEHICLE_CHANCE and player.vehicle=="":
+		# the plain motorbike is the usual find; the better bikes and the car are the rare ones
+		var v_roll:=rng.randf()
+		var want:="BIKE"
+		if v_roll>=0.95: want="SEDAN"
+		elif v_roll>=0.84: want="CRUISER"
+		elif v_roll>=0.72: want="SPORT"
+		return want if (want=="BIKE" or owned_vehicle==want) else "BIKE"
 	var choices: Array=CRATE_WEAPONS.duplicate(); choices.erase(player.weapon)
 	return String(choices[rng.randi_range(0,choices.size()-1)])
 
@@ -5838,17 +6049,21 @@ func _update_mouse_aim() -> void:
 	var flat:=point-player.global_position; flat.y=0
 	if flat.length()>0.15: aim_direction=flat.normalized()
 
+## Zombies are NOT locked on to: the right stick is the aim, and a shot goes exactly where it
+## points. (They used to be snapped to inside a 20-degree cone, which from the middle of the road
+## covered every zombie on it: the game aimed itself and the right stick had no job.)
+## Only barrels and supply platforms keep the snap -- they are small, low targets that a round
+## fired level from the shoulder would otherwise sail straight over.
+var aim_on_banshee:=false
 func _update_touch_aim() -> void:
 	aim_target=null; var best_score:=0.94
-	for z in zombies+watchers:
-		if not is_instance_valid(z) or z.dead: continue
-		if watchers.has(z) and z.global_position.z>player.global_position.z-1.5: continue # behind: ignore
-		var flat: Vector3=z.global_position-player.global_position; flat.y=0
-		if flat.length()<0.2 or flat.length()>42: continue
-		var score: float=aim_direction.dot(flat.normalized())-flat.length()*0.0008
-		if z.kind=="banshee": score+=0.04 # the Banshee is the priority target when she's roughly in line
-		if score>best_score:
-			best_score=score; aim_target=z; aim_point=z.global_position+Vector3(0,z.collision_height()*0.62,0)
+	aim_on_banshee=false
+	for z in zombies:
+		# no lock: this only notes whether the stick is pointing straight at the Banshee, so that
+		# shot keeps its punch-through and can reach her behind the pack
+		if not is_instance_valid(z) or z.dead or z.kind!="banshee": continue
+		var b_flat: Vector3=z.global_position-player.global_position; b_flat.y=0
+		if b_flat.length()>0.2 and aim_direction.dot(b_flat.normalized())>0.9986: aim_on_banshee=true
 	for barrel in barrels:
 		if not is_instance_valid(barrel) or barrel.dead: continue
 		var flat: Vector3=barrel.global_position-player.global_position; flat.y=0
@@ -5865,6 +6080,7 @@ func _update_touch_aim() -> void:
 			best_score=score; aim_target=crate; aim_point=crate.global_position+Vector3(0,0.45,0)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if booting: return
 	if armory_drag and is_instance_valid(armory_model):
 		if event is InputEventScreenDrag or (event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_LEFT)):
 			# spin around a pivot so horizontal drag is a yaw and vertical drag a pitch,
@@ -6270,10 +6486,10 @@ func _load_save() -> void:
 	for f in ["--smoke-test","--soak-test","--lootbox-test","--stamina-test","--capture","--capture-medic","--capture-bike"]:
 		if f in OS.get_cmdline_user_args(): isolated=true; break
 	if not isolated and (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK):
-		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v3",true)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
+		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
 		if owned_vehicle=="CAR": owned_vehicle="CRUISER" # old save name for the third bike
 		owned_characters=_dict_or_empty(c.get_value("chars","owned",{})); owned_skins=_dict_or_empty(c.get_value("chars","skins",{}))
-		terms_accepted=bool(c.get_value("legal","terms_v1",false))
+		terms_accepted=bool(c.get_value("legal","terms_premium_v1",false))   # own key: an acceptance stored by the old in-app-purchase build does not count for this one
 		for mk in c.get_value("mail","claimed",[]): mail_claimed[String(mk)]=true
 		airdrop_day=String(c.get_value("crates","day",""))
 		airdrop_count_today=int(c.get_value("crates","count",0))
@@ -6344,8 +6560,8 @@ func _read_muted() -> bool:
 	return bool(c.get_value("audio","muted",false)) if (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK) else false
 func _save() -> void:
 	if "--smoke-test" in OS.get_cmdline_user_args() or "--soak-test" in OS.get_cmdline_user_args() or "--lootbox-test" in OS.get_cmdline_user_args() or "--stamina-test" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_user_args() or "--capture-medic" in OS.get_cmdline_user_args() or "--capture-bike" in OS.get_cmdline_user_args(): return # test and capture runs must never touch the player's real save
-	var c:=ConfigFile.new(); c.set_value("misc","loadout_v2","done"); c.set_value("run","best",best_distance); c.set_value("run","character",character_choice); c.set_value("run","skins",skin_choice); c.set_value("run","pet",pet_choice); c.set_value("run","pet_equipped",pet_equipped); c.set_value("pets","owned",owned_pets); c.set_value("pets","rules",2); c.set_value("chars","owned",owned_characters); c.set_value("chars","skins",owned_skins); c.set_value("vehicles","owned",owned_vehicle); c.set_value("run","loadout_on",loadout_on); c.set_value("puzzle","pieces",puzzle_pieces); c.set_value("pass","owned",passes); c.set_value("pass","days",pass_days); c.set_value("pass","all_access",all_access); c.set_value("mail","claimed",mail_claimed); c.set_value("airdrop","day",airdrop_day); c.set_value("run","intro_seen",intro_seen); c.set_value("run","ad_run_used",ad_run_used); c.set_value("gameplay","auto_reload_v3",auto_reload); c.set_value("display","text_size",text_size); c.set_value("display","quality_high",quality_high); c.set_value("audio","music_volume",sound.music_volume if is_instance_valid(sound) else 0.8); c.set_value("audio","sfx_volume",sound.sfx_volume if is_instance_valid(sound) else 1.0)
-	c.set_value("ui","language",language_code); c.set_value("wallet","coins",bank_coins); c.set_value("wallet","silver",bank_silver); c.set_value("wallet","vouchers",bank_vouchers); c.set_value("store","owned",store_owned.keys()); c.set_value("store","remove_ads",remove_ads); c.set_value("store","ads_offer_shows",ads_offer_shows); c.set_value("store","iap_ledger",iap_ledger.keys()); c.set_value("legal","terms_v1",terms_accepted)
+	var c:=ConfigFile.new(); c.set_value("misc","loadout_v2","done"); c.set_value("run","best",best_distance); c.set_value("run","character",character_choice); c.set_value("run","skins",skin_choice); c.set_value("run","pet",pet_choice); c.set_value("run","pet_equipped",pet_equipped); c.set_value("pets","owned",owned_pets); c.set_value("pets","rules",2); c.set_value("chars","owned",owned_characters); c.set_value("chars","skins",owned_skins); c.set_value("vehicles","owned",owned_vehicle); c.set_value("run","loadout_on",loadout_on); c.set_value("puzzle","pieces",puzzle_pieces); c.set_value("pass","owned",passes); c.set_value("pass","days",pass_days); c.set_value("pass","all_access",all_access); c.set_value("mail","claimed",mail_claimed); c.set_value("airdrop","day",airdrop_day); c.set_value("run","intro_seen",intro_seen); c.set_value("run","ad_run_used",ad_run_used); c.set_value("gameplay","auto_reload_v4",auto_reload); c.set_value("display","text_size",text_size); c.set_value("display","quality_high",quality_high); c.set_value("audio","music_volume",sound.music_volume if is_instance_valid(sound) else 0.8); c.set_value("audio","sfx_volume",sound.sfx_volume if is_instance_valid(sound) else 1.0)
+	c.set_value("ui","language",language_code); c.set_value("wallet","coins",bank_coins); c.set_value("wallet","silver",bank_silver); c.set_value("wallet","vouchers",bank_vouchers); c.set_value("store","owned",store_owned.keys()); c.set_value("store","remove_ads",remove_ads); c.set_value("store","ads_offer_shows",ads_offer_shows); c.set_value("store","iap_ledger",iap_ledger.keys()); c.set_value("legal","terms_premium_v1",terms_accepted)
 	c.set_value("can_ads","day",can_ad_day); c.set_value("can_ads","count",can_ad_count)
 	c.set_value("crates","day",airdrop_day); c.set_value("crates","count",airdrop_count_today);
 	c.set_value("crates","runs",runs_total); c.set_value("crates","at_run",airdrop_at_run)
@@ -6523,7 +6739,7 @@ func _capture() -> void:
 	go_to_lobby(); await get_tree().create_timer(0.3).timeout
 	open_map(); await get_tree().create_timer(0.5).timeout; await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png("res://diagnostics/ui-map-table.png")
-	map_scene.pan_x=1.6; await get_tree().create_timer(0.25).timeout; await RenderingServer.frame_post_draw
+	_ensure_map(); map_scene.pan_x=1.6; await get_tree().create_timer(0.25).timeout; await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png("res://diagnostics/ui-map-table-right.png")
 	close_map()
 	go_to_lobby(); await get_tree().create_timer(0.3).timeout

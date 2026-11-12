@@ -1,14 +1,14 @@
-# DEAD FRONTIER
+# DREADLINE
 
 ## END USER TERMS OF USE & DISCLAIMER
 
-Please read these Terms of Use and Disclaimer carefully before accessing, installing, or playing Dead Frontier.
+Please read these Terms of Use and Disclaimer carefully before accessing, installing, or playing Dreadline.
 
 By selecting "I Agree", you acknowledge that you have read and understood these Terms of Use and agree to be bound by them. If you do not agree to these terms, you must select "I Do Not Agree" and discontinue your use of the game.
 
 ### 1. NATURE AND PURPOSE OF THE GAME
 
-Dead Frontier is a fictional video game developed for entertainment purposes only. All characters, names, locations, organizations, events, scenarios, and storylines depicted in the game are fictional unless expressly stated otherwise. Any resemblance to actual persons, living or deceased, organizations, or real-world events is coincidental.
+Dreadline is a fictional video game developed for entertainment purposes only. All characters, names, locations, organizations, events, scenarios, and storylines depicted in the game are fictional unless expressly stated otherwise. Any resemblance to actual persons, living or deceased, organizations, or real-world events is coincidental.
 
 The game may contain fictional violence, combat, weapons, zombies, blood effects, horror elements, frightening imagery, and other potentially disturbing content. Such content is presented exclusively for entertainment purposes and must not be interpreted as factual information, professional advice, or encouragement to engage in real-world violence, dangerous activities, or unlawful conduct.
 
@@ -30,7 +30,7 @@ To the maximum extent permitted by applicable law, the Developer shall not be re
 
 ### 3. PLAYER RESPONSIBILITIES AND ACCEPTABLE USE
 
-You agree to use Dead Frontier for lawful personal entertainment purposes and in accordance with these terms and all applicable laws and regulations.
+You agree to use Dreadline for lawful personal entertainment purposes and in accordance with these terms and all applicable laws and regulations.
 
 You must not use unauthorized cheats, exploits, bots, scripts, modified applications, or other tools intended to manipulate the game's operation, bypass intended gameplay restrictions, gain unauthorized advantages, or interfere with the integrity of the game.
 
@@ -42,7 +42,7 @@ You are responsible for any consequences arising from your own unlawful conduct,
 
 Your ability to access and play the game may depend on your device, operating system, available storage, hardware performance, internet connection, network provider, and other technical requirements.
 
-The Developer does not guarantee that Dead Frontier will be compatible with every device, operating system, hardware configuration, or future software update.
+The Developer does not guarantee that Dreadline will be compatible with every device, operating system, hardware configuration, or future software update.
 
 The Developer shall not be responsible for interruptions, performance issues, connection failures, additional network charges, or access problems arising from your device, internet service provider, telecommunications provider, operating system, app distribution platform, or other services outside the Developer's reasonable control, except where such responsibility cannot legally be excluded.
 
@@ -50,7 +50,7 @@ You are responsible for maintaining a suitable device, installing compatible sof
 
 ### 5. GAME AVAILABILITY, MAINTENANCE AND MODIFICATIONS
 
-The Developer will make reasonable efforts to maintain the availability and functionality of Dead Frontier. However, uninterrupted, continuous, secure, or error-free operation cannot be guaranteed.
+The Developer will make reasonable efforts to maintain the availability and functionality of Dreadline. However, uninterrupted, continuous, secure, or error-free operation cannot be guaranteed.
 
 The game may become temporarily unavailable or experience interruptions due to maintenance, software updates, technical failures, server or network outages, platform restrictions, security incidents, or circumstances beyond the Developer's reasonable control.
 
@@ -72,11 +72,11 @@ Players are encouraged to take reasonable precautions to protect their devices a
 
 ### 7. IN-APP PURCHASES AND VIRTUAL CONTENT
 
-Dead Frontier may offer optional purchases of virtual currencies, vouchers, equipment, cosmetic items, upgrades, and other digital content.
+Dreadline may offer optional purchases of virtual currencies, vouchers, equipment, cosmetic items, upgrades, and other digital content.
 
 All in-app purchases are processed through the applicable digital distribution platform and are subject to that platform's payment procedures, terms, and applicable laws. Purchase prices and available payment methods are determined and displayed through the applicable platform before a transaction is completed.
 
-Virtual currencies and digital items are licensed for use within Dead Frontier and do not represent real money, financial assets, legal tender, or ownership of physical property. Unless expressly permitted by the Developer or required by applicable law or platform rules, such virtual content cannot be exchanged for real-world money, transferred outside the game, or independently sold or traded.
+Virtual currencies and digital items are licensed for use within Dreadline and do not represent real money, financial assets, legal tender, or ownership of physical property. Unless expressly permitted by the Developer or required by applicable law or platform rules, such virtual content cannot be exchanged for real-world money, transferred outside the game, or independently sold or traded.
 
 Virtual currencies purchased through the Apple App Store will not expire where prohibited by applicable platform rules. Free, promotional, or event-based rewards may be subject to separate conditions or expiry periods where these are clearly disclosed and legally permitted.
 
@@ -86,7 +86,7 @@ Refund requests, billing disputes, and payment reversals are subject to the appl
 
 ### 8. ADVERTISEMENTS AND THIRD-PARTY SERVICES
 
-Dead Frontier may display advertisements provided by independent third-party advertising networks. The game may also integrate third-party software development kits, analytics services, platform services, or other external technologies to support its operation.
+Dreadline may display advertisements provided by independent third-party advertising networks. The game may also integrate third-party software development kits, analytics services, platform services, or other external technologies to support its operation.
 
 Third-party advertisements may promote products, applications, websites, or services that are not owned or operated by the Developer. The Developer does not endorse every advertised product, service, claim, or external website and does not control the independent business practices of third-party advertisers.
 
@@ -106,7 +106,7 @@ Nothing in these Terms of Use is intended to replace the Privacy Policy, constit
 
 ### 10. INTELLECTUAL PROPERTY RIGHTS
 
-Dead Frontier and its original content, including its software, characters, artwork, graphics, animations, music, sound effects, designs, visual elements, logos, and other materials, are protected by applicable intellectual property laws and are owned by or licensed to their respective rights holders.
+Dreadline and its original content, including its software, characters, artwork, graphics, animations, music, sound effects, designs, visual elements, logos, and other materials, are protected by applicable intellectual property laws and are owned by or licensed to their respective rights holders.
 
 Your installation or use of the game does not transfer any intellectual property ownership or other proprietary rights to you.
 
@@ -116,7 +116,7 @@ You must not reproduce, redistribute, publicly distribute, commercially exploit,
 
 ### 11. DISCLAIMER OF WARRANTIES
 
-To the maximum extent permitted by applicable law, Dead Frontier is provided on an "AS IS" and "AS AVAILABLE" basis.
+To the maximum extent permitted by applicable law, Dreadline is provided on an "AS IS" and "AS AVAILABLE" basis.
 
 The Developer does not guarantee that the game will always be available, uninterrupted, secure, error-free, compatible with every device, or free from all defects.
 
@@ -128,7 +128,7 @@ Nothing in this section excludes, restricts, or modifies any consumer guarantee,
 
 ### 12. LIMITATION OF LIABILITY
 
-To the maximum extent permitted by applicable law, the Developer shall not be liable for indirect, incidental, special, exemplary, or consequential losses arising out of or in connection with the use of, inability to use, or interruption of Dead Frontier.
+To the maximum extent permitted by applicable law, the Developer shall not be liable for indirect, incidental, special, exemplary, or consequential losses arising out of or in connection with the use of, inability to use, or interruption of Dreadline.
 
 This limitation may include loss of profits, loss of business opportunities, loss of goodwill, loss of anticipated savings, loss of data, or other intangible losses, where such exclusions are legally permitted.
 
@@ -172,7 +172,7 @@ If any provision of these terms is found to be unlawful, invalid, or unenforceab
 
 ### 17. FINAL ACKNOWLEDGEMENT
 
-By selecting "I Agree", you confirm that you have had the opportunity to read these Terms of Use and Disclaimer, understand the general nature of the game and its associated risks, and agree to use Dead Frontier in accordance with these terms and applicable laws.
+By selecting "I Agree", you confirm that you have had the opportunity to read these Terms of Use and Disclaimer, understand the general nature of the game and its associated risks, and agree to use Dreadline in accordance with these terms and applicable laws.
 
 If you do not agree with these terms, you must select "I Do Not Agree" and discontinue your use of the game.
 

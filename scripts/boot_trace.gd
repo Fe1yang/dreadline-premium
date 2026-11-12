@@ -62,7 +62,8 @@ func _open_new_log() -> void:
 func mark(text: String) -> void:
 	if _file == null:
 		return
-	_file.store_line(text)
+	# milliseconds since the app started, so a slow step can be read straight off the log
+	_file.store_line("%6d ms  %s" % [Time.get_ticks_msec(), text])
 	_file.flush()
 
 

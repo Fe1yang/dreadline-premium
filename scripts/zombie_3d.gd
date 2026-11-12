@@ -35,6 +35,20 @@ var banshee_ground_speed := 2.0 # how fast she is walking backwards over the roa
 ## Spitter: seconds until the next venom glob, and a flag main consumes to fire it.
 var spit_timer := 2.4
 var spit_ready := false
+## While it spits it stops walking: it stands on the road (so it drifts in with the road, like a
+## parked car) and plays a standing clip -- arms and head moving -- instead of sliding along
+## frozen. Then it walks on.
+var spit_hold := 0.0
+const ROAD_SPEED := 3.5
+const SPIT_STAND_CLIPS := ["Zombie_Scratch","Zombie_Idle","Zombie_Idle_Loop"]
+func begin_spit(seconds: float) -> void:
+	spit_hold=seconds+0.35
+	if not is_instance_valid(animation_player): return
+	for clip in SPIT_STAND_CLIPS:
+		if animation_player.has_animation(clip):
+			animation_player.get_animation(clip).loop_mode=Animation.LOOP_LINEAR
+			animation_player.play(clip,0.2)
+			return
 var dead := false
 var death_played := false
 var model: Node3D
@@ -72,7 +86,9 @@ func _apply_stats(type: String, difficulty: float) -> void:
 		"jockey": health=68*difficulty; speed=7.4+difficulty*0.16; damage=22; reward=3; radius=0.48
 		"banshee": health=210*difficulty; speed=1.65+difficulty*0.05; damage=28; reward=8; radius=0.46
 		# Keeps its distance and lobs venom: slower than a walker, but it never has to touch you.
-		"spitter": health=70*difficulty; speed=3.15+difficulty*0.08; damage=13; reward=3; radius=0.55
+		# 3.95, not 3.15: anything slower than the road itself (3.5) is being carried backwards
+		# while its legs walk forwards, which is why it looked like it was walking on the spot.
+		"spitter": health=70*difficulty; speed=3.95+difficulty*0.08; damage=13; reward=3; radius=0.55
 		_: health=44*difficulty; speed=3.65+difficulty*0.1; damage=18; reward=1
 	max_health = health
 	age = randf()*4
@@ -110,6 +126,7 @@ func reuse(type: String, difficulty: float) -> void:
 	banshee_time = 0.0
 	spit_timer = 2.4
 	spit_ready = false
+	spit_hold = 0.0
 	kind = type
 	_apply_stats(type, difficulty)
 	age = randf() * 4.0
@@ -367,14 +384,19 @@ func tick(delta: float) -> void:
 	var move_scale := 0.12 if stun_timer>0.0 else (1.68 if frenzy else 1.0)
 	if kind=="banshee":
 		_banshee_move(delta,move_scale)
+	elif spit_hold>0.0:
+		position.z += ROAD_SPEED*delta   # standing still on a moving road
+		spit_hold-=delta
+		if spit_hold<=0.0 and is_instance_valid(animation_player) and run_clip!="" and animation_player.has_animation(run_clip):
+			animation_player.play(run_clip,0.25)
 	else:
 		position.z += speed*move_scale*delta
 	hit_flash=maxf(0,hit_flash-delta)
 	for mesh in meshes: mesh.material_overlay=flash_material if hit_flash>0 else null
 	if kind=="spitter":
 		spit_timer-=delta
-		if spit_timer<=0.0:
-			spit_timer=randf_range(2.9,4.2)
+		if spit_timer<=0.0 and spit_hold<=0.0 and stun_timer<=0.0:
+			spit_timer=randf_range(4.6,6.2)
 			spit_ready=true
 	if needs_waddle and is_instance_valid(model):
 		# fat zombie shuffle: rock the body and bob with each step
@@ -388,6 +410,7 @@ func tick(delta: float) -> void:
 		elif kind=="brute" or kind.begins_with("bomber"): base_rate=_brute_stride_rate()
 		elif kind=="banshee": base_rate=clampf(banshee_ground_speed/2.3,0.6,1.7)
 		animation_player.speed_scale = 0.0 if stun_timer>0.0 else maxf(0.55,base_rate*(1.30 if frenzy else 1.0))
+		if spit_hold>0.0 and stun_timer<=0.0: animation_player.speed_scale=1.0
 
 	if is_instance_valid(flames): flames.emitting=burn_timer>0.0 or kind=="banshee"
 	if is_instance_valid(embers): embers.emitting=flames.emitting

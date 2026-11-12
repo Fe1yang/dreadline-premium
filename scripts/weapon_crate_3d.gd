@@ -363,13 +363,21 @@ func is_pet() -> bool:
 func pet_index() -> int:
 	return clampi(int(weapon_id.trim_prefix("PET_")),0,LobbyScene.PETS.size()-1)
 
+const FUEL_NAMES:={"en":"FUEL","zh_CN":"燃料","zh_TW":"燃料","ja":"燃料","ko":"연료","es":"COMBUSTIBLE","fr":"CARBURANT",
+	"de":"TREIBSTOFF","pt":"COMBUSTÍVEL","ru":"ТОПЛИВО","ar":"وقود","hi":"ईंधन","id":"BAHAN BAKAR","it":"CARBURANTE",
+	"tr":"YAKIT","nl":"BRANDSTOF","pl":"PALIWO","th":"เชื้อเพลิง","vi":"NHIÊN LIỆU","uk":"ПАЛИВО"}
 func display_name() -> String:
 	var RT=load("res://scripts/run_text.gd")
 	if is_pet(): return RT.text("dog_%d"%pet_index())
 	if weapon_id=="BIKE": return RT.text("l_bike")
-	if weapon_id=="SPORT" or weapon_id=="CRUISER":
+	# vehicles: the store already has every name. SEDAN / TANK / GOLD_CAR used to fall through to
+	# the weapon table, which has no entry for them, so the raw key showed instead of a name.
+	var store_keys:={"SPORT":"sport","CRUISER":"cruiser","SEDAN":"sedan","TANK":"tank","GOLD":"gold","GOLD_CAR":"gold_car","GOLDCAR":"gold_car"}
+	if store_keys.has(weapon_id):
 		var SC=load("res://scripts/store_catalog.gd")
-		return SC.text(RT.lang,"sport" if weapon_id=="SPORT" else "cruiser")
+		return SC.text(RT.lang,String(store_keys[weapon_id]))
+	if weapon_id=="FUEL":
+		return String(FUEL_NAMES.get(RT.lang,FUEL_NAMES["en"]))
 	if weapon_id=="ARMOR": return RT.fmt("shield",50)
 	if weapon_id=="HELMET": return RT.text("helmet")
 	var ST=load("res://scripts/shop_text.gd")
