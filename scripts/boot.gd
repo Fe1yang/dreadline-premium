@@ -28,7 +28,8 @@ var fade := 1.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
+	# full-screen art: fill tall phones top to bottom (no grey band); gameplay letterboxes later
+	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP_WIDTH
 	var cfg := ConfigFile.new()
 	var lang := OS.get_locale()
 	if cfg.load("user://deadfrontier.cfg") == OK: lang = String(cfg.get_value("ui", "language", lang))
@@ -84,7 +85,7 @@ func _paint() -> void:
 	canvas.draw_rect(Rect2(Vector2.ZERO, size), Color(INK, a))
 	if art != null:
 		var tw := float(art.get_width()); var th := float(art.get_height())
-		var k := minf(size.x / tw, size.y / th)
+		var k := maxf(size.x / tw, size.y / th)   # cover: fill the screen, crop the overflow
 		var sz := Vector2(tw * k, th * k)
 		canvas.draw_texture_rect(art, Rect2((size - sz) * 0.5, sz), false, Color(1, 1, 1, a))
 	var sx := size.x / 540.0; var sy := size.y / 960.0

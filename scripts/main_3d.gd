@@ -609,9 +609,7 @@ func _ready() -> void:
 	# Plus is 19.5:9) used to EXPAND the canvas, so the lobby grew a dead black band
 	# under it and the camera staged a frame the design never had. Keep the original
 	# rectangle and letterbox it on every device instead.
-	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP
-	ui_h=get_viewport().get_visible_rect().size.y
-	ui_w=get_viewport().get_visible_rect().size.x
+	_update_aspect()
 	_pin_sticks()
 	touch_controls=OS.has_feature("mobile")
 	_boot_progress(2); await get_tree().process_frame
@@ -1340,7 +1338,23 @@ func _sleep_hidden_scenes() -> void:
 		var want: int = Node.PROCESS_MODE_INHERIT if n.visible else Node.PROCESS_MODE_DISABLED
 		if n.process_mode != want: n.process_mode = want
 
+## The full-screen pictures (title poster, loading art) are 2:3 and the phones 9:19.5: in the
+## letterboxed 9:16 frame they left a grey band. While one of them is up the canvas grows to
+## the phone's full height (KEEP_WIDTH) and the picture is cover-fitted; every other screen
+## keeps the 9:16 frame it was laid out for.
+func _update_aspect() -> void:
+	var full: bool = booting or state in ["cover", "loading"]
+	var want: int = Window.CONTENT_SCALE_ASPECT_KEEP_WIDTH if full else Window.CONTENT_SCALE_ASPECT_KEEP
+	var w := get_tree().root
+	if w.content_scale_aspect != want:
+		w.content_scale_aspect = want
+	var r: Vector2 = get_viewport().get_visible_rect().size
+	if r.y != ui_h or r.x != ui_w:
+		ui_h = r.y; ui_w = r.x
+		if not booting: _pin_sticks()   # on-screen sticks and buttons follow the frame
+
 func _process(delta: float) -> void:
+	_update_aspect()
 	if booting: return   # still being put together behind the loading screen
 	_sleep_hidden_scenes()
 	_frame_probe(delta)
