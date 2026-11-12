@@ -901,10 +901,10 @@ func _build_district(i: int) -> void:
 		return
 	road.position=Vector3(0,0,ROAD_BEHIND-i*ROAD_SEGMENT); add_child(road)
 	EnvironmentMaterials.apply(road,i); DisasterDressing.apply(road,i,ZombieScript); roads.append(road)
-	_place_phone_booth(road)
-	_place_street_props(road, i)
+	_dress_district(road, i)
 	_apply_cull_range(road)
 	_randomize_zebra(road)
+	_reroll_dressing(road)
 	_setup_streetlamp(road,i)
 	_matte_district(road)
 	if road.has_meta("watcher"): watchers.append(road.get_meta("watcher"))
@@ -965,142 +965,221 @@ func _hide_road_lamps(road: Node3D) -> void:
 			mi.visible = false
 
 
-## One phone booth per block, standing beside the block's own street shelter and aligned with it.
-## If a district has no shelter there is no booth: nothing is dropped at random.
-const SHELTER_HINTS := ["station", "shelter", "busstop", "bus_stop", "kiosk"]
+## ---- Street furniture ------------------------------------------------------------------
+## Everything stands on the pavement: between the kerb (4.36 m from the centre line) and the
+## building fronts, which are measured for every block (they stand 7.3-8.7 m out and differ from
+## block to block). Nothing is put on the roadway, nothing where the block model already has
+## something (bus stop, tree, sign, steps), and props never overlap each other.
+## Wall pieces (vending machines, dumpster, phone booth, bench) have their back to the wall and
+## face the road; kerb pieces (bins, hydrants, lamps, traffic lights) stand at the kerb.
+## Blocks are built once and loop, so each block keeps a handful of candidate props and re-rolls
+## which of them are shown every time it comes round again (see _reroll_dressing): the same
+## block never looks the same twice in a row, and nothing is built during play.
+## (The CityMix models used to be exported with their origin 5-16 m away from the model, which
+## is why a bin "placed on the pavement" stood in the middle of the road. They are centred now.)
+const KERB_X := 4.36
+const KERB_PROP_X := 4.85         # bins, hydrants, lamps and traffic lights stand here
+const WALL_MIN := 6.8             # a front closer than this (an awning, a ramp) -> no wall props
+const WALL_MAX := 10.5
 
-
-func _shelter_of(road: Node3D) -> AABB:
-	var found := AABB()
-	var has := false
+func _block_wall(road: Node3D, side: float) -> float:
+	var best := 99.0
 	for m in road.find_children("*", "MeshInstance3D", true, false):
 		var mi := m as MeshInstance3D
-		if mi == null or mi.mesh == null:
-			continue
-		var nm := String(mi.name).to_lower()
-		var hit := false
-		for hint in SHELTER_HINTS:
-			if nm.find(hint) != -1:
-				hit = true
-				break
-		if not hit:
-			continue
+		if mi == null or mi.mesh == null: continue
 		var a: AABB = mi.global_transform * mi.get_aabb()
-		# a real shelter sits wholly on one pavement; anything crossing the centre line is not one
-		var on_left: bool = a.end.x < -4.6
-		var on_right: bool = a.position.x > 4.6
-		if not (on_left or on_right):
-			continue
-		if a.size.x > 4.0 or a.size.y > 4.5:
-			continue
-		found = a if not has else found.merge(a)
-		has = true
-	return found
+		if a.size.y < 4.0: continue
+		if side > 0.0 and a.position.x > 5.0: best = minf(best, a.position.x)
+		if side < 0.0 and a.end.x < -5.0: best = minf(best, -a.end.x)
+	return best
 
-
-func _place_phone_booth(road: Node3D) -> void:
-	var shel := _shelter_of(road)
-	if shel.size == Vector3.ZERO:
-		# No shelter mesh in this block: stand it on the pavement line instead of skipping, so
-		# every other block gets one. One per 16 m block can never overlap the next.
-		return
-	var side := -1.0 if shel.get_center().x < 0.0 else 1.0
-	# Fixed outer line requested by the user: 10 m from the centre line, well past the kerb.
-	# 8.85 m is the pavement line; 11 m sits inside the building shell, so props placed there
-	# were invisible.
-	var x: float = side * 8.85
-	var z: float = shel.end.z + 1.5 if side < 0.0 else shel.position.z - 1.5
-	# side-on, glass towards the road
-	_prop_node("phone_booth", road, Vector3(x, PAVEMENT_Y, z), -side * PI * 0.5)
-
-
-## The rest of the street furniture, all on the x = 11 line the user settled on. Sparse: most
-## blocks get two or three pieces, and litter comes as a small cluster near existing ground junk.
-func _place_street_props(road: Node3D, index: int) -> void:
-	var rng_d := RandomNumberGenerator.new()
-	rng_d.seed = 0xC0FFEE + index * 733
-	var side: float = -1.0 if rng_d.randf() < 0.5 else 1.0
-	var base_z: float = road.global_position.z
-	# 8.85 m is the pavement line; 11 m sits inside the building shell, so props placed there
-	# were invisible.
-	var x: float = side * 8.85
-
-	if rng_d.randf() < 0.20:
-		_prop_node("bench", road, Vector3(x, PAVEMENT_Y, base_z + rng_d.randf_range(-6.0, 6.0)), -side * PI * 0.5)
-	if rng_d.randf() < 0.18:
-		_prop_node("trash_bin", road, Vector3(x, PAVEMENT_Y, base_z + rng_d.randf_range(-6.0, 6.0)), -side * PI * 0.5)
-	# trash cans live out past the kerb line, at 12 m from the centre
-	if rng_d.randf() < 0.16:
-		_prop_node("trash_can", road, Vector3(side * 12.0, PAVEMENT_Y, base_z + rng_d.randf_range(-6.0, 6.0)), 0.0)
-	if rng_d.randf() < 0.40:
-		# 10.9 .. 11.3 on whichever pavement this block uses
-		var mx: float = x + side * rng_d.randf_range(-0.1, 0.3)
-		# ring the crater mouth instead of dropping covers on the tarmac
-	# No hydrant on the tarmac: hydrants belong on the pavement (the block below places them
-	# at the kerb line). This one used to drop in the middle of the lane.
-
-	# litter: 1-4 cans in one spot, preferably where the block already has ground junk
-	if rng_d.randf() < 0.45:
-		# only the z comes from the junk pile: the cans themselves must stay on 9..12
-		var near := _junk_spot(road, side)
-		var lz: float = near.z if near != Vector3.ZERO else base_z + rng_d.randf_range(-7.0, 7.0)
-		var lx: float = side * rng_d.randf_range(9.0, 12.0)
-		var count: int = rng_d.randi_range(1, 4)
-		for i in range(count):
-			var can_name: String = ["can_a", "can_b", "can_c", "can_d"][rng_d.randi_range(0, 3)]
-			var off := Vector3(rng_d.randf_range(-0.6, 0.6), 0.0, rng_d.randf_range(-0.6, 0.6))
-			_prop_node(can_name, road, Vector3(lx, PAVEMENT_Y, lz) + off, rng_d.randf_range(0.0, TAU))
-
-
-## World position of existing ground junk on one side of the block, or ZERO if there is none.
-func _junk_spot(road: Node3D, side: float) -> Vector3:
+## Building front on one side at one point along the road (99 if no building stands there).
+## Where a side street or an open plot meets the road there is asphalt instead of pavement, so
+## nothing may be put there -- not even a kerb piece.
+func _wall_at(road: Node3D, side: float, z: float, half_len: float) -> float:
+	var best := 99.0
 	for m in road.find_children("*", "MeshInstance3D", true, false):
 		var mi := m as MeshInstance3D
-		if mi == null or mi.mesh == null:
-			continue
-		var nm := String(mi.name).to_lower()
-		if nm.find("garbage") == -1 and nm.find("trash") == -1 and nm.find("weed") == -1 and nm.find("rubble") == -1:
-			continue
+		if mi == null or mi.mesh == null: continue
 		var a: AABB = mi.global_transform * mi.get_aabb()
-		if side > 0.0 and a.get_center().x < 4.2:
-			continue
-		if side < 0.0 and a.get_center().x > -4.2:
-			continue
-		return a.get_center()
-	return Vector3.ZERO
+		if a.size.y < 4.0: continue
+		if a.position.z > z - half_len or a.end.z < z + half_len: continue   # must cover the whole prop
+		if side > 0.0 and a.position.x > 5.0: best = minf(best, a.position.x)
+		if side < 0.0 and a.end.x < -5.0: best = minf(best, -a.end.x)
+	return best
 
+## Footprints (x/z rectangles) of whatever the block model already has standing on the pavement.
+func _block_clutter(road: Node3D) -> Array:
+	var out: Array = []
+	for m in road.find_children("*", "MeshInstance3D", true, false):
+		var mi := m as MeshInstance3D
+		if mi == null or mi.mesh == null or not mi.visible: continue
+		var a: AABB = mi.global_transform * mi.get_aabb()
+		if a.size.y < 0.25 and a.position.y < 0.3: continue      # paint, kerbs, paving
+		if a.size.x > 7.0 or a.size.z > 7.0: continue            # buildings and the road itself
+		var cx: float = absf(a.get_center().x)
+		if cx < KERB_X - 0.3 or cx > WALL_MAX: continue
+		out.append(Rect2(a.position.x, a.position.z, a.size.x, a.size.z))
+	return out
 
-func _decorate_district(road: Node3D, index: int) -> void:
-	var decor_rng := RandomNumberGenerator.new()
-	decor_rng.seed = 0x5EED + index * 977
-	var base_z: float = road.global_position.z
-	# --- lamps: three block styles, so the lighting differs from street to street -------------
-	# Placed near the kerb, in world space, on the pavement (kerb 4.36, buildings ~7.8).
-	var lamp_style: int = index % 3
-	if lamp_style != 2:
-		var lamp_name: String = "lamp_modern" if lamp_style == 0 else "lamp_round"
+func _spot_free(taken: Array, r: Rect2) -> bool:
+	var grown := r.grow(0.25)
+	for t in taken:
+		if grown.intersects(t): return false
+	return true
+
+## Places one prop if its footprint is free. size_x / size_z = footprint after the yaw.
+func _dress_one(road: Node3D, taken: Array, name: String, pos: Vector3, yaw: float, size_x: float, size_z: float) -> Node3D:
+	if absf(pos.x) < KERB_X + 0.1: return null      # never on the roadway
+	# only where a building actually stands behind the spot: no side streets, no junctions
+	var w: float = _wall_at(road, signf(pos.x), pos.z, size_z * 0.5 + 0.3)
+	if w > WALL_MAX or absf(pos.x) + size_x * 0.5 > w - 0.02: return null
+	var r := Rect2(pos.x - size_x * 0.5, pos.z - size_z * 0.5, size_x, size_z)
+	if not _spot_free(taken, r): return null
+	var n := _prop_node(name, road, pos, yaw)
+	if n != null: taken.append(r)
+	return n
+
+func _dress_district(road: Node3D, index: int) -> void:
+	var d := RandomNumberGenerator.new()
+	d.seed = 0xC17E + index * 7919
+	var z0: float = road.global_position.z
+	var taken: Array = _block_clutter(road)
+	var groups: Array = []        # [[nodes...], chance]  re-rolled every lap
+	var signals: Array = []       # traffic lights shown together with this block's zebra crossing
+	var walls := {-1.0: _block_wall(road, -1.0), 1.0: _block_wall(road, 1.0)}
+
+	# --- traffic lights -------------------------------------------------------------------------
+	# Overhead signal gantries on two of the four signal blocks are swapped for kerb lights.
+	var gantry := AABB(); var has_gantry := false
+	for m in road.find_children("*", "MeshInstance3D", true, false):
+		var mi := m as MeshInstance3D
+		if mi == null or not String(mi.name).begins_with("CITY_signal_"): continue
+		var ga: AABB = mi.global_transform * mi.get_aabb()
+		gantry = ga if not has_gantry else gantry.merge(ga); has_gantry = true
+	if has_gantry and (index % 24 == 11 or index % 24 == 23):
+		for m in road.find_children("CITY_signal_*", "MeshInstance3D", true, false):
+			(m as MeshInstance3D).visible = false
 		for side in [-1.0, 1.0]:
-			_prop_node(lamp_name, road, Vector3(side * 8.80, PAVEMENT_Y, base_z + 2.4), 0.0)
-			_prop_node(lamp_name, road, Vector3(side * 8.80, PAVEMENT_Y, base_z - 5.4), 0.0)
-	# --- things that stand against the buildings --------------------------------------------
+			_dress_one(road, taken, "traffic_light", Vector3(side * KERB_PROP_X, PAVEMENT_Y, gantry.position.z + 0.4), 0.0, 0.4, 0.4)
+	# A crossing gets a light at its far edge on both kerbs, facing the runner; shown only when the
+	# crossing itself is (crossings come and go each lap).
+	var zebra := road.find_child("CITY_zebra_paint", true, false) as MeshInstance3D
+	if zebra != null and zebra.mesh != null and not (has_gantry and (index % 24 == 11 or index % 24 == 23)):
+		var za: AABB = zebra.global_transform * zebra.get_aabb()
+		if za.position.x < -1.0 and za.end.x > 1.0:          # it crosses the main road
+			for side in [-1.0, 1.0]:
+				var tl := _dress_one(road, taken, "traffic_light", Vector3(side * KERB_PROP_X, PAVEMENT_Y, za.position.z - 0.7), 0.0, 0.4, 0.4)
+				if tl != null: signals.append(tl)
+	road.set_meta("dress_signals", signals)
+
+	# --- round lamps on the blocks that have no lamp of their own -------------------------------
+	var own_lamp := road.find_child("*diffuser*", true, false) != null or road.find_child("CITY_lamp", true, false) != null
+	if not own_lamp:
+		# like the ordinary lamps: sometimes a pair facing each other, sometimes just one, on
+		# either side; and about a third of them are dead and stay dark at night
+		var lamp_sides: Array = [-1.0, 1.0] if d.randf() < 0.4 else [(-1.0 if d.randf() < 0.5 else 1.0)]
+		for ls in lamp_sides:
+			var lamp := _dress_one(road, taken, "lamp_round", Vector3(ls * KERB_PROP_X, PAVEMENT_Y, z0 + 4.8), 0.0, 0.7, 0.7)
+			if lamp != null and d.randf() < 0.65: _light_round_lamp(road, lamp)
+
+	# --- against the wall ----------------------------------------------------------------------
 	for side in [-1.0, 1.0]:
-		var x_wall: float = side * 9.40
-		if decor_rng.randf() < 0.34:
-			_prop_node("trash_bin", road, Vector3(x_wall, PAVEMENT_Y, base_z + decor_rng.randf_range(-6.0, 6.0)), side * PI * 0.5)
-		if decor_rng.randf() < 0.26:
-			_prop_node("trash_can", road, Vector3(side * 12.0, PAVEMENT_Y, base_z + decor_rng.randf_range(-6.0, 6.0)), side * PI * 0.5)
-		if decor_rng.randf() < 0.18:
-			_prop_node("phone_booth", road, Vector3(x_wall, PAVEMENT_Y, base_z + decor_rng.randf_range(-5.0, 5.0)), side * PI * 0.5)
-		if decor_rng.randf() < 0.30:
-			_prop_node("bench", road, Vector3(side * 8.80, PAVEMENT_Y, base_z + decor_rng.randf_range(-5.5, 5.5)), side * PI * 0.5)
-		if decor_rng.randf() < 0.22:
-			_prop_node("hydrant", road, Vector3(side * 8.70, PAVEMENT_Y, base_z + decor_rng.randf_range(-6.5, 6.5)), 0.0)
-		# --- litter: a couple of cans, not a carpet ---------------------------------------------
-	var cans := decor_rng.randi_range(0, 3)
-	for i in range(cans):
-		var can_name: String = ["can_a", "can_b", "can_c", "can_d"][decor_rng.randi_range(0, 3)]
-		var cx: float = decor_rng.randf_range(8.6, 9.7) * (1.0 if decor_rng.randf() < 0.5 else -1.0)
-		_prop_node(can_name, road, Vector3(cx, PAVEMENT_Y, base_z + decor_rng.randf_range(-7.0, 7.0)), decor_rng.randf_range(0.0, TAU))
+		var wall: float = walls[side]
+		if wall < WALL_MIN or wall > WALL_MAX: continue
+		var face_road: float = -side * PI * 0.5          # model front (+Z) turned towards the road
+		var roll := d.randf()
+		var zc: float = z0 + d.randf_range(-5.0, 5.0)
+		if roll < 0.30:
+			# a pair of drink machines side by side
+			# the pair is checked as one footprint, so the two machines may touch each other
+			var x: float = side * (wall - 0.39 - 0.04)
+			var pair := Rect2(x - 0.39, zc - 1.12, 0.78, 2.24)
+			if _spot_free(taken, pair) and _wall_at(road, side, zc, 1.4) <= WALL_MAX:
+				var a := _prop_node("vending_drinks_a", road, Vector3(x, PAVEMENT_Y, zc - 0.56), face_road)
+				var b := _prop_node("vending_drinks_b", road, Vector3(x, PAVEMENT_Y, zc + 0.56), face_road)
+				taken.append(pair)
+				var g: Array = []
+				if a != null: g.append(a)
+				if b != null: g.append(b)
+				if not g.is_empty(): groups.append([g, 0.45])
+		elif roll < 0.55:
+			# a dumpster, long side along the wall, with a box or two beside it
+			var x2: float = side * (wall - 0.61 - 0.05)
+			var dump := _dress_one(road, taken, "dumpster", Vector3(x2, PAVEMENT_Y, zc), face_road, 1.22, 2.64)
+			if dump != null:
+				var g2: Array = [dump]
+				for k in range(d.randi_range(1, 2)):
+					var bz: float = zc + (1.75 + 0.65 * k) * (1.0 if d.randf() < 0.5 else -1.0)
+					var box := _dress_one(road, taken, "cardboard_box", Vector3(side * (wall - 0.34), PAVEMENT_Y, bz), d.randf_range(-0.4, 0.4), 0.62, 0.62)
+					if box != null: g2.append(box)
+				groups.append([g2, 0.40])
+		elif roll < 0.77:
+			# phone booth (a favourite -- seen more often than the rest): its door (+X) towards the road
+			var x3: float = side * (wall - 0.55 - 0.05)
+			var booth := _dress_one(road, taken, "phone_booth", Vector3(x3, PAVEMENT_Y, zc), 0.0 if side < 0.0 else PI, 1.1, 1.1)
+			if booth != null: groups.append([[booth], 0.7])
+		elif roll < 0.90:
+			# bench with its back to the wall
+			var x4: float = side * (wall - 0.34 - 0.10)
+			var bench := _dress_one(road, taken, "bench", Vector3(x4, PAVEMENT_Y, zc), face_road, 0.68, 1.94)
+			if bench != null: groups.append([[bench], 0.5])
+
+	# --- at the kerb ---------------------------------------------------------------------------
+	for side in [-1.0, 1.0]:
+		if d.randf() < 0.45:
+			var bin := _dress_one(road, taken, "trash_bin", Vector3(side * KERB_PROP_X, PAVEMENT_Y, z0 + d.randf_range(-6.5, 6.5)), PI * 0.5, 0.5, 0.66)
+			if bin != null: groups.append([[bin], 0.45])
+		if d.randf() < 0.30:
+			var hyd := _dress_one(road, taken, "hydrant", Vector3(side * KERB_PROP_X, PAVEMENT_Y, z0 + d.randf_range(-6.5, 6.5)), d.randf_range(0.0, TAU), 0.5, 0.5)
+			if hyd != null: groups.append([[hyd], 0.4])
+
+	# --- on the pavement: a manhole cover, a few cans --------------------------------------------
+	var ms: float = -1.0 if d.randf() < 0.5 else 1.0
+	var mw: float = walls[ms] if walls[ms] < WALL_MAX else 8.0
+	if d.randf() < 0.5 and mw - KERB_X > 2.6:
+		var mh := _dress_one(road, taken, "manhole_cover", Vector3(ms * (KERB_X + 1.2), PAVEMENT_Y - 0.035, z0 + d.randf_range(-6.0, 6.0)), d.randf_range(0.0, TAU), 1.0, 1.0)
+		if mh != null: groups.append([[mh], 0.35])
+	if d.randf() < 0.5:
+		var cs: float = -1.0 if d.randf() < 0.5 else 1.0
+		var cw: float = walls[cs] if walls[cs] < WALL_MAX else 8.0
+		var cz: float = z0 + d.randf_range(-6.0, 6.0)
+		var cans: Array = []
+		for k in range(d.randi_range(1, 3)):
+			var can := _dress_one(road, taken, ["can_a", "can_b", "can_c", "can_d"][d.randi_range(0, 3)],
+				Vector3(cs * d.randf_range(KERB_X + 0.6, cw - 0.4), PAVEMENT_Y, cz + d.randf_range(-0.8, 0.8)), d.randf_range(0.0, TAU), 0.14, 0.14)
+			if can != null: cans.append(can)
+		if not cans.is_empty(): groups.append([cans, 0.4])
+	road.set_meta("dress_groups", groups)
+
+## Each lap: every group of street furniture is shown or hidden afresh; traffic lights follow the
+## block's zebra crossing.
+func _reroll_dressing(road: Node3D) -> void:
+	if road.has_meta("dress_groups"):
+		for g in road.get_meta("dress_groups"):
+			var on: bool = rng.randf() < float(g[1])
+			for n in g[0]:
+				if is_instance_valid(n): (n as Node3D).visible = on
+	if road.has_meta("dress_signals"):
+		var zebra := road.find_child("CITY_zebra_paint", true, false) as Node3D
+		var crossing_on: bool = zebra != null and zebra.visible
+		for n in road.get_meta("dress_signals"):
+			if is_instance_valid(n): (n as Node3D).visible = crossing_on
+
+## The round lamp's globe glows at night and throws a pool of light, like the blocks' own lamps.
+var round_globe_mesh: SphereMesh
+func _light_round_lamp(road: Node3D, lamp: Node3D) -> void:
+	if round_globe_mesh == null:
+		round_globe_mesh = SphereMesh.new(); round_globe_mesh.radius = 0.36; round_globe_mesh.height = 0.72
+	var globe := MeshInstance3D.new(); globe.mesh = round_globe_mesh
+	var mat := StandardMaterial3D.new(); mat.albedo_color = Color("e9e6dc"); mat.roughness = 0.6
+	mat.emission_enabled = true; mat.emission = Color("ffd78e"); mat.emission_energy_multiplier = 0.0
+	globe.material_override = mat; globe.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	lamp.add_child(globe); globe.position = Vector3(0, 3.2, 0)
+	var spot := SpotLight3D.new(); spot.position = Vector3(0, 3.0, 0); spot.rotation_degrees = Vector3(-90, 0, 0)
+	spot.light_color = Color("ffdca3"); spot.spot_range = 9.0; spot.spot_angle = 55.0; spot.spot_attenuation = 1.2
+	spot.light_energy = 0.0; spot.visible = false; lamp.add_child(spot)
+	street_lamps.append({"light": spot, "material": mat})
 
 
 func _build_road() -> void:
@@ -1199,6 +1278,7 @@ func _process(delta: float) -> void:
 			_refresh_watcher(road)
 			var _t1 := Time.get_ticks_usec()
 			_randomize_zebra(road)
+			_reroll_dressing(road)
 			var _t2 := Time.get_ticks_usec()
 			if OS.has_environment("PERF_TRACE"):
 				var _a: float = (_t1 - _t0) / 1000.0
