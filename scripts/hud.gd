@@ -152,7 +152,27 @@ func _process(_delta: float) -> void:
 	if material: (material as ShaderMaterial).set_shader_parameter("strength",0.0 if game.state in ["cover","loading","terms"] else 1.0)
 	queue_redraw()
 
+## The title poster lives on its own node behind the HUD. The HUD's worn-paint shader covers
+## everything the HUD itself draws, and it was only switched off in three named states: whenever
+## the poster was the backdrop of anything else (settings opened from the cover, a pop-up, a
+## transition) the shader ate blotchy holes into its sky and sun. A child node does not inherit
+## that shader, so the poster is now clean no matter which screen is showing it.
+var cover_node: TextureRect
+func _show_cover_art() -> void:
+	if cover_node==null:
+		cover_node=TextureRect.new()
+		cover_node.show_behind_parent=true
+		cover_node.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		cover_node.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+		cover_node.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_COVERED   # fill, crop the overflow
+		add_child(cover_node)
+	cover_node.texture=menu_art
+	cover_node.position=Vector2.ZERO
+	cover_node.size=Vector2(540.0,game.ui_h)
+	cover_node.visible=true
+
 func _draw() -> void:
+	if cover_node!=null: cover_node.visible=false   # switched back on by _draw_cover() when needed
 	_draw_missing_assets()
 	clean_ops.clear(); list_ops.clear()
 	if game==null or font==null: return
@@ -282,12 +302,12 @@ func _draw_hud() -> void:
 	var rx: float=270.0-(38.0+kw)*0.5
 	_draw_skull(Vector2(rx+14,118),16)
 	draw_string(bold,Vector2(rx+38,133),kill_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,34,WHITE)
-	var gold_txt:="金币 x %d" % game.run_coins if String(game.language_code).begins_with("zh") else "GOLD x %d" % game.run_coins
-	var silver_txt:="银币 x %d" % game.run_silver if String(game.language_code).begins_with("zh") else "SILVER x %d" % game.run_silver
+	var gold_txt:="金币x%d" % game.run_coins if String(game.language_code).begins_with("zh") else "GOLD x %d" % game.run_coins
+	var silver_txt:="银币x%d" % game.run_silver if String(game.language_code).begins_with("zh") else "SILVER x %d" % game.run_silver
 	# right aligned, small, both currencies always visible so the player can read the stock
 	var gold_w: float=bold.get_string_size(gold_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x
 	var silver_w: float=bold.get_string_size(silver_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x
-	var coin_total: float=gold_w+14.0+silver_w
+	var coin_total: float=gold_w+9.0+silver_w
 	draw_string(bold,Vector2(534.000000-coin_total,150.0),gold_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("f2c14e"))
 	draw_string(bold,Vector2(534.000000-silver_w,150.0),silver_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("cfd6dd"))
 	var pause_pos: Vector2=game.control_pos("pause")
@@ -521,11 +541,7 @@ func _draw_cover() -> void:
 	# top-right corner opens settings; any other tap continues to the main menu.
 	if menu_art:
 		# cover fit: the poster always fills the height, and any extra width is cropped away
-		var tw := float(menu_art.get_width())
-		var th := float(menu_art.get_height())
-		var k := maxf(game.ui_h / th, 540.0 / tw)
-		var sz := Vector2(tw * k, th * k)
-		draw_texture_rect(menu_art, Rect2(Vector2((540.0 - sz.x) * 0.5, (game.ui_h - sz.y) * 0.5), sz), false)
+		_show_cover_art()
 	else: draw_rect(Rect2(0,0,540,game.ui_h),INK)
 	# The Dreadline poster has no prompt painted on it, so draw it here.
 	var lang_t: String = game.language_code
@@ -777,10 +793,11 @@ func _draw_character_select() -> void:
 					_info_tip(mpl,RunText.text(String(sk4.get("name","")),lang),game.character_name(int(sk4.get("char",-1))),
 						ExtraText.text(lang,"skin_locked"))
 				elif game.lobby_tab==1 and ci<game.lobby.PETS.size():
+					var pci: int = game.pet_for_card(ci)   # card slot -> pet index
 					var psub := ExtraText.text(lang,"pet_locked")
 					if game.premium_build():
-						psub = ("已拥有" if String(lang).begins_with("zh") else "OWNED") if game.pet_owned(ci) else ("%d %s" % [int(game.pack_by_id("pet_%d" % ci).get("coins",0)), "金币" if String(lang).begins_with("zh") else "coins"])
-					_info_tip(mpl,game.pet_name(ci),ShopText.text(lang,"pets"), psub)
+						psub = ("已拥有" if String(lang).begins_with("zh") else "OWNED") if game.pet_owned(pci) else ("%d %s" % [int(game.pack_by_id("pet_%d" % pci).get("coins",0)), "金币" if String(lang).begins_with("zh") else "coins"])
+					_info_tip(mpl,game.pet_name(pci),ShopText.text(lang,"pets"), psub)
 				elif game.lobby_tab==0 and ci<game.lobby.CHARACTERS.size():
 					var ch: Dictionary=game.lobby.CHARACTERS[ci]
 					var perk2: String=String(ch.get("perk",""))
@@ -865,7 +882,9 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 		# Flamethrower: a gold-framed card, because it is the one high-value weapon in the game.
 		var owned: bool=game.flame_owned()
 		var gold:=Color("e8b84b")
-		_panel(vis,Color(0.16,0.12,0.05,0.95) if owned else Color(0.10,0.08,0.03,0.85),gold if whole else Color(gold,0.55),2)
+		# equipped: the same red frame and red underline every other equipped card gets
+		var flame_on: bool=owned and bool(game.weapon_equipped)
+		_panel(vis,Color(0.16,0.12,0.05,0.95) if owned else Color(0.10,0.08,0.03,0.85),(RED if flame_on else gold) if whole else Color(gold,0.55),2)
 		var wtex: Texture2D=_store_art("weapon_flame")
 		var wr2:=Rect2(card.position+Vector2(5,5),card.size-Vector2(10,30))
 		var wvis:=wr2.intersection(view)
@@ -876,7 +895,9 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 			_box(wvis,Color(0,0,0,0.55))
 		if whole:
 			_text_center("火焰喷射器" if String(lang).begins_with("zh") else "FLAMETHROWER",Vector2(card.get_center().x,card.end.y-9),13,gold)
-			if owned:
+			if flame_on:
+				draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),Color("b94a43"))
+			elif owned:
 				draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),gold)
 		_card_buy_row(card, 4, i, lang)
 		return
@@ -944,10 +965,11 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 		if whole: _locked_slot(card,pets)
 		else: _panel(vis,Color(0.04,0.045,0.047,0.80),Color(LINE,0.7),0)
 		return
-	var on: bool=(game.pet_equipped and game.pet_choice==i) if pets else (game.character_choice==i)
+	var pi: int=int(game.pet_for_card(i)) if pets else i   # card slot -> pet index on the pets tab
+	var on: bool=(game.pet_equipped and game.pet_choice==pi) if pets else (game.character_choice==i)
 	_panel(vis,Color(0.10,0.11,0.115,0.94) if on else Color(0.05,0.055,0.06,0.80),RED if on and whole else LINE,0)
 	var tex: Texture2D=null
-	if pets: tex=pet_portraits[i] if pet_portraits.size()>i else null
+	if pets: tex=pet_portraits[pi] if pet_portraits.size()>pi else null
 	else: tex=portraits[i] if portraits.size()>i else null
 	var r:=Rect2(card.position+Vector2(4,4),card.size-Vector2(8,30))
 	var vr:=r.intersection(view)
@@ -955,7 +977,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 		var ts:=tex.get_size()
 		var src := Rect2((vr.position-r.position)/r.size*ts, vr.size/r.size*ts)
 		clean_ops.append(["region",tex,vr,src])
-	var locked_card: bool=(not game.pet_owned(i)) if pets else (not game.character_owned(i))
+	var locked_card: bool=(not game.pet_owned(pi)) if pets else (not game.character_owned(i))
 	if locked_card and vr.size.y>1.0:
 		_box(vr,Color(0,0,0,0.58))
 		var lc:=r.get_center()+Vector2(0,6)
@@ -966,7 +988,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 			clean_ops.append(["line",arc,Color(1,1,1,0.9),3.0])
 			_box(Rect2(lc+Vector2(-2,5),Vector2(4,7)),Color(0,0,0,0.8))
 	if whole:
-		var label: String=game.pet_name(i) if pets else game.character_name(i)
+		var label: String=game.pet_name(pi) if pets else game.character_name(i)
 		var menu_open: bool = int(game.equip_menu_index)==i
 		if not menu_open:
 			_text_center(label,Vector2(card.get_center().x,card.end.y-9),11 if pets else 12,WHITE if on else MUTED)
@@ -976,7 +998,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 			var owned_now := false
 			match game.lobby_tab:
 				0: owned_now = game.character_owned(i)
-				1: owned_now = game.pet_owned(i)
+				1: owned_now = game.pet_owned(pi)
 				2: owned_now = game.skin_owned(i)
 				3: owned_now = game.vehicle_is_owned(String(["vehicle_bike","vehicle_sport","vehicle_car","vehicle_gold","vehicle_tank","vehicle_sedan","vehicle_gold_car"][clampi(i,0,6)]))
 				4: owned_now = game.flame_owned()
@@ -985,7 +1007,7 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 				_text_center("已拥有" if String(lang).begins_with("zh") else "OWNED", row.get_center()+Vector2(0,5), 11, Color(C_BONE.r,C_BONE.g,C_BONE.b,0.55))
 			else:
 				_box(row, Color(0.03,0.032,0.035,0.92)); _box(Rect2(row.position,Vector2(3,row.size.y)),C_BLOOD)
-				_text_center(game.card_price_text(game.lobby_tab, i), row.get_center()+Vector2(0,5), 11, C_ACID)
+				_text_center(game.card_price_text(game.lobby_tab, pi), row.get_center()+Vector2(0,5), 11, C_ACID)
 		if on: draw_rect(Rect2(card.position.x+6,card.end.y-5,card.size.x-12,2),Color("b94a43"))
 
 func _locked_slot(rect: Rect2,pet:=false,skin:=false) -> void:
