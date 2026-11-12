@@ -1636,7 +1636,7 @@ func _warm_crate_ids() -> void:
 	# Read the real id list instead of a hand-written copy: MAKAROV/RIFLE/SUOMI were missing and
 	# each one still cost ~68 ms the first time a crate rolled in.
 	var ids: Array = CRATE_WEAPONS.duplicate()
-	for extra in ["ARMOR", "HELMET", "BIKE", "SPORT", "CRUISER", "SEDAN", "FUEL", "PET_0"]:
+	for extra in ["ARMOR", "HELMET", "BIKE", "SPORT", "CRUISER", "SEDAN", "TANK", "FUEL", "PET_0"]:
 		if not ids.has(extra):
 			ids.append(extra)
 	var warm: Array = []
@@ -1717,7 +1717,7 @@ func _render_warmup() -> void:
 		holders.append(z)
 		n += 1
 	var ids: Array = CRATE_WEAPONS.duplicate()
-	for extra in ["ARMOR", "HELMET", "BIKE", "SPORT", "CRUISER", "SEDAN", "FUEL", "PET_0"]:
+	for extra in ["ARMOR", "HELMET", "BIKE", "SPORT", "CRUISER", "SEDAN", "TANK", "FUEL", "PET_0"]:
 		if not ids.has(extra):
 			ids.append(extra)
 	n = 0
@@ -5523,6 +5523,7 @@ const LEGEND_PETS := [5, 6]                  # white tiger, lion (indexes into l
 const ROAD_PET_WEIGHTS := {0: 32, 1: 26, 4: 22, 2: 14, 3: 6}   # doberman, shepherd, labrador, wolfdog, mastiff
 const STARTER_PETS := [0, 1, 4]              # free on the road for everyone
 const ROLLER_PET_CHANCE := 0.07              # was 0.20
+const UNLOCK_TANK := 6000.0                 # metres before a tank can roll in on a barrel
 const ROLLER_VEHICLE_CHANCE := 0.12          # was 0.30
 var legend_pet_run := false
 var legend_pet_given := false
@@ -5549,6 +5550,8 @@ func _roller_id() -> String:
 		# the plain motorbike is the usual find; the better bikes and the car are the rare ones
 		var v_roll:=rng.randf()
 		var want:="BIKE"
+		# Late game only, and for everyone (no purchase needed): now and then a tank on a barrel.
+		if distance>=UNLOCK_TANK and v_roll>=0.965: return "TANK"
 		if v_roll>=0.95: want="SEDAN"
 		elif v_roll>=0.84: want="CRUISER"
 		elif v_roll>=0.72: want="SPORT"
@@ -5590,6 +5593,9 @@ func _break_crate(crate: Node3D) -> void:
 	if crate.weapon_id=="FUEL":
 		_refuel(); sound.play("gate")
 		return
+	if crate.weapon_id=="TANK":
+		player.mount_vehicle("TANK"); sound.play("gate")
+		_popup(player.position+Vector3(0,2.5,0),crate.display_name(),Color("ffd27a")); return
 	if crate.weapon_id=="SEDAN":
 		player.mount_vehicle("SEDAN"); sound.play("gate")
 		_popup(player.position+Vector3(0,2.5,0),crate.display_name(),Color("ffd27a")); return

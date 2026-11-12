@@ -16,7 +16,7 @@ const CRATE_SCALE := 2.9
 ## The item floating over a crate/barrel reads too small on a phone: scale it up.
 const ITEM_BOOST := 1.75
 ## Every ride in the game, and the length it is drawn at on a crate.
-const VEHICLE_IDS := ["BIKE", "SPORT", "CRUISER", "SEDAN", "GOLDCAR"]
+const VEHICLE_IDS := ["BIKE", "SPORT", "CRUISER", "SEDAN", "GOLDCAR", "TANK"]
 ## How long a vehicle looks while it floats over a barrel or stands on a platform. One rule for
 ## every vehicle, measured on the model as it actually sits in the world, so a GLB authored in
 ## centimetres (the gold car is 97 units long) and one authored in metres come out the same.
@@ -24,7 +24,7 @@ const VEHICLE_IDS := ["BIKE", "SPORT", "CRUISER", "SEDAN", "GOLDCAR"]
 ## (sedan, gold sports car) are shown at twice that: at pet size a car read as a toy.
 const VEHICLE_SHOW := 1.7
 const CAR_SHOW := 3.4
-const CAR_IDS := ["SEDAN", "GOLDCAR", "CAR"]
+const CAR_IDS := ["SEDAN", "GOLDCAR", "CAR", "TANK"]
 const CRATE_ITEM_SCALE := 1.5   # helmets keep their size
 ## Height of the concrete platform the drop stands on (the two platforms the crates
 ## have always been placed on, left and right of the lane).
@@ -138,6 +138,7 @@ func _ready() -> void:
 	if weapon_id=="CRUISER": path = "res://assets/models/vehicles/bike_paid3.glb"
 	if weapon_id=="SEDAN": path = "res://assets/models/vehicles/black_car.glb"
 	if weapon_id=="GOLDCAR": path = "res://assets/models/vehicles/gold_car.glb"
+	if weapon_id=="TANK": path = "res://assets/models/vehicles/tank_military.glb"
 	if is_pet():
 		var pi := pet_index()
 		weapon_model = (load(LobbyScene.PETS[pi].asset) as PackedScene).instantiate() as Node3D
