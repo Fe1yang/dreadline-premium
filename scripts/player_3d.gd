@@ -1061,8 +1061,14 @@ func set_helmet(equipped: bool) -> void:
 			# bushier hairdo gets a bigger shell over it instead of pushing the rim down over the eyes.
 			var ref_sc: float = maxf(0.261 * 1.16 / hb.size.x, 0.267 * 1.10 / hb.size.z)
 			var rim: float = head_y + 0.202 - hb.size.y * ref_sc   # 2 cm above Maya's: clear of every survivor's eyes
-			var sc: float = maxf(maxf(h.size.x * 1.10 / hb.size.x, h.size.z * 1.06 / hb.size.z), (h.end.y + 0.03 - rim) / hb.size.y)
-			var pos := Vector3(hc.x - hb.get_center().x * sc, rim - hb.position.y * sc, hc.z + 0.005 - hb.get_center().z * sc)
+			# One helmet size for everyone: the size that fits Riley (head 0.32 x 0.34 m, crown 1.745 m).
+			# Sized per head it came out oversized on the two men and too small on Maya.
+			var riley_rim: float = 1.5687 + 0.202 - hb.size.y * ref_sc
+			var sc: float = maxf(maxf(0.32 * 1.10 / hb.size.x, 0.342 * 1.06 / hb.size.z), (1.745 + 0.03 - riley_rim) / hb.size.y)
+			# Faces sit at different heights on the shared rig: lift the rim to each survivor's brow.
+			if character == 3: sc *= 1.12   # Maya's braids need a roomier shell
+			var brow_lift: float = float({0: 0.055, 1: 0.0, 2: 0.025, 3: 0.045}.get(character, 0.0))
+			var pos := Vector3(hc.x - hb.get_center().x * sc, rim + brow_lift - hb.position.y * sc, hc.z + 0.005 - hb.get_center().z * sc)
 			helmet_model.transform = _bone_model("Head").affine_inverse() * Transform3D(Basis.from_scale(Vector3.ONE * sc), pos)
 		else:
 			var widest: float = maxf(hb.size.x, maxf(hb.size.y, hb.size.z))
