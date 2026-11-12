@@ -21,7 +21,11 @@ static func bite_damage(breed_index: int) -> float:
 const BITE_INTERVAL:=1.35
 ## The white tiger and the lion still kill whatever they bite, but they take their time:
 ## one kill every 5 s instead of every 1.35 s, so they thin the horde rather than erase it.
-const BIG_CAT_BITE_INTERVAL:=5.0
+## Big cats used to bite once every five seconds, one zombie at a time, which read as the pet
+## idling while the horde walked past. They now bite roughly twice a second and the swipe catches
+## everything in a short arc in front of them.
+const BIG_CAT_BITE_INTERVAL:=0.55
+const BIG_CAT_SWEEP_RANGE:=2.4
 func bite_interval() -> float:
 	return BIG_CAT_BITE_INTERVAL if (breed==TIGER_BREED or breed==LION_BREED) else BITE_INTERVAL
 const FOLLOW_SPEED:=7.0
@@ -315,6 +319,17 @@ func tick(delta: float) -> void:
 			var dmg: float=bite_damage(breed)
 			if target.kind=="brute": dmg=minf(dmg,maxf(0.0,float(target.health)-1.0))
 			if dmg>0.0: game._hit_zombie(target,dmg,"torso",hit_at)
+			# the swing carries: every other zombie within the arc is caught too
+			if breed==TIGER_BREED or breed==LION_BREED:
+				var centre: Vector3=target.global_position
+				for other in game.zombies.duplicate():
+					if not is_instance_valid(other) or other.dead or other==target: continue
+					var flat: Vector3=other.global_position-centre; flat.y=0.0
+					if flat.length()>BIG_CAT_SWEEP_RANGE: continue
+					var odmg: float=bite_damage(breed)
+					if String(other.kind)=="brute": odmg=minf(odmg,maxf(0.0,float(other.health)-1.0))
+					if odmg>0.0:
+						game._hit_zombie(other,odmg,"torso",other.global_position+Vector3(0,0.9,0))
 			if game.has_method("_progress"): game._progress("bites",1)
 			target=null
 	else:

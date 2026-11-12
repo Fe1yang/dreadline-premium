@@ -1392,6 +1392,9 @@ const PIERCE_CAP := 2
 const CRIT_BONUS_CAP := 0.60      # on top of the gun's own crit (sniper 25% -> up to 85%)
 const CRIT_MULT_CAP := 2.5        # a crit hits for at most x2.5
 const RELOAD_SCALE_MIN := 0.55
+## Roof on total HP: unlimited max-HP gates quietly undid the 60 HP base (a 2000 m run could sit
+## at 150+ HP and survive the one-hit kills the balance pass was for).
+const MAX_HEALTH_CAP := 110.0
 const REGEN_CAP := 0.6
 const KILL_HEAL_CAP := 1.0
 const DMG_REDUCE_CAP := 0.18
@@ -1418,7 +1421,7 @@ func apply_upgrade(id: String,value:=-1.0) -> void:
 			if n<=0: return
 			split_bonus += n; projectile_count = mini(9 if weapon=="SHOTGUN" else 5,projectile_count+n); gun_level += 1
 		"heal": health = minf(max_health,health+(15.0 if value<0 else value)*heal_scale())
-		"max_hp": max_health += value; health = minf(max_health,health+value)
+		"max_hp": max_health = minf(MAX_HEALTH_CAP,max_health+value); health = minf(max_health,health+value)
 		"regen": regen = minf(REGEN_CAP,regen+value)
 		"kill_heal": kill_heal = minf(KILL_HEAL_CAP,kill_heal+value)
 		"dmg_reduce": dmg_reduce = minf(DMG_REDUCE_CAP,dmg_reduce+value/100.0)
