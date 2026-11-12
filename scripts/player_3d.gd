@@ -33,7 +33,7 @@ var split_bonus := 0          # extra bullets from gates, kept when changing gun
 var shield := 0.0             # absorbs damage before health
 var regen := 0.0              # HP per second
 var kill_heal := 0.0          # HP per kill
-var dmg_reduce := 0.0         # 0..0.6 of incoming damage removed
+var dmg_reduce := 0.0         # 0..0.35 of incoming damage removed
 var move_mult := 1.0          # forward run and side-step speed, up to 1.4
 var bullet_speed_scale := 1.0
 ## "range" gate buff: how far a round flies. BULLET_REACH is the reach with no buff.
@@ -1110,15 +1110,15 @@ func weapon_bonus(id: String) -> float:
 ## set_weapon and apply_meta so a bought level always lands exactly once.
 func base_damage(id: String) -> float:
 	match id:
-		"MAKAROV": return 85.0*damage_scale
-		"SUOMI": return 16.0*damage_scale
-		"FLAME": return 6.0*damage_scale
-		"SMG": return 12.0*damage_scale
-		"SNIPER": return 95.0*damage_scale
-		"SHOTGUN": return 30.0*damage_scale
-		"PISTOL": return 24.0*damage_scale
-		"LAUNCHER": return 180.0*damage_scale
-		_: return 20.0*damage_scale
+		"MAKAROV": return 112.0*damage_scale
+		"SUOMI": return 21.0*damage_scale
+		"FLAME": return 8.0*damage_scale
+		"SMG": return 16.0*damage_scale
+		"SNIPER": return 125.0*damage_scale
+		"SHOTGUN": return 40.0*damage_scale
+		"PISTOL": return 32.0*damage_scale
+		"LAUNCHER": return 235.0*damage_scale
+		_: return 27.0*damage_scale
 
 func set_weapon(id: String) -> void:
 	# A gun swap must also stop the nozzle: the flame jet kept burning out of whatever
@@ -1133,31 +1133,31 @@ func set_weapon(id: String) -> void:
 	fire_mode = false
 	match weapon:
 		"MAKAROV":
-			magazine_size = 8; damage = 85.0*damage_scale; fire_interval = 0.55*rate_scale
+			magazine_size = 8; damage = 112.0*damage_scale; fire_interval = 0.55*rate_scale
 			bullet_speed = 44.0; pierce = 1; reload_duration = 1.45; reserve_ammo = 40
 		"SUOMI":
-			magazine_size = 50; damage = 16.0*damage_scale; fire_interval = 0.10*rate_scale
+			magazine_size = 50; damage = 21.0*damage_scale; fire_interval = 0.10*rate_scale
 			bullet_speed = 30.0; pierce = 0; reload_duration = 1.55; reserve_ammo = 150
 		"FLAME":
-			magazine_size = 100; damage = 6.0*damage_scale; fire_interval = 0.12*rate_scale
+			magazine_size = 100; damage = 8.0*damage_scale; fire_interval = 0.12*rate_scale
 			bullet_speed = 20.0; pierce = 0; reload_duration = 1.4; reserve_ammo = 200
 		"SMG":
-			magazine_size = 36; damage = 12.0*damage_scale; fire_interval = 0.095*rate_scale
+			magazine_size = 36; damage = 16.0*damage_scale; fire_interval = 0.095*rate_scale
 			bullet_speed = 31.0; pierce = 0; reload_duration = 1.35; reserve_ammo = 108
 		"SNIPER":
-			magazine_size = 5; damage = 95.0*damage_scale; fire_interval = 0.85*rate_scale
+			magazine_size = 5; damage = 125.0*damage_scale; fire_interval = 0.85*rate_scale
 			bullet_speed = 48.0; pierce = 2; reload_duration = 1.80; reserve_ammo = 25
 		"SHOTGUN":
-			magazine_size = 8; damage = 30.0*damage_scale; fire_interval = 0.72*rate_scale; projectile_count = 7
+			magazine_size = 8; damage = 40.0*damage_scale; fire_interval = 0.72*rate_scale; projectile_count = 7
 			bullet_speed = 30.0; pierce = 0; reload_duration = 1.65; reserve_ammo = 48
 		"PISTOL":
-			magazine_size = 12; damage = 24.0*damage_scale; fire_interval = 0.42*rate_scale
+			magazine_size = 12; damage = 32.0*damage_scale; fire_interval = 0.42*rate_scale
 			bullet_speed = 30.0; pierce = 0; reload_duration = 1.10; reserve_ammo = 72
 		"LAUNCHER":
-			magazine_size = 4; damage = 180.0*damage_scale; fire_interval = 1.0*rate_scale
+			magazine_size = 4; damage = 235.0*damage_scale; fire_interval = 1.0*rate_scale
 			bullet_speed = 14.0; pierce = 0; reload_duration = 2.0; reserve_ammo = 16
 		_:
-			weapon = "RIFLE"; magazine_size = 30; damage = 20.0*damage_scale; fire_interval = 0.30*rate_scale
+			weapon = "RIFLE"; magazine_size = 30; damage = 27.0*damage_scale; fire_interval = 0.30*rate_scale
 			bullet_speed = 28.0; pierce = 0; reload_duration = 1.25; reserve_ammo = 90
 	damage = base_damage(weapon)*weapon_bonus(weapon)
 	# The ammo case bought in the supply truck is never lost to a weapon swap.
@@ -1361,7 +1361,8 @@ func finish_reload() -> void:
 	_play_run()
 
 func take_damage(amount: float) -> void:
-	var applied_damage := amount * (0.8 if has_helmet else 1.0) * (1.0-dmg_reduce)
+	# Defence was stacking to near-immunity: helmet + dmg_reduce + shield soaked most of a hit.
+	var applied_damage := amount * (0.88 if has_helmet else 1.0) * (1.0-dmg_reduce)
 	if shield>0.0:
 		var soak := minf(shield,applied_damage)
 		shield -= soak; applied_damage -= soak
@@ -1391,10 +1392,10 @@ const PIERCE_CAP := 2
 const CRIT_BONUS_CAP := 0.60      # on top of the gun's own crit (sniper 25% -> up to 85%)
 const CRIT_MULT_CAP := 2.5        # a crit hits for at most x2.5
 const RELOAD_SCALE_MIN := 0.55
-const REGEN_CAP := 4.0
-const KILL_HEAL_CAP := 5.0
-const DMG_REDUCE_CAP := 0.40
-const SHIELD_CAP := 120.0
+const REGEN_CAP := 1.2
+const KILL_HEAL_CAP := 2.0
+const DMG_REDUCE_CAP := 0.28
+const SHIELD_CAP := 55.0
 const MOVE_CAP := 1.25
 const BURN_CAP := 20.0
 const POISON_CAP := 15.0

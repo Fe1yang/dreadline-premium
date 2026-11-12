@@ -252,7 +252,7 @@ const GEAR_CRATE_CHANCE:=0.22
 const FUEL_CRATE_CHANCE:=0.30   # only while riding or holding the flamethrower # helmet / armour on a platform instead of a gun
 const BIKE_CRATE_CHANCE:=0.14  # a motorcycle: ride it, ram zombies, until it breaks apart
 ## Durability lost per zombie run down on the bike, by kind.
-const BIKE_RAM_COST:={"walker":8.0,"walker_b":8.0,"walker_c":8.0,"runner":6.0,"runner_b":6.0,"brute":22.0,"jockey":10.0,"banshee":18.0,"spitter":14.0,"bomber_male":30.0,"bomber_female":30.0}
+const BIKE_RAM_COST:={"walker":11.0,"walker_b":11.0,"walker_c":11.0,"runner":9.0,"runner_b":9.0,"brute":38.0,"jockey":14.0,"banshee":18.0,"spitter":14.0,"bomber_male":30.0,"bomber_female":30.0}
 const BIKE_DECAY:=1.8           # durability per second — a careful ride lasts about a minute
 ## District 14's missile crater is a real hole in the road: it blocks the survivor and
 ## the horde instead of being a floor decal. Must match build_city_districts.py.
@@ -2524,14 +2524,14 @@ var armory_drag := false
 
 ## Damage / rate / magazine for every weapon, taken from the same table set_weapon uses.
 const ARMORY_STATS := {
-	"PISTOL":   {"damage": 24.0, "rate": 0.42, "mag": 12},
-	"MAKAROV":  {"damage": 20.0, "rate": 0.36, "mag": 8},
-	"SUOMI":    {"damage": 11.0, "rate": 0.085, "mag": 70},
-	"SMG":      {"damage": 12.0, "rate": 0.095, "mag": 36},
-	"SHOTGUN":  {"damage": 30.0, "rate": 0.72, "mag": 8},
-	"SNIPER":   {"damage": 95.0, "rate": 0.85, "mag": 5},
-	"LAUNCHER": {"damage": 180.0, "rate": 1.0, "mag": 4},
-	"FLAME":    {"damage": 22.0, "rate": 0.12, "mag": 100},
+	"PISTOL":   {"damage": 32.0, "rate": 0.42, "mag": 12},
+	"MAKAROV":  {"damage": 27.0, "rate": 0.36, "mag": 8},
+	"SUOMI":    {"damage": 15.0, "rate": 0.085, "mag": 70},
+	"SMG":      {"damage": 16.0, "rate": 0.095, "mag": 36},
+	"SHOTGUN":  {"damage": 40.0, "rate": 0.72, "mag": 8},
+	"SNIPER":   {"damage": 125.0, "rate": 0.85, "mag": 5},
+	"LAUNCHER": {"damage": 235.0, "rate": 1.0, "mag": 4},
+	"FLAME":    {"damage": 29.0, "rate": 0.12, "mag": 100},
 }
 
 ## A tiny 3D stage that renders the selected weapon for the armory panel.
@@ -4274,7 +4274,9 @@ func _count_zombie_kind(type: String) -> int:
 ## Waves beat a flat trickle: a burst you can clean out, then a real breather. The quota
 ## grows by two per wave and stops at 26, so late waves are dense but still clearable.
 func _wave_size() -> int:
-	return clampi(4+wave*2,6,26)
+	# Lower cap than before (26): with damage up, the same threat fits in fewer bodies, and the
+	# draw/physics cost of a packed horde was the main stutter risk on older phones.
+	return clampi(4+wave*2,6,18)
 
 ## Zombie toughness grows with the distance run, slowly at first and faster later:
 ## x1.16 at 500 m, x1.37 at 1000 m, x1.9 at 2000 m, x2.5 at 3000 m, x3.8 at 5000 m, x7.6 at
@@ -4286,6 +4288,12 @@ const DIFFICULTY_POWER := 1.25
 const DIFFICULTY_MAX := 10.0
 func _wave_difficulty() -> float:
 	return clampf(1.0+pow(maxf(distance,0.0)/DIFFICULTY_SCALE_M,DIFFICULTY_POWER),1.0,DIFFICULTY_MAX)
+
+## Zombie melee damage multiplier. Toughness alone made late runs long, not dangerous: a walker hit
+## for the same 18 HP at 10 000 m as at 0 m while the player stacked regen. This climbs to x3.2 by
+## roughly 2500 m and stays there, so a sloppy fight ends a run inside the first couple of kilometres.
+func _zombie_damage_scale() -> float:
+	return clampf(1.0+maxf(distance,0.0)/1100.0,1.0,3.2)
 
 func _living_zombies() -> int:
 	var count:=0
@@ -4872,7 +4880,7 @@ func _tick_zombies(delta: float) -> void:
 				# lobby walker: it just shuffles past, no bite
 				continue
 			else:
-				_hurt_player(z.damage); _burst(z.position+Vector3(0,1,0),Color("91a85c"),8); zombies.remove_at(i); _release_zombie(z)
+				_hurt_player(z.damage*_zombie_damage_scale()); _burst(z.position+Vector3(0,1,0),Color("91a85c"),8); zombies.remove_at(i); _release_zombie(z)
 		elif z.position.z>13: zombies.remove_at(i); _release_zombie(z)
 	_overtake_zombies(delta)
 	_separate_zombies()
@@ -5254,6 +5262,9 @@ func _ram_zombie(z: Node3D) -> void:
 		_drop_coins(zp+Vector3(0,0,0.35),maxi(2,int(round(float(z.get("reward"))*5.0))),"brute")
 	shake=maxf(shake,0.45 if player.vehicle in ["CRUISER","GOLD"] else 0.3)
 	player.vehicle_durability-=cost
+	# A brute is a wall: the rider feels it too, not just the bike.
+	if String(z.kind)=="brute":
+		player.take_damage(10.0); damage_flash=0.35; shake=maxf(shake,0.6)
 	if player.vehicle_durability<=0.0: _vehicle_breakdown()
 
 func _vehicle_breakdown() -> void:
@@ -5263,7 +5274,7 @@ func _vehicle_breakdown() -> void:
 	sound.play("explosion"); shake=maxf(shake,0.55)
 	vehicle_auto_active=false
 	player.dismount_vehicle()
-	_popup(player.position+Vector3(0,2.5,0),RunText.text("bike_down"),Color("ffad72"))
+	_popup(player.position+Vector3(0,2.5,0),RunText.text("car_down" if player.vehicle in ["SEDAN","GOLD_CAR","TANK"] else "bike_down"),Color("ffad72"))
 
 ## Wear and the warning smoke. Under 30 durability the engine coughs gray puffs and sparks.
 var vehicle_smoke:=0.0
@@ -6231,7 +6242,7 @@ func _tick_pickups(delta: float) -> void:
 				player.fire_ammo=mini(24,player.fire_ammo+4); _popup(player.position+Vector3(0,2.4,0),RunText.fmt("incendiary_n",4),Color("ff6547"))
 			else:
 				# Darius (paramedic) doubles the medkit: 70 HP instead of 35.
-				var healed:=int(35.0*player.heal_scale())
+				var healed:=int(22.0*player.heal_scale())
 				player.health=minf(player.max_health,player.health+healed); _popup(player.position+Vector3(0,2.4,0),RunText.fmt("health",healed),Color("c9f54a"))
 			sound.play("pickup"); pickups.remove_at(i); p.queue_free()
 		elif p.position.z>13: pickups.remove_at(i); p.queue_free()
