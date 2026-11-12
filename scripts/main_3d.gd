@@ -1109,28 +1109,7 @@ func _dress_district(road: Node3D, index: int) -> void:
 	var signals: Array = []       # traffic lights shown together with this block's zebra crossing
 	var walls := {-1.0: _block_wall(road, -1.0), 1.0: _block_wall(road, 1.0)}
 
-	# --- traffic lights -------------------------------------------------------------------------
-	# Overhead signal gantries on two of the four signal blocks are swapped for kerb lights.
-	var gantry := AABB(); var has_gantry := false
-	for m in road.find_children("*", "MeshInstance3D", true, false):
-		var mi := m as MeshInstance3D
-		if mi == null or not String(mi.name).begins_with("CITY_signal_"): continue
-		var ga: AABB = mi.global_transform * mi.get_aabb()
-		gantry = ga if not has_gantry else gantry.merge(ga); has_gantry = true
-	if has_gantry and (index % 24 == 11 or index % 24 == 23):
-		for m in road.find_children("CITY_signal_*", "MeshInstance3D", true, false):
-			(m as MeshInstance3D).visible = false
-		for side in [-1.0, 1.0]:
-			_dress_one(road, taken, "traffic_light", Vector3(side * KERB_PROP_X, PAVEMENT_Y, gantry.position.z + 0.4), 0.0, 0.4, 0.4)
-	# A crossing gets a light at its far edge on both kerbs, facing the runner; shown only when the
-	# crossing itself is (crossings come and go each lap).
-	var zebra := road.find_child("CITY_zebra_paint", true, false) as MeshInstance3D
-	if zebra != null and zebra.mesh != null and not (has_gantry and (index % 24 == 11 or index % 24 == 23)):
-		var za: AABB = zebra.global_transform * zebra.get_aabb()
-		if za.position.x < -1.0 and za.end.x > 1.0:          # it crosses the main road
-			for side in [-1.0, 1.0]:
-				var tl := _dress_one(road, taken, "traffic_light", Vector3(side * KERB_PROP_X, PAVEMENT_Y, za.position.z - 0.7), 0.0, 0.4, 0.4)
-				if tl != null: signals.append(tl)
+	# (the kerb traffic lights were removed: the blocks keep their own overhead signals)
 	road.set_meta("dress_signals", signals)
 
 	# --- round lamps on the blocks that have no lamp of their own -------------------------------

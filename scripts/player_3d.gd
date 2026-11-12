@@ -1016,6 +1016,7 @@ func set_armor(equipped: bool) -> void:
 			# jacket and shirt need put their vest up at the throat, so they keep a lower, shorter fit.
 			var female: bool = character in [1, 3]
 			var want := Vector3(t.size.x * (1.12 if female else 1.22) + 0.03, t.size.y * (1.06 if female else 1.22), t.size.z * 1.18 + 0.03)
+			if character == 0: want *= Vector3(1.12, 1.04, 1.16)   # Mason's padded jacket pushed through the plates
 			var sc := Vector3(want.x / vb.size.x, want.y / vb.size.y, want.z / vb.size.z)
 			var mean: float = (sc.x + sc.y + sc.z) / 3.0
 			sc = sc.clamp(Vector3.ONE * mean * 0.7, Vector3.ONE * mean * 1.4)   # keep its shape
