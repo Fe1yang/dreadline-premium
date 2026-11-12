@@ -9,8 +9,8 @@ const BUFFS:={
 	# --- survival ---
 	"max_hp":      {"values":[15,30,50,80],   "unit":"",   "min":0, "group":"survival"}, # +max HP (and heals that much)
 	"heal":        {"values":[15,30,55,100],  "unit":"",   "min":0, "group":"survival"}, # instant heal
-	"regen":       {"values":[1,2,3,5],       "unit":"/s", "min":0, "group":"survival"}, # HP per second
-	"kill_heal":   {"values":[1,2,4,8],       "unit":"",   "min":0, "group":"survival"}, # HP per kill
+	"regen":       {"values":[0.4,0.8,1.2,1.6], "unit":"/s", "min":0, "group":"survival"}, # HP per second (cap 1.6)
+	"kill_heal":   {"values":[1,2,3,5],       "unit":"",   "min":0, "group":"survival"}, # HP per kill (cap 5)
 	"dmg_reduce":  {"values":[4,8,12,20],     "unit":"%",  "min":0, "group":"survival"}, # damage taken -x% (cap 60%)
 	"shield":      {"values":[20,40,70,120],  "unit":"",   "min":0, "group":"survival"}, # absorbs damage before HP
 	"move":        {"values":[4,8,12,20],     "unit":"%",  "min":0, "group":"survival"}, # run + side-step speed (cap +40%)
