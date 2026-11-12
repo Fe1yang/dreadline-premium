@@ -63,6 +63,8 @@ func _ready() -> void:
 	streams["equip"] = load("res://assets/audio/equip_lobby.mp3")
 	streams["pistol_near"] = load("res://assets/audio/pistol_near.mp3")
 	streams["pistol_far"] = load("res://assets/audio/pistol_far.mp3")
+	# The Makarov used to fall through to a missing id and fired silently.
+	streams["makarov"] = load("res://assets/audio/makarov.mp3")
 	streams["reload"] = load("res://assets/audio/reload.mp3")
 	streams["explosion"] = load("res://assets/audio/explosion.mp3")
 	streams["zombie"] = load("res://assets/audio/zombie_growl.mp3")
@@ -273,6 +275,7 @@ func play(id: String) -> void:
 	# Gunshots levelled to about the pistol's loudness (measured: rifle -11, smg -14.5,
 	# shotgun -7, sniper -18, pistol -7 LUFS raw), so no gun is much louder than another.
 	if id=="rifle": voice.volume_db=-12.0
+	elif id=="makarov": voice.volume_db=-13.0
 	elif id=="smg": voice.volume_db=-10.0
 	elif id=="pistol_near": voice.volume_db=-16.0
 	elif id=="pistol_far": voice.volume_db=-12.0
