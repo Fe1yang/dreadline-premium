@@ -1123,7 +1123,10 @@ func _draw_armory() -> void:
 		if tex != null:
 			clean_ops.append(["texture", tex, Rect2(40, 158, 460, 380)])
 	# name
-	_bold_text(id, Vector2(60, 552), 24, WHITE)
+	# the weapon name is localised (shop_text holds n_pistol, n_smg, ...)
+	var _wname: String = ShopText.text(String(game.language_code), "n_" + id.to_lower())
+	if _wname.begins_with("n_"): _wname = id
+	_bold_text(_wname, Vector2(60, 552), 24, WHITE)
 	# bars: damage / rate / magazine, normalised against the strongest weapon
 	var dmg: float = float(stats.get("damage", 0.0))
 	var rate: float = 1.0 / maxf(0.05, float(stats.get("rate", 0.3)))
