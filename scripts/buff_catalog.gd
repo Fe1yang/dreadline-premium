@@ -10,7 +10,7 @@ extends RefCounted
 
 const BUFFS:={
 	# --- survival ---
-	"max_hp":      {"values":[8,12,20,30],    "unit":"",   "min":0, "group":"survival"}, # +max HP (and heals that much)
+	"max_hp":      {"values":[2,3,5,8],      "unit":"",   "min":0, "group":"survival"}, # +max HP (and heals that much)
 	"heal":        {"values":[6,10,16,26],   "unit":"",   "min":0, "group":"survival"}, # instant heal
 	"regen":       {"values":[0.2,0.35,0.5,0.8],"unit":"/s", "min":0, "group":"survival"}, # HP per second
 	"kill_heal":   {"values":[0.2,0.35,0.5,0.8],"unit":"", "min":0, "group":"survival"}, # HP per kill

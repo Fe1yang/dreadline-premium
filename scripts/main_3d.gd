@@ -508,6 +508,8 @@ var record_banner:=0.0
 const RECORD_HINT_METRES:=150.0  # start showing "x m to your best" this close
 var spawn_timer:=0.0
 var gate_timer:=7.0
+## Trickle spawner: keeps a few zombies walking in between waves.
+var trickle_timer:=2.0
 var barrel_timer:=5.0
 var obstacle_timer:=5.5
 var pickup_timer:=3.0
@@ -1454,6 +1456,14 @@ func _process(delta: float) -> void:
 			_fire(); shot_timer=player.fire_interval
 		elif player.ammo<=0 and auto_reload:
 			request_reload()
+	# Between waves the street is not empty any more: a slow trickle keeps zombies coming, so a
+	# late run feels like a horde instead of a jog between two gates.
+	if not surge:
+		trickle_timer-=delta
+		if trickle_timer<=0.0:
+			trickle_timer=rng.randf_range(1.6,3.2)
+			if _living_zombies()<_max_alive():
+				_spawn_zombie()
 	if surge and wave_quota>0:
 		spawn_timer-=delta
 		if spawn_timer<=0:
@@ -1466,7 +1476,7 @@ func _process(delta: float) -> void:
 	gate_timer-=delta
 	if gate_timer<=0:
 		# a gate every 12-15 s (was 7.5-11 s): fewer steps up per run, each one worth having
-		if _road_clear(-40.0): _spawn_gate(); gate_timer=lerpf(15.0,12.0,ramp)*rng.randf_range(0.9,1.15)
+		if _road_clear(-40.0): _spawn_gate(); gate_timer=lerpf(34.0,26.0,ramp)*rng.randf_range(0.9,1.15)
 		else: gate_timer=1.2
 	_district_threads()
 	barrel_timer-=delta
@@ -2047,7 +2057,7 @@ func start_run(free_with_ad:=false,no_cost:=false) -> void:
 	for road in roads: _refresh_watcher(road)
 	revive_used=false; revive_count=0; revive_pending=false; revive_invulnerable=0.0; jockey_introduced=false; banshee_introduced=false; banshee_warning=0.0
 	_chase_reset()
-	spawn_timer=1.6; gate_timer=9.0; barrel_timer=32.0; crate_timer=20.0; obstacle_timer=24.0; pickup_timer=12.0; shot_timer=0; growl_timer=3.5; hint_time=7; damage_flash=0; new_gate_index=0; gates_since_epic=0
+	spawn_timer=1.6; gate_timer=16.0; barrel_timer=32.0; crate_timer=20.0; obstacle_timer=24.0; pickup_timer=12.0; shot_timer=0; growl_timer=3.5; hint_time=7; damage_flash=0; new_gate_index=0; gates_since_epic=0
 	surge=false; phase_timer=1.6; wave_quota=0; wave_timeout=0.0; wave_clear_banner=0.0  # a calm opening before the first 尸潮
 	aim_direction=Vector3.FORWARD; aim_target=null; left_stick=Vector2.ZERO; right_stick=Vector2.ZERO; _release_touches()
 	shop_truck.visible=false; player.visible=true; camera.fov=52; camera.position=Vector3(0,6.4,13.5)
