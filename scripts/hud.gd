@@ -880,6 +880,11 @@ func _lobby_card(card: Rect2,i: int,view: Rect2,lang: String) -> void:
 	if vis.size.y<4.0 or vis.size.x<4.0: return
 	var whole: bool=vis.size.y>=card.size.y-0.5 and vis.size.x>=card.size.x-0.5
 	if whole: _brackets(card.grow(-1.0), 9.0, C_BONE, 2.0)
+	# the "coming soon" cards at the end of the weapon and vehicle rows
+	if (game.lobby_tab==4 and i>=1) or (game.lobby_tab==3 and i>=game.LOBBY_VEHICLE_CARDS):
+		if whole: _locked_slot(card)
+		else: _panel(vis,Color(0.04,0.045,0.047,0.80),Color(LINE,0.7),0)
+		return
 	if game.lobby_tab==4:
 		# Flamethrower: a gold-framed card, because it is the one high-value weapon in the game.
 		var owned: bool=game.flame_owned()

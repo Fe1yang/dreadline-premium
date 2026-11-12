@@ -3689,11 +3689,13 @@ func lobby_tab_rect(t: int) -> Rect2:
 func lobby_view_rect() -> Rect2:
 	return Rect2(LOBBY_LEFT_X-6,LOBBY_STRIP_Y,540-2*(LOBBY_LEFT_X-6),LOBBY_CARD.y)
 
+## Every tab ends with a few "coming soon" cards (padlock / paw print) to say more is on the way.
+const LOBBY_SOON_CARDS:=3
 func lobby_item_count() -> int:
 	if lobby_tab==2: return maxi(LOBBY_SLOTS,lobby.SKINS.size())
-	if lobby_tab==3: return LOBBY_VEHICLE_CARDS # BIKE / SPORT / CRUISER / GOLD / TANK / SEDAN
-	if lobby_tab==4: return 1  # the flamethrower
-	return maxi(LOBBY_SLOTS,lobby.CHARACTERS.size()) if lobby_tab==0 else maxi(LOBBY_SLOTS,lobby.PETS.size())
+	if lobby_tab==3: return LOBBY_VEHICLE_CARDS+LOBBY_SOON_CARDS # BIKE / SPORT / CRUISER / GOLD / TANK / SEDAN / GOLD CAR
+	if lobby_tab==4: return 1+LOBBY_SOON_CARDS  # the flamethrower
+	return lobby.CHARACTERS.size()+LOBBY_SOON_CARDS if lobby_tab==0 else lobby.PETS.size()+LOBBY_SOON_CARDS
 
 func lobby_max_scroll() -> float:
 	return maxf(0.0,lobby_item_count()*LOBBY_STEP-(LOBBY_STEP-LOBBY_CARD.x)+12.0-lobby_view_rect().size.x)
@@ -3810,6 +3812,8 @@ func _lobby_release(pos: Vector2) -> void:
 	if not lobby_view_rect().has_point(pos): return
 	for i in range(lobby_item_count()):
 		if lobby_card_rect(i).has_point(pos):
+			if (lobby_tab==4 and i>=1) or (lobby_tab==3 and i>=LOBBY_VEHICLE_CARDS):
+				lobby_toast=1.6; lobby_toast_key="coming"; return
 			if lobby_tab==4:
 				# one card: the flamethrower. Owned ones offer EQUIP, unowned ones just say so.
 				if not flame_owned():
