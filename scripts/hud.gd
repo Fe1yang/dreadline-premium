@@ -651,7 +651,7 @@ func _draw_settings() -> void:
 	_volume_slider(game.SLIDER_MUSIC,ShopText.text(lang,"vol_music"),game.sound.music_volume)
 	_volume_slider(game.SLIDER_SFX,ShopText.text(lang,"vol_sfx"),game.sound.sfx_volume)
 	_button(Rect2(66,348,408,70),game.localize("reload_auto") if game.auto_reload else game.localize("reload_manual"),false)
-	_button(Rect2(66,436,408,70),"文   "+game.localize("language"),false)
+	_button(Rect2(66,436,408,70),("文   " if String(game.language_code).begins_with("zh") else "")+game.localize("language"),false)
 	var sep: String="：" if lang in ["zh_CN","zh_TW","ja"] else ": "
 	_button(Rect2(66,524,408,70),"Aa   %s%s%s"%[ShopText.text(lang,"text_size"),sep,ShopText.text(lang,"ts_%d"%game.text_size)],false)
 	_button(Rect2(66,612,408,70),Localization.text(lang,"control_layout"),false)
@@ -767,7 +767,8 @@ func _draw_character_select() -> void:
 	for t in [0, 1, 3, 4]:
 		var tab: Rect2=game.lobby_tab_rect(t); var tab_on: bool=game.lobby_tab==t
 		if tab_on: _blood_banner(tab)
-		var tlabel: String = "载具" if t==3 else ("武器" if t==4 else ShopText.text(lang,"chars" if t==0 else "pets"))
+		var _zhc: bool = String(lang).begins_with("zh")
+		var tlabel: String = ("载具" if _zhc else "VEHICLES") if t==3 else (("武器" if _zhc else "WEAPONS") if t==4 else ShopText.text(lang,"chars" if t==0 else "pets"))
 		_text_center(tlabel,Vector2(tab.get_center().x,tab.end.y-12),15,C_BONE if tab_on else MUTED)
 	# The settings gear lives in the same corner on every tab, always white. Equipping happens
 	# on the cards themselves, so the per-tab gear toggles are gone.
@@ -1085,7 +1086,7 @@ func _character_card(rect: Rect2,index: int) -> void:
 	if portraits.size()>index and portraits[index]:
 		clean_ops.append(["texture",portraits[index],Rect2(rect.position+Vector2(3,3),Vector2(rect.size.x-6,rect.size.y-61))])
 	draw_rect(Rect2(rect.position+Vector2(3,rect.size.y-58),Vector2(rect.size.x-6,55)),Color(0.025,0.03,0.031,0.96))
-	_text_center("男" if index==0 else "女",rect.position+Vector2(rect.size.x/2,rect.size.y-20),22,WHITE)
+	_text_center(("男" if index==0 else "女") if String(game.language_code).begins_with("zh") else ("M" if index==0 else "F"),rect.position+Vector2(rect.size.x/2,rect.size.y-20),22,WHITE)
 	if game.character_choice==index:
 		draw_rect(Rect2(rect.position,Vector2(5,rect.size.y)),RED)
 		draw_rect(Rect2(rect.position,Vector2(rect.size.x,4)),WHITE)
@@ -1117,9 +1118,10 @@ func _draw_armory() -> void:
 	var dmg: float = float(stats.get("damage", 0.0))
 	var rate: float = 1.0 / maxf(0.05, float(stats.get("rate", 0.3)))
 	var mag: float = float(stats.get("mag", 1))
-	var rows := [["伤害", dmg / 180.0, str(int(dmg))],
-		["攻速", rate / (1.0 / 0.085), "%.1f/s" % rate],
-		["容量", mag / 100.0, str(int(mag))]]
+	var _zh: bool = String(game.language_code).begins_with("zh")
+	var rows := [["伤害" if _zh else "DAMAGE", dmg / 180.0, str(int(dmg))],
+		["攻速" if _zh else "FIRE RATE", rate / (1.0 / 0.085), "%.1f/s" % rate],
+		["容量" if _zh else "MAGAZINE", mag / 100.0, str(int(mag))]]
 	var y: float = 596.0
 	for row in rows:
 		_text(String(row[0]), Vector2(60, y + 4), 15, MUTED)
@@ -1134,11 +1136,11 @@ func _draw_armory() -> void:
 	var lv: int = game.armory_level()
 	var lv_max: int = game.armory_max_level()
 	if lv_max > 0:
-		_text("升级  LV %d / %d" % [lv, lv_max], Vector2(60, 706), 15, GOLD)
-		_button(game.ARMORY_UPGRADE, ("升级  %d 银币" % game.armory_price()) if lv < lv_max else "已满级", lv < lv_max)
+		_text(("升级  LV %d / %d" if _zh else "UPGRADE  LV %d / %d") % [lv, lv_max], Vector2(60, 706), 15, GOLD)
+		_button(game.ARMORY_UPGRADE, (("升级  %d 银币" if _zh else "UPGRADE  %d SILVER") % game.armory_price()) if lv < lv_max else ("已满级" if _zh else "MAX LEVEL"), lv < lv_max)
 	else:
-		_text("升级  此枪不可升级", Vector2(60, 706), 15, MUTED)
-		_button(game.ARMORY_UPGRADE, "不可升级", false)
+		_text("升级  此枪不可升级" if _zh else "UPGRADE  NOT AVAILABLE", Vector2(60, 706), 15, MUTED)
+		_button(game.ARMORY_UPGRADE, "不可升级" if _zh else "NOT UPGRADEABLE", false)
 	# nav
 	_box(Rect2(60, 736, 60, 44), Color(0.10, 0.11, 0.12, 1.0), Color(LINE, 1.0), 0)
 	_text_center("‹", Vector2(90, 764), 22, WHITE)
