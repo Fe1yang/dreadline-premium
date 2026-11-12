@@ -302,14 +302,7 @@ func _draw_hud() -> void:
 	var rx: float=270.0-(38.0+kw)*0.5
 	_draw_skull(Vector2(rx+14,118),16)
 	draw_string(bold,Vector2(rx+38,133),kill_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,34,WHITE)
-	var gold_txt:="金币x%d" % game.run_coins if String(game.language_code).begins_with("zh") else "GOLD x %d" % game.run_coins
-	var silver_txt:="银币x%d" % game.run_silver if String(game.language_code).begins_with("zh") else "SILVER x %d" % game.run_silver
-	# right aligned, small, both currencies always visible so the player can read the stock
-	var gold_w: float=bold.get_string_size(gold_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x
-	var silver_w: float=bold.get_string_size(silver_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x
-	var coin_total: float=gold_w+9.0+silver_w
-	draw_string(bold,Vector2(534.000000-coin_total,150.0),gold_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("f2c14e"))
-	draw_string(bold,Vector2(534.000000-silver_w,150.0),silver_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("cfd6dd"))
+	# (gold and silver are drawn in the right-hand column by _draw_ammo, under the grenades)
 	var pause_pos: Vector2=game.control_pos("pause")
 	_draw_pause_button(Rect2(pause_pos-Vector2(23,23),Vector2(46,46)))
 	if game.record_banner>0.0: _draw_record_banner()
@@ -467,15 +460,31 @@ func _draw_ammo(right_top: Vector2) -> void:
 	var weapon_label: String=ShopText.text(game.language_code,"n_"+String(game.player.weapon).to_lower())
 	if game.player.weapon=="LAUNCHER": weapon_label+="  ·  "+(RunText.text("incendiary")+" ×%d"%game.player.fire_ammo if game.player.fire_mode else RunText.text("l_grenade"))
 	_text_right(weapon_label,Vector2(534.000000,right_top.y+26),16,MUTED)
+	# Right-hand column, one tidy stack with no gaps: weapon, grenades, gold / silver, then the
+	# reload line. (The reload hint used to sit at a fixed height on top of the coins.)
+	var row_y: float=right_top.y+48
 	if not game.touch_controls:
-		_text_right("%s ×%d   %s ×%d"%[RunText.text("l_grenade"),game.player.grenade_count,RunText.text("l_flashbang"),game.player.flashbang_count],Vector2(534.000000,right_top.y+48),15,MUTED)
+		_text_right("%s ×%d   %s ×%d"%[RunText.text("l_grenade"),game.player.grenade_count,RunText.text("l_flashbang"),game.player.flashbang_count],Vector2(534.000000,row_y),15,MUTED)
+		row_y+=22
+	var zh: bool=String(game.language_code).begins_with("zh")
+	var gold_txt:="金币×%d" % game.run_coins if zh else "GOLD ×%d" % game.run_coins
+	var silver_txt:="银币×%d" % game.run_silver if zh else "SILVER ×%d" % game.run_silver
+	var silver_w: float=bold.get_string_size(silver_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x
+	var gold_w: float=bold.get_string_size(gold_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15).x
+	draw_string(bold,Vector2(534.0-silver_w-12.0-gold_w,row_y),gold_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("f2c14e"))
+	draw_string(bold,Vector2(534.0-silver_w,row_y),silver_txt,HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("cfd6dd"))
+	row_y+=22
 	if game.player.reloading:
 		var progress: float=1.0-game.player.reload_timer/game.player.reload_duration
-		draw_rect(Rect2(Vector2(right_top.x-110,right_top.y+60),Vector2(116,3)),Color(1,1,1,0.18))
-		draw_rect(Rect2(Vector2(right_top.x-110,right_top.y+60),Vector2(116*progress,3)),RED)
-		_text_right(game.localize("loading"),Vector2(right_top.x+6,right_top.y+84),15,WHITE)
+		draw_rect(Rect2(Vector2(534.0-116.0,row_y-14),Vector2(116,3)),Color(1,1,1,0.18))
+		draw_rect(Rect2(Vector2(534.0-116.0,row_y-14),Vector2(116*progress,3)),RED)
+		_text_right(game.localize("loading"),Vector2(534.0,row_y+4),15,WHITE)
 	elif game.player.ammo==0:
-		_text_right(game.localize("auto") if game.auto_reload else game.localize("press_r"),Vector2(right_top.x+6,right_top.y+84),15,Color("e66b62"))
+		# phones have no R key: point at the on-screen reload button instead
+		var hint: String=game.localize("press_r")
+		if game.touch_controls or OS.has_feature("mobile"):
+			hint={"zh_CN":"点击装弹键","zh_TW":"點擊裝彈鍵","ja":"リロードボタンをタップ","ko":"재장전 버튼을 누르세요"}.get(String(game.language_code),"TAP RELOAD")
+		_text_right(game.localize("auto") if game.auto_reload else hint,Vector2(534.0,row_y),15,Color("e66b62"))
 
 func _btn(p: Vector2) -> Vector2:
 	return p + Vector2(0, game.ui_h - 960.0)
