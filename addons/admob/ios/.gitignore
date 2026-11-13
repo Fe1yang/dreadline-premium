@@ -1,2 +1,4 @@
-# Remove /bin folder line if you want to commit
-/bin
+# Only the core AdMob plugin is committed so the cloud iOS build links it;
+# the mediation adapters stay local.
+/bin/*
+!/bin/ads/
