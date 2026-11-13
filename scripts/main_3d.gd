@@ -257,7 +257,7 @@ const GEAR_CRATE_CHANCE:=0.22
 const FUEL_CRATE_CHANCE:=0.30   # only while riding or holding the flamethrower # helmet / armour on a platform instead of a gun
 const BIKE_CRATE_CHANCE:=0.14  # a motorcycle: ride it, ram zombies, until it breaks apart
 ## Durability lost per zombie run down on the bike, by kind.
-const BIKE_RAM_COST:={"walker":11.0,"walker_b":11.0,"walker_c":11.0,"runner":9.0,"runner_b":9.0,"brute":38.0,"jockey":14.0,"banshee":18.0,"spitter":14.0,"bomber_male":30.0,"bomber_female":30.0}
+const BIKE_RAM_COST:={"walker":6.0,"walker_b":6.0,"walker_c":6.0,"runner":5.0,"runner_b":5.0,"brute":20.0,"jockey":8.0,"banshee":18.0,"spitter":14.0,"bomber_male":30.0,"bomber_female":30.0}
 const BIKE_DECAY:=1.8           # durability per second — a careful ride lasts about a minute
 ## District 14's missile crater is a real hole in the road: it blocks the survivor and
 ## the horde instead of being a floor decal. Must match build_city_districts.py.
@@ -736,7 +736,10 @@ func _pin_sticks() -> void:
 	for key in defaults.keys():
 		var p: Vector2=defaults[key]
 		var saved: Variant=touch_layout.get(key)
-		if saved is Vector2: p=saved
+		if saved is Vector2:
+			# saved against the 540x960 design canvas: re-project onto whatever canvas this device
+			# has, otherwise a taller screen clamped every control to the bottom edge.
+			p=Vector2(saved.x*ui_w/540.0, saved.y*ui_h/960.0)
 		touch_layout[key]=_clamped_control(key,p)
 	left_origin=touch_layout["stick_left"]; right_origin=touch_layout["stick_right"]
 	left_knob=left_origin; right_knob=right_origin
@@ -5353,7 +5356,7 @@ func _tick_vehicle(delta: float) -> void:
 	if player.vehicle=="": return
 	# Bought bike: auto-ride only covers the opening stretch; step off at VEHICLE_AUTO_RANGE.
 	if vehicle_auto_active and distance>=vehicle_range_end:
-		vehicle_auto_active=false; player.dismount_vehicle(); sound.play("gate"); _popup(player.position+Vector3(0,2.5,0),RunText.text("bike_down"),Color("ffad72")); return
+		vehicle_auto_active=false; player.dismount_vehicle(); sound.play("gate"); _popup(player.position+Vector3(0,2.5,0),RunText.text("car_down" if player.vehicle in ["SEDAN","GOLD_CAR","TANK"] else "bike_down"),Color("ffad72"));return
 	# TANK: the cannon fires itself; each shell clears the lane ahead and
 	# costs a chunk of durability, so roughly 6-8 shots wreck it.
 	if player.vehicle=="TANK":
@@ -6974,6 +6977,14 @@ func _read_volumes() -> void:
 func _read_muted() -> bool:
 	var c:=ConfigFile.new()
 	return bool(c.get_value("audio","muted",false)) if (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK) else false
+## Ctrl layout is written in design-canvas units so a different screen size cannot shift it.
+func _layout_for_save() -> Dictionary:
+	var out:={}
+	for key in touch_layout.keys():
+		var p: Vector2=touch_layout[key]
+		out[key]=Vector2(p.x*540.0/maxf(ui_w,1.0), p.y*960.0/maxf(ui_h,1.0))
+	return out
+
 func _save() -> void:
 	if "--smoke-test" in OS.get_cmdline_user_args() or "--soak-test" in OS.get_cmdline_user_args() or "--lootbox-test" in OS.get_cmdline_user_args() or "--stamina-test" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_user_args() or "--capture-medic" in OS.get_cmdline_user_args() or "--capture-bike" in OS.get_cmdline_user_args(): return # test and capture runs must never touch the player's real save
 	var c:=ConfigFile.new(); c.set_value("misc","loadout_v2","done"); c.set_value("run","best",best_distance); c.set_value("run","character",character_choice); c.set_value("run","skins",skin_choice); c.set_value("run","pet",pet_choice); c.set_value("run","pet_equipped",pet_equipped); c.set_value("pets","owned",owned_pets); c.set_value("pets","rules",2); c.set_value("chars","owned",owned_characters); c.set_value("chars","skins",owned_skins); c.set_value("vehicles","owned",owned_vehicle); c.set_value("run","loadout_on",loadout_on); c.set_value("puzzle","pieces",puzzle_pieces); c.set_value("pass","owned",passes); c.set_value("pass","days",pass_days); c.set_value("pass","all_access",all_access); c.set_value("mail","claimed",mail_claimed); c.set_value("airdrop","day",airdrop_day); c.set_value("run","intro_seen",intro_seen); c.set_value("run","ad_run_used",ad_run_used); c.set_value("gameplay","auto_reload_v4",auto_reload); c.set_value("display","text_size",text_size); c.set_value("display","quality_high",quality_high); c.set_value("display","look",look_mode); c.set_value("audio","music_volume",sound.music_volume if is_instance_valid(sound) else 0.8); c.set_value("audio","sfx_volume",sound.sfx_volume if is_instance_valid(sound) else 1.0)
@@ -6990,7 +7001,7 @@ func _save() -> void:
 	c.set_value("missions","day",daily_day); c.set_value("missions","stats",daily_stats); c.set_value("missions","claimed",daily_claimed); c.set_value("missions","swaps",daily_swaps)
 	c.set_value("event","window",event_window); c.set_value("event","stats",event_stats); c.set_value("event","claimed",event_claimed); c.set_value("event","swaps",event_swaps)
 	for id in meta_upgrades.keys(): c.set_value("upgrades",id,meta_upgrades[id])
-	c.set_value("controls","layout",touch_layout)
+	c.set_value("controls","layout",_layout_for_save())
 	stamina.save_config(c)
 	c.set_value("audio","muted",sound.muted if is_instance_valid(sound) else false); c.save(SAVE_PATH)
 

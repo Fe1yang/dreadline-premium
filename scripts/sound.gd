@@ -139,7 +139,7 @@ func _ready() -> void:
 		rain.bus="Music"; add_child(rain)
 	var fanfare_stream=load(RECORD_FANFARE)
 	if fanfare_stream:
-		fanfare=AudioStreamPlayer.new(); fanfare.stream=fanfare_stream; fanfare.volume_db=-2.0
+		fanfare=AudioStreamPlayer.new(); fanfare.stream=fanfare_stream; fanfare.volume_db=-9.0
 		add_child(fanfare); fanfare.finished.connect(_fanfare_finished)
 	for p in [music,title_music,lobby_music,shop_music,chase,fanfare]:
 		if is_instance_valid(p): p.bus="Music"
