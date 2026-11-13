@@ -57,7 +57,7 @@ const SKY_SHADER=preload("res://shaders/sky_clouds.gdshader")
 # "mix" is the pack's day/sunset blend (1 = full day, ~0.1 = golden hour).
 const SKY_PRESETS:={
 	"clear":{"sky":Color("3988c4"),"horizon":Color("b9d9e8"),"sunset_sky":Color("303b68"),"sunset_horizon":Color("d9956c"),"cloud":Color("f4f2e9"),"density":0.96,"depth":2.4,"wind":Vector2(0.35,0.18),"mix":1.0,"energy":0.96,"tiling":0.75},
-	"sunset":{"sky":Color("39424f"),"horizon":Color("b8693a"),"sunset_sky":Color("343a46"),"sunset_horizon":Color("a85a30"),"cloud":Color("a98a70"),"density":1.0,"depth":3.0,"wind":Vector2(0.3,0.15),"mix":0.12,"energy":1.0,"tiling":0.75},
+	"sunset":{"sky":Color("2a3f8f"),"horizon":Color("ff8a3d"),"sunset_sky":Color("2c2f7a"),"sunset_horizon":Color("ff6a2a"),"cloud":Color("ffb57a"),"density":1.0,"depth":3.0,"wind":Vector2(0.3,0.15),"mix":0.12,"energy":1.0,"tiling":0.75},
 	"rain":{"sky":Color("3d4a58"),"horizon":Color("7f8d99"),"cloud":Color("6e7984"),"density":1.6,"depth":3.5,"wind":Vector2(0.7,0.35),"mix":1.0,"energy":1.05,"tiling":0.9},
 	"storm":{"sky":Color("141b26"),"horizon":Color("394556"),"cloud":Color("2c3440"),"density":2.3,"depth":4.0,"wind":Vector2(1.3,0.6),"mix":1.0,"energy":0.95,"tiling":1.0},
 	"fog":{"sky":Color("8f9ea8"),"horizon":Color("d3dade"),"cloud":Color("e1e6e9"),"density":1.3,"depth":2.0,"wind":Vector2(0.2,0.1),"mix":1.0,"energy":1.1,"tiling":0.8}}
@@ -2469,7 +2469,7 @@ func set_weather(kind: String) -> void:
 	var preset: Dictionary=SKY_PRESETS.get(preset_name,SKY_PRESETS["clear"])
 	sky_energy=float(preset.energy)
 	if preset_name=="sunset":
-		sun_color=Color("e9a676"); sun_energy=0.7; ambient=Color("b4aca6"); fog_color=Color("a99686")
+		sun_color=Color("ffb06a"); sun_energy=0.75; ambient=Color("d8b8a8"); fog_color=Color("e0b49a")
 	# Mode first: switching fog mode resets the density in this Godot version.
 	world_env.fog_mode=Environment.FOG_MODE_DEPTH if depth_fog else Environment.FOG_MODE_EXPONENTIAL
 	world_env.fog_depth_begin=fog_begin; world_env.fog_depth_end=fog_end; world_env.fog_depth_curve=1.35
