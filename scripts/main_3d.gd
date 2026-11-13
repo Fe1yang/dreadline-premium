@@ -5221,7 +5221,7 @@ func _build_crit_glyphs(key: String) -> void:
 				l.add_theme_constant_override("outline_size", 16)
 			else:
 				# flat colour, no gradient shader: the gold fill is solid
-				l.add_theme_color_override("font_color", Color.WHITE)
+				l.add_theme_color_override("font_color", Color("ffcf45"))   # solid gold (the fill was left white)
 			vp.add_child(l)
 		x += widths[i] + CRIT_GLYPH_PAD * 2
 	await RenderingServer.frame_post_draw
@@ -5250,7 +5250,7 @@ func _damage_number(z: Node3D,amount: float,_color: Color,crit:=false) -> void:
 	var e = _fx_label_at(z.global_position+Vector3(rng.randf_range(-0.24,0.24),2.78,rng.randf_range(-0.12,0.12)),
 		text,col,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,big)
 	if glyphs != null:
-		var hgt := 0.92   # a size up from the plain red numbers so a crit reads at a glance
+		var hgt := 1.25   # about 1.7x the plain red numbers so a crit reads at a glance
 		var k: float = hgt / float(CRIT_GLYPH_H)
 		var row: Array = []
 		for ch in body:
@@ -6392,7 +6392,7 @@ func _fx_label_at(pos: Vector3,text: String,color: Color,vel: Vector3,seconds: f
 	else: e=fx_labels.pop_back()
 	e.make_text(text,color)
 	e.set_meta("fx_kind","label")
-	if big: e.label.font_size=64; e.label.pixel_size=0.0085; e.label.outline_size=12
+	if big: e.label.font_size=84; e.label.pixel_size=0.0095; e.label.outline_size=14
 	e.position=pos; e.velocity=vel; e.gravity=0.0; e.arm(seconds)
 	effects.append(e)
 	return e
