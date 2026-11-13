@@ -122,7 +122,7 @@ const CHASE_REWARD:=25
 var character_choice:=0
 var skin_choice = {} # char index -> index into lobby.SKINS (outfit override, stats unchanged)
 var pet_choice:=0
-var language_code:="zh_CN"
+var language_code:="en"   # a fresh install starts in English; players pick another language in Settings
 var player: Node3D
 var debug_show_fps := false   # F3: on-screen frame time counter
 var debug_hide_pickups := false

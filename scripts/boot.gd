@@ -31,7 +31,7 @@ func _ready() -> void:
 	# full-screen art: fill tall phones top to bottom (no grey band); gameplay letterboxes later
 	get_tree().root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP_WIDTH
 	var cfg := ConfigFile.new()
-	var lang := OS.get_locale()
+	var lang := "en"   # English until the player picks a language (saved in the config)
 	if cfg.load("user://deadfrontier.cfg") == OK: lang = String(cfg.get_value("ui", "language", lang))
 	zh = lang.begins_with("zh")
 	var rng := RandomNumberGenerator.new(); rng.randomize()
