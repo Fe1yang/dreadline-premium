@@ -1427,6 +1427,9 @@ func _process(delta: float) -> void:
 	lobby.visible=lobby_behind()
 	RunText.lang=language_code
 	lobby_toast=maxf(0.0,lobby_toast-delta); share_toast=maxf(0.0,share_toast-delta); store_toast=maxf(0.0,store_toast-delta)
+	for k in btn_pressed.keys():
+		btn_pressed[k]=float(btn_pressed[k])-delta
+		if float(btn_pressed[k])<=0.0: btn_pressed.erase(k)
 	if state in ["playing","intro","paused"]: _track_play_time(delta)
 	if state=="offer" and not offer_active(): close_offer()
 	if lobby_behind():
@@ -3654,6 +3657,20 @@ func claim_signin(times:=1) -> bool:
 	_grant(int(r.get("coins", 0))*times,int(r.get("vouchers", 0))*times)
 	return true
 
+## On-screen buttons dim for a moment when tapped, so a press is felt.
+var btn_pressed:={}
+const BTN_PRESS_TIME:=0.16
+func _press_btn(id: String) -> void:
+	btn_pressed[id]=BTN_PRESS_TIME
+func btn_press_amount(id: String) -> float:
+	return clampf(float(btn_pressed.get(id,0.0))/BTN_PRESS_TIME,0.0,1.0)
+
+## An ad button is lit (brass) only when an ad is actually ready to play; otherwise it is grey.
+func ad_ready() -> bool:
+	if remove_ads: return true
+	if not is_instance_valid(revival_ads): return false
+	return revival_ads.status in ["ready","desktop"]
+
 func can_ads_left() -> int:
 	return maxi(0,CAN_AD_DAILY_LIMIT-clampi(can_ad_count,0,CAN_AD_DAILY_LIMIT)) if can_ad_day==today() else CAN_AD_DAILY_LIMIT
 
@@ -5357,7 +5374,6 @@ func _vehicle_breakdown() -> void:
 ## Wear and the warning smoke. Under 30 durability the engine coughs gray puffs and sparks.
 var vehicle_smoke:=0.0
 var cannon_cd:=0.0
-var vehicle_dust:=0.0
 func _tick_vehicle(delta: float) -> void:
 	if player.vehicle=="": return
 	# Bought bike: auto-ride only covers the opening stretch; step off at VEHICLE_AUTO_RANGE.
@@ -5371,13 +5387,6 @@ func _tick_vehicle(delta: float) -> void:
 			cannon_cd=CANNON_PERIOD
 			_fire_cannon()
 	player.vehicle_durability-=BIKE_DECAY*delta
-	vehicle_dust-=delta
-	if vehicle_dust<=0.0:
-		vehicle_dust=0.05
-		var d:=EffectScript.new(); d.position=player.position+Vector3(rng.randf_range(-0.22,0.22),0.08,0.75)
-		d.velocity=Vector3(rng.randf_range(-0.5,0.5),rng.randf_range(0.6,1.5),rng.randf_range(2.4,3.8)); d.gravity=-1.2
-		d.life=0.55; d.total_life=0.55; add_child(d)
-		d.make_blast(Color("8a7f68"),rng.randf_range(0.05,0.12),true); effects.append(d)
 	if player.vehicle_durability<30.0:
 		vehicle_smoke-=delta
 		if vehicle_smoke<=0.0:
@@ -5992,6 +6001,8 @@ func _tick_barrels(delta: float) -> void:
 		if b.position.z>13: barrels.remove_at(i); b.queue_free()
 
 func _resolve_barrel_collision() -> void:
+	# A vehicle is not steered around a barrel: it drives into it and _vehicle_smash sets it off.
+	if player.vehicle!="": return
 	for barrel in barrels:
 		if not is_instance_valid(barrel) or barrel.dead: continue
 		var dz: float=player.position.z-barrel.position.z
@@ -6252,12 +6263,25 @@ func _explode(barrel: Node3D) -> void:
 	_custom_explosion(center)
 	_burst(center,Color("ffd275"),18); _fire_spray(center)
 	if _flat_distance(player.position,barrel.position)<3.25:
-		if player.has_armor:
+		if player.vehicle!="":
+			_vehicle_blast()
+		elif player.has_armor:
 			_hurt_player(player.max_health*0.90); _popup(player.position+Vector3(0,2.6,0),RunText.text("armor_hit"),Color("72d9e5"))
 		else:
 			_hurt_player(player.max_health*2.0); _popup(player.position+Vector3(0,2.6,0),RunText.text("no_armor"),Color("ff6547"))
 	for z in zombies.duplicate():
 		if is_instance_valid(z) and _flat_distance(z.position,barrel.position)<3.4: _hit_zombie(z,150,"torso",z.position+Vector3(0,1.1,0),Color("ffb15c"))
+
+## An explosive barrel going off under a vehicle: the bike or car is blown apart and the
+## survivor is thrown off hurt (less with a vest). The tank's armour only loses a big chunk.
+func _vehicle_blast() -> void:
+	if revive_invulnerable>0.0: return
+	if player.vehicle=="TANK":
+		_hurt_player(60.0)
+		return
+	_vehicle_breakdown()
+	player.take_damage(player.max_health*(0.35 if player.has_armor else 0.6))
+	damage_flash=0.6; shake=1.0; sound.play("hurt")
 
 func _custom_explosion(pos: Vector3) -> void:
 	var fx:=ExplosionScript.new()
@@ -6873,11 +6897,11 @@ func _pointer_down(pos: Vector2) -> bool:
 		if PAUSE_BUTTON.has_point(pos):
 			state="paused"; _release_touches(); _freeze_world(true); return true
 		if health_plus_rect.grow(8).has_point(pos): _tap_health_plus(); return true
-		if touch_controls and pos.distance_to(control_pos("btn_swap"))<BTN_RADIUS+4: swap_weapon(); return true
-		if touch_controls and pos.distance_to(control_pos("btn_reload"))<BTN_RADIUS+6: request_reload(); return true
-		if touch_controls and pos.distance_to(control_pos("btn_frag"))<BTN_RADIUS: _throw_ordnance("molotov" if player.molotov_count>0 else "frag"); return true
-		if touch_controls and pos.distance_to(control_pos("btn_flash"))<BTN_RADIUS: _throw_ordnance("flash"); return true
-		if touch_controls and player.weapon=="LAUNCHER" and pos.distance_to(control_pos("btn_fire"))<BTN_RADIUS: toggle_fire_mode(); return true
+		if touch_controls and pos.distance_to(control_pos("btn_swap"))<BTN_RADIUS+4: _press_btn("btn_swap"); swap_weapon(); return true
+		if touch_controls and pos.distance_to(control_pos("btn_reload"))<BTN_RADIUS+6: _press_btn("btn_reload"); request_reload(); return true
+		if touch_controls and pos.distance_to(control_pos("btn_frag"))<BTN_RADIUS: _press_btn("btn_frag"); _throw_ordnance("molotov" if player.molotov_count>0 else "frag"); return true
+		if touch_controls and pos.distance_to(control_pos("btn_flash"))<BTN_RADIUS: _press_btn("btn_flash"); _throw_ordnance("flash"); return true
+		if touch_controls and player.weapon=="LAUNCHER" and pos.distance_to(control_pos("btn_fire"))<BTN_RADIUS: _press_btn("btn_fire"); toggle_fire_mode(); return true
 	elif state=="health_ad":
 		if HEALTH_AD_CANCEL.has_point(pos): state="playing"; return true
 		if HEALTH_AD_WATCH.has_point(pos): request_reward_ad("health_refill"); return true

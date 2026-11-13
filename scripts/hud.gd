@@ -321,16 +321,16 @@ func _draw_hud() -> void:
 	if game.touch_controls and game.state=="playing":
 		_draw_joystick(game.left_origin,game.left_knob,false)
 		_draw_joystick(game.right_origin,game.right_knob,true)
-		_round_button(game.control_pos("btn_reload"),"reload",-1,WHITE)
+		_round_button(game.control_pos("btn_reload"),"reload",-1,WHITE,game.btn_press_amount("btn_reload"))
 		var swap_to: String=game.player.swap_target()
-		_round_button(game.control_pos("btn_swap"),"swap",-1,WHITE if swap_to!="" else Color(1,1,1,0.35))
+		_round_button(game.control_pos("btn_swap"),"swap",-1,WHITE if swap_to!="" else Color(1,1,1,0.35),game.btn_press_amount("btn_swap"))
 		if swap_to!="":
 			var short:={"PISTOL":"PST","SMG":"SMG","SHOTGUN":"SG","SNIPER":"SNP","RIFLE":"AR","LAUNCHER":"GL"}
 			_text_center(short.get(swap_to,swap_to),game.control_pos("btn_swap")+Vector2(0,52),13,WHITE)
-		_round_button(game.control_pos("btn_frag"),"frag",game.player.grenade_count,WHITE)
-		_round_button(game.control_pos("btn_flash"),"flash",game.player.flashbang_count,Color("cfefff"))
+		_round_button(game.control_pos("btn_frag"),"frag",game.player.grenade_count,WHITE,game.btn_press_amount("btn_frag"))
+		_round_button(game.control_pos("btn_flash"),"flash",game.player.flashbang_count,Color("cfefff"),game.btn_press_amount("btn_flash"))
 		if game.player.weapon=="LAUNCHER":
-			_round_button(game.control_pos("btn_fire"),"fire",game.player.fire_ammo,Color("ff8a5c"))
+			_round_button(game.control_pos("btn_fire"),"fire",game.player.fire_ammo,Color("ff8a5c"),game.btn_press_amount("btn_fire"))
 	if game.hint_time>0:
 		var hint: String=game.localize("aim_stick") if game.touch_controls else GameText.text(game.language_code,"auto_hint")
 		_text_center(hint,Vector2(270,186),15,Color(WHITE.r,WHITE.g,WHITE.b,clampf(game.hint_time,0,1)*0.9))
@@ -503,10 +503,11 @@ func _draw_ammo(right_top: Vector2) -> void:
 func _btn(p: Vector2) -> Vector2:
 	return p + Vector2(0, game.ui_h - 960.0)
 
-func _round_button(center: Vector2,icon: String,count: int,accent: Color) -> void:
+func _round_button(center: Vector2,icon: String,count: int,accent: Color,press:=0.0) -> void:
 	var r:=34.0
-	draw_circle(center,r,Color(0.02,0.02,0.02,0.45))
-	draw_arc(center,r,0,TAU,48,WHITE,2.5,true)
+	# a tap greys the button for a moment so the press is felt
+	draw_circle(center,r,Color(0.02,0.02,0.02,0.45).lerp(Color(0.55,0.56,0.58,0.80),press))
+	draw_arc(center,r,0,TAU,48,WHITE.lerp(Color(0.62,0.63,0.65),press),2.5+1.5*press,true)
 	match icon:
 		"reload":
 			draw_arc(center,15,deg_to_rad(200),deg_to_rad(340),20,WHITE,4,true)
@@ -1307,14 +1308,16 @@ func _draw_revive_button(rect: Rect2) -> void:
 	var zh: bool=game.language_code.begins_with("zh")
 	var ad_status: String=game.revival_ads.status if is_instance_valid(game.revival_ads) else "desktop"
 	var busy: bool=game.revive_pending or ad_status=="showing"
+	# grey unless an ad is actually ready to play (it still takes a tap to retry)
+	var dim: bool=busy or not game.ad_ready()
 	var pulse:=0.5+0.5*sin(Time.get_ticks_msec()/1000.0*4.0)
-	var bg:=Color("302817",0.98) if not busy else Color("201e19",0.96)
+	var bg:=Color("302817",0.98) if not dim else Color("201e19",0.96)
 	_box(Rect2(rect.position+Vector2(0,4),rect.size),Color(0,0,0,0.5))
 	_box(rect,bg)
-	_frame(rect,Color(BRASS_LIGHT,0.68) if not busy else Color(1,1,1,0.16),1.0)
-	_box(Rect2(rect.position,Vector2(3,rect.size.y)),BRASS)
-	if not busy: _frame(rect.grow(2),Color(BRASS_LIGHT,0.16+0.18*pulse),1.0)
-	_draw_heart_icon(rect.position+Vector2(38,rect.size.y*0.5),BRASS_LIGHT if not busy else MUTED)
+	_frame(rect,Color(BRASS_LIGHT,0.68) if not dim else Color(1,1,1,0.16),1.0)
+	_box(Rect2(rect.position,Vector2(3,rect.size.y)),BRASS if not dim else Color(1,1,1,0.22))
+	if not dim: _frame(rect.grow(2),Color(BRASS_LIGHT,0.16+0.18*pulse),1.0)
+	_draw_heart_icon(rect.position+Vector2(38,rect.size.y*0.5),BRASS_LIGHT if not dim else MUTED)
 	var label:=("看广告复活" if zh else "WATCH AD TO REVIVE")
 	var rv: Dictionary=game.REVIVES[mini(game.revive_count,game.REVIVES.size()-1)]
 	var pct:=int(float(rv.hp)*100.0); var secs:=int(rv.invuln)
@@ -1322,14 +1325,14 @@ func _draw_revive_button(rect: Rect2) -> void:
 	if busy: label=("广告播放中…" if zh else "AD PLAYING…"); sub=""
 	elif ad_status=="loading": sub=("广告加载中…" if zh else "Loading ad…")
 	elif ad_status=="unavailable": sub=("广告暂不可用，点击重试" if zh else "Ad unavailable — tap to retry")
-	var ink: Color=BRASS_LIGHT if not busy else MUTED
+	var ink: Color=BRASS_LIGHT if not dim else MUTED
 	clean_ops.append(["text",bold,rect.position+Vector2(70,44 if sub.is_empty() else 36),label,26,ink])
 	if not sub.is_empty(): clean_ops.append(["text",font,rect.position+Vector2(70,58),sub,14,Color(ink.r,ink.g,ink.b,0.8)])
 	var tag:=Rect2(rect.end.x-58,rect.position.y+20,42,28)
 	_box(tag,Color("100e0a",0.95))
-	_frame(tag,Color(BRASS_LIGHT,0.55),1.0)
+	_frame(tag,Color(BRASS_LIGHT,0.55) if not dim else Color(1,1,1,0.2),1.0)
 	var aw:=bold.get_string_size("AD",HORIZONTAL_ALIGNMENT_LEFT,-1,16).x
-	clean_ops.append(["text",bold,tag.get_center()+Vector2(-aw/2,6),"AD",16,BRASS_LIGHT if not busy else MUTED])
+	clean_ops.append(["text",bold,tag.get_center()+Vector2(-aw/2,6),"AD",16,BRASS_LIGHT if not dim else MUTED])
 
 func _ad_x2_button(r: Rect2,mode:="ready") -> void:
 	var lang: String=game.language_code
@@ -1340,39 +1343,41 @@ func _ad_x2_button(r: Rect2,mode:="ready") -> void:
 		_clean_text(bold,r.position+Vector2(46,r.size.y*0.5+8),ProgressCatalog.text(lang,"doubled"),20,Color(1,1,1,0.58),false)
 		return
 	var busy: bool=mode=="busy"
-	var bg:=Color("332a18",0.98) if not busy else Color("211f1a",0.96)
+	var dim: bool=busy or not game.ad_ready()
+	var bg:=Color("332a18",0.98) if not dim else Color("211f1a",0.96)
 	_box(Rect2(r.position+Vector2(0,4),r.size),Color(0,0,0,0.5))
 	_box(r,bg)
-	_frame(r,Color(BRASS_LIGHT,0.76) if not busy else Color(1,1,1,0.18),1.0)
-	_box(Rect2(r.position,Vector2(r.size.x,2)),BRASS)
+	_frame(r,Color(BRASS_LIGHT,0.76) if not dim else Color(1,1,1,0.18),1.0)
+	_box(Rect2(r.position,Vector2(r.size.x,2)),BRASS if not dim else Color(1,1,1,0.22))
 	var c:=r.position+Vector2(28,r.size.y*0.5)
 	var disc:=PackedVector2Array()
 	for i in range(20): disc.append(c+Vector2(cos(TAU*i/20.0),sin(TAU*i/20.0))*14.0)
-	clean_ops.append(["poly",disc,BRASS_LIGHT])
+	clean_ops.append(["poly",disc,BRASS_LIGHT if not dim else MUTED])
 	clean_ops.append(["poly",PackedVector2Array([c+Vector2(-5,-8),c+Vector2(9,0),c+Vector2(-5,8)]),INK_DARK])
 	var label: String=ProgressCatalog.text(lang,"ad_playing" if busy else "ad_x2")
 	var size:=22
 	while bold.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(size)).x>r.size.x-64 and size>12: size-=1
-	_clean_text(bold,Vector2(r.position.x+52,r.get_center().y+_scaled(size)*0.36),label,size,BRASS_LIGHT if not busy else MUTED,false)
+	_clean_text(bold,Vector2(r.position.x+52,r.get_center().y+_scaled(size)*0.36),label,size,BRASS_LIGHT if not dim else MUTED,false)
 	var tag:=Rect2(r.end.x-30,r.position.y-9,34,20)
 	_box(tag,INK_DARK)
 	var aw3: float = bold.get_string_size("AD",HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
-	_clean_text(bold,Vector2(tag.get_center().x-aw3*0.5,tag.get_center().y+4),"AD",13,BRASS_LIGHT,false)
+	_clean_text(bold,Vector2(tag.get_center().x-aw3*0.5,tag.get_center().y+4),"AD",13,BRASS_LIGHT if not dim else MUTED,false)
 
 func _swap_ad_button(r: Rect2,busy:=false) -> void:
+	busy=busy or not game.ad_ready()   # grey until an ad is ready
 	_box(r,Color(1,1,1,0.10) if not busy else Color(1,1,1,0.04))
-	_box(Rect2(r.position,Vector2(r.size.x,2)),Color(HILITE,0.8))
+	_box(Rect2(r.position,Vector2(r.size.x,2)),Color(HILITE,0.8) if not busy else Color(1,1,1,0.2))
 	var c:=r.get_center()+Vector2(0,2)
 	var arc:=PackedVector2Array()
 	for i in range(15):
 		var a: float=-PI*0.35+TAU*0.78*i/14.0
 		arc.append(c+Vector2(cos(a),sin(a))*10.0)
-	var col: Color=HILITE if not busy else Color(HILITE,0.4)
+	var col: Color=HILITE if not busy else Color(1,1,1,0.3)
 	clean_ops.append(["line",arc,col,3.0])
 	var tip: Vector2=arc[arc.size()-1]
 	clean_ops.append(["poly",PackedVector2Array([tip+Vector2(-1,-7),tip+Vector2(8,1),tip+Vector2(-3,6)]),col])
 	var tag:=Rect2(r.end.x-22,r.position.y-8,26,16)
-	_box(tag,HILITE)
+	_box(tag,HILITE if not busy else Color(1,1,1,0.25))
 	# plain text, no shadow: at 11 px the offset copy read as a double "AD"
 	var aw2: float = bold.get_string_size("AD",HORIZONTAL_ALIGNMENT_LEFT,-1,11).x
 	_clean_text(bold,Vector2(tag.get_center().x-aw2*0.5,tag.get_center().y+4),"AD",11,INK_DARK,false)
@@ -1801,7 +1806,7 @@ func _draw_store() -> void:
 
 func _store_can_ad(r: Rect2,lang: String) -> void:
 	var left: int=game.can_ads_left()
-	var enabled: bool=left>0 and game.ad_pending.is_empty()
+	var enabled: bool=left>0 and game.ad_pending.is_empty() and game.ad_ready()
 	_di_row(r)
 	var tile:=Rect2(r.position+Vector2(8,8),Vector2(58,58))
 	_box(tile,Color("292316",0.98) if enabled else Color(1,1,1,0.04))

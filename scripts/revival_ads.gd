@@ -15,8 +15,13 @@ const AD_UNIT_ID := "ca-app-pub-3341507214983966/6115727375"
 # ads while developing, so every debug build uses this instead.
 const TEST_AD_UNIT_ID := "ca-app-pub-3940256099942544/1712485313"
 
+# TEMPORARY: while the App Store listing is not live, AdMob serves this app almost no real ads
+# ("limited ad serving"), so TestFlight builds use Google's test unit to prove the whole ad flow
+# works. Set back to false before submitting to App Review.
+const FORCE_TEST_ADS := true
+
 func ad_unit_id() -> String:
-	return TEST_AD_UNIT_ID if OS.is_debug_build() else AD_UNIT_ID
+	return TEST_AD_UNIT_ID if (OS.is_debug_build() or FORCE_TEST_ADS) else AD_UNIT_ID
 
 var status := "desktop"
 var initialized := false
