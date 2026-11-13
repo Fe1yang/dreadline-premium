@@ -24,28 +24,28 @@ const T:={
 	"uk":{"item_silver":"Срібло","not_enough_coins":"Недостатньо монет","not_enough_silver":"Недостатньо срібла","skins":"Скіни","pet_locked":"Виграйте в ящику, щоб отримати назавжди","char_locked":"Відкрийте в крамниці","skin_locked":"Відкрийте скін у крамниці","mail":"Пошта","mail_empty":"Листів немає","claim":"Забрати","claimed":"Отримано","welcome_title":"Лист від розробника","welcome_body":"Дякуємо, що завантажили Dreadline!\n\nЦю гру я розробляю сам, тож перша версія може бути неідеальною. Прошу вибачення і сподіваюся на ваше розуміння.\n\nНе хвилюйтеся: гру постійно оновлюватимуть, помилки виправлятимуться, а новий контент уже в дорозі. Очікуйте! Якщо виникнуть проблеми або є пропозиції — напишіть мені.\n\nДодаю подарунковий набір, щоб ви змогли втекти ще далі.\n\n— Розробник","from":"Розробник","bag":"Рюкзак","item_coins":"Монети","item_vouchers":"Талони","read":"Читати","stay_tuned":"Незабаром","already_here":"Ви вже тут","map":"Мапа","airdrop":"Скидання припасів","airdrop_free":"Безкоштовно щодня","airdrop_tomorrow":"Повертайся завтра","airdrop_got":"Припаси прибули!","tap_close":"Торкніться, щоб закрити","share":"Поділитися","share_text":"Я пробіг %m м і вбив %k зомбі в Dreadline. Зможеш краще?","copied":"Скопійовано! Вставте будь-де","iap_ok":"Покупку завершено","iap_pending":"Очікування підтвердження оплати","iap_cancelled":"Покупку скасовано","iap_busy":"Підключення до App Store…","restore":"Відновити","restored":"Покупки відновлено","nothing_restore":"Немає що відновлювати","removeads_title":"Прибрати рекламу","removeads_desc":"Без реклами: нагорода одразу","view_in_match":"Дивіться в матчі"},
 }
 
-## Welcome-letter paragraph about what is coming next (helicopter, weapons, modes, maps).
+## Welcome-letter paragraph about what may come next (more vehicles, weapons, modes, maps).
 const PLANS:={
-	"en":"Coming in future updates: a helicopter to ride, more weapons, new game modes and more maps.",
-	"zh_CN":"之后的更新里还会加入：可以驾驶的直升机、更多武器、新的玩法和更多地图。",
-	"zh_TW":"之後的更新裡還會加入：可以駕駛的直升機、更多武器、新的玩法和更多地圖。",
-	"ja":"今後のアップデートでは、乗れるヘリコプター、さらに多くの武器、新しいゲームモード、新しいマップを追加する予定です。",
-	"ko":"앞으로의 업데이트에서는 탈 수 있는 헬리콥터, 더 많은 무기, 새로운 게임 모드와 더 많은 맵을 추가할 예정입니다.",
-	"es":"En próximas actualizaciones llegarán: un helicóptero para pilotar, más armas, nuevos modos de juego y más mapas.",
-	"fr":"Dans les prochaines mises à jour : un hélicoptère à piloter, plus d'armes, de nouveaux modes de jeu et plus de cartes.",
-	"de":"In kommenden Updates: ein Hubschrauber zum Fliegen, mehr Waffen, neue Spielmodi und weitere Karten.",
-	"pt":"Nas próximas atualizações: um helicóptero para pilotar, mais armas, novos modos de jogo e mais mapas.",
-	"ru":"В следующих обновлениях: вертолёт, на котором можно летать, больше оружия, новые режимы игры и новые карты.",
-	"ar":"في التحديثات القادمة: مروحية يمكنك قيادتها، ومزيد من الأسلحة، وأنماط لعب جديدة، وخرائط أكثر.",
-	"hi":"आने वाले अपडेट में: उड़ाने के लिए एक हेलीकॉप्टर, और हथियार, नए गेम मोड और ज़्यादा मैप।",
-	"id":"Di pembaruan berikutnya: helikopter yang bisa dikendarai, lebih banyak senjata, mode permainan baru, dan lebih banyak peta.",
-	"it":"Nei prossimi aggiornamenti: un elicottero da pilotare, più armi, nuove modalità di gioco e altre mappe.",
-	"tr":"Gelecek güncellemelerde: binebileceğin bir helikopter, daha fazla silah, yeni oyun modları ve daha fazla harita.",
-	"nl":"In komende updates: een helikopter om mee te vliegen, meer wapens, nieuwe spelmodi en meer kaarten.",
-	"pl":"W kolejnych aktualizacjach: helikopter do pilotowania, więcej broni, nowe tryby gry i więcej map.",
-	"th":"ในอัปเดตต่อไปจะมี: เฮลิคอปเตอร์ที่ขับได้ อาวุธเพิ่มเติม โหมดการเล่นใหม่ และแผนที่เพิ่มขึ้น",
-	"vi":"Trong các bản cập nhật tới: trực thăng để điều khiển, thêm nhiều vũ khí, chế độ chơi mới và thêm bản đồ.",
-	"uk":"У наступних оновленнях: гелікоптер, яким можна керувати, більше зброї, нові режими гри та нові карти."}
+	"en":"I also plan to add more vehicles in future updates (maybe even something like a helicopter), along with more weapons, new game modes and more maps.",
+	"zh_CN":"之后的更新里，我还打算加入更多载具（说不定会有类似直升机这样的），以及更多武器、新的玩法和更多地图。",
+	"zh_TW":"之後的更新裡，我還打算加入更多載具（說不定會有類似直升機這樣的），以及更多武器、新的玩法和更多地圖。",
+	"ja":"今後のアップデートでは、さらに多くの乗り物（ヘリコプターのようなものも登場するかもしれません）、武器、新しいゲームモード、マップを追加していく予定です。",
+	"ko":"앞으로의 업데이트에서는 더 많은 탈것(어쩌면 헬리콥터 같은 것도), 더 많은 무기, 새로운 게임 모드와 더 많은 맵을 추가할 계획입니다.",
+	"es":"En próximas actualizaciones quiero añadir más vehículos (quizá incluso algo parecido a un helicóptero), además de más armas, nuevos modos de juego y más mapas.",
+	"fr":"Dans les prochaines mises à jour, je compte ajouter d'autres véhicules (peut-être même quelque chose comme un hélicoptère), ainsi que plus d'armes, de nouveaux modes de jeu et d'autres cartes.",
+	"de":"In kommenden Updates möchte ich weitere Fahrzeuge hinzufügen (vielleicht sogar so etwas wie einen Hubschrauber), dazu mehr Waffen, neue Spielmodi und weitere Karten.",
+	"pt":"Nas próximas atualizações, pretendo adicionar mais veículos (talvez até algo parecido com um helicóptero), além de mais armas, novos modos de jogo e mais mapas.",
+	"ru":"В будущих обновлениях я планирую добавить больше транспорта (возможно, даже что-то вроде вертолёта), а также больше оружия, новые режимы игры и новые карты.",
+	"ar":"أخطط في التحديثات القادمة لإضافة مزيد من المركبات (وربما شيء يشبه المروحية)، إلى جانب مزيد من الأسلحة وأنماط لعب جديدة وخرائط أكثر.",
+	"hi":"आने वाले अपडेट में मैं और वाहन जोड़ने की योजना बना रहा हूँ (शायद हेलीकॉप्टर जैसा भी कुछ), साथ ही और हथियार, नए गेम मोड और ज़्यादा मैप।",
+	"id":"Di pembaruan berikutnya, saya berencana menambah lebih banyak kendaraan (mungkin juga sesuatu seperti helikopter), serta lebih banyak senjata, mode permainan baru, dan lebih banyak peta.",
+	"it":"Nei prossimi aggiornamenti vorrei aggiungere altri veicoli (magari anche qualcosa di simile a un elicottero), oltre a più armi, nuove modalità di gioco e altre mappe.",
+	"tr":"Gelecek güncellemelerde daha fazla araç (belki helikopter gibi bir şey bile), daha fazla silah, yeni oyun modları ve daha fazla harita eklemeyi planlıyorum.",
+	"nl":"In komende updates wil ik meer voertuigen toevoegen (misschien zelfs iets als een helikopter), plus meer wapens, nieuwe spelmodi en meer kaarten.",
+	"pl":"W kolejnych aktualizacjach planuję dodać więcej pojazdów (może nawet coś w rodzaju helikoptera), a także więcej broni, nowe tryby gry i więcej map.",
+	"th":"ในอัปเดตต่อ ๆ ไป ผมวางแผนจะเพิ่มยานพาหนะอีก (อาจมีอะไรคล้ายเฮลิคอปเตอร์ด้วย) รวมถึงอาวุธเพิ่มเติม โหมดการเล่นใหม่ และแผนที่เพิ่มขึ้น",
+	"vi":"Trong các bản cập nhật tới, tôi dự định thêm nhiều phương tiện hơn (có thể cả thứ gì đó giống trực thăng), cùng nhiều vũ khí, chế độ chơi mới và thêm bản đồ.",
+	"uk":"У наступних оновленнях я планую додати більше транспорту (можливо, навіть щось на кшталт гелікоптера), а також більше зброї, нові режими гри та нові карти."}
 
 static func plans(code: String) -> String:
 	return String(PLANS.get(code,PLANS["en"]))
