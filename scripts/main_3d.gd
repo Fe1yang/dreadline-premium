@@ -3500,8 +3500,8 @@ func claim_mail(id: String) -> bool:
 ## In the supply truck: a plain way into the store next to the coin balance.
 const SHOP_STORE_BTN:=Rect2(430,590,92,48)
 ## Check-in popup.
-const SIGNIN_PANEL:=Rect2(30,170,480,520)
-const SIGNIN_CLOSE:=Rect2(458,180,44,44)
+const SIGNIN_PANEL:=Rect2(30,150,480,560)   # 24 px of margin round everything inside
+const SIGNIN_CLOSE:=Rect2(458,158,44,44)
 const SIGNIN_CLAIM:=Rect2(56,600,200,64)
 const SIGNIN_DOUBLE:=Rect2(268,600,216,64)
 ## Missions page.
@@ -3768,7 +3768,7 @@ func close_tasks() -> void:
 ## Tile rectangles of the 7 check-in days (4 on top, then 3 with a wide day 7).
 ## Week / month switch at the top of the check-in panel.
 func signin_tab_rect(t: int) -> Rect2:
-	return Rect2(56 + t * 220, 214, 208, 46)
+	return Rect2(54 + t * 220, 216, 212, 42)
 
 
 func signin_tile(i: int) -> Rect2:
@@ -3776,10 +3776,10 @@ func signin_tile(i: int) -> Rect2:
 		# 6 columns x 5 rows inside the same panel: 30 days on one screen
 		var col: int = i % 6
 		var row: int = i / 6
-		return Rect2(40 + col * 77, 258 + row * 62, 71, 56)
-	if i<4: return Rect2(46+i*114,262,106,150)
-	if i<6: return Rect2(46+(i-4)*114,424,106,150)
-	return Rect2(274,424,220,150)
+		return Rect2(54 + col * 72, 272 + row * 62, 66, 56)
+	if i<4: return Rect2(54+i*108,270,102,150)
+	if i<6: return Rect2(54+(i-4)*108,432,102,150)
+	return Rect2(270,432,210,150)
 
 ## Mission rows on the missions page for the open tab.
 func task_rows() -> Array:
@@ -6750,6 +6750,11 @@ func _pointer_down(pos: Vector2) -> bool:
 		return true
 	elif state=="signin":
 		if SIGNIN_CLOSE.grow(8).has_point(pos) or not SIGNIN_PANEL.has_point(pos): close_signin(); return true
+		# weekly / monthly tabs under the title (they were drawn but never wired up)
+		for ti in range(2):
+			if signin_tab_rect(ti).has_point(pos):
+				signin_monthly = ti == 1
+				return true
 		if SIGNIN_CLAIM.has_point(pos): claim_signin()
 		elif SIGNIN_DOUBLE.has_point(pos): request_reward_ad("signin_double")
 		return true

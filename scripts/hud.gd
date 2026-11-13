@@ -422,17 +422,14 @@ func _draw_hearts(origin: Vector2) -> void:
 func _draw_vehicle_bar(origin: Vector2) -> void:
 	if game.player.vehicle=="": return
 	var d: float=clampf(game.player.vehicle_durability,0.0,100.0)/100.0
-	var r:=Rect2(origin+Vector2(0,2),Vector2(170,9))
+	# kept short and without the bike glyph: at a few thousand metres the distance number
+	# grows wide enough to run into anything past x~160
+	var r:=Rect2(origin+Vector2(0,2),Vector2(128,9))
 	draw_rect(r,Color(0.015,0.018,0.019,0.82)); draw_rect(r,Color(1,1,1,0.52),false,1.0)
 	var low: bool=game.player.vehicle_durability<30.0
 	var col:=Color("d96b43") if low else Color("d9a143")
 	if low and int(Time.get_ticks_msec()/180)%2==0: col=Color("e5483c")
 	if d>0.0: draw_rect(Rect2(r.position+Vector2(2,2),Vector2((r.size.x-4)*d,r.size.y-4)),col)
-	# Glyph: two wheels, a frame bar and handlebars.
-	var g:=origin+Vector2(186,6)
-	draw_arc(g+Vector2(-8,3),4,0,TAU,14,WHITE,1.8); draw_arc(g+Vector2(8,3),4,0,TAU,14,WHITE,1.8)
-	draw_line(g+Vector2(-8,3),g+Vector2(0,-4),WHITE,1.8); draw_line(g+Vector2(0,-4),g+Vector2(8,3),WHITE,1.8)
-	draw_line(g+Vector2(-8,3),g+Vector2(2,3),WHITE,1.8); draw_line(g+Vector2(0,-4),g+Vector2(3,-8),WHITE,1.8)
 
 func _draw_armor_badge(pos: Vector2) -> void:
 	var shield:=PackedVector2Array([pos+Vector2(0,0),pos+Vector2(16,-4),pos+Vector2(32,0),pos+Vector2(30,18),pos+Vector2(16,30),pos+Vector2(2,18)])
@@ -2414,7 +2411,7 @@ func _draw_signin() -> void:
 	var p: Rect2=game.SIGNIN_PANEL
 	_box(p,Color(0.045,0.05,0.052,0.95))
 	_frame(p,Color(1,1,1,0.12),1.0)
-	_section(Vector2(-1,p.position.y+16),ProgressCatalog.text(lang,"signin"),24)
+	_section(Vector2(-1,p.position.y+46),ProgressCatalog.text(lang,"signin"),24)   # inside the panel, not on its edge
 	# week / month switch, centred under the title
 	for ti in range(2):
 		var tr: Rect2 = game.signin_tab_rect(ti)
