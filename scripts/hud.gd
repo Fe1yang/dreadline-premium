@@ -244,13 +244,22 @@ func _draw_clean() -> void:
 func _draw_list() -> void:
 	_replay(list_clip,list_ops,-list_clip.position)
 
+## The voucher art is a wide ticket (240x147). Many slots were laid out as near-squares, which
+## squashed it into a tall stub; keep its height and widen it around the same centre instead.
+func _keep_aspect(tex: Texture2D,r: Rect2) -> Rect2:
+	if tex==null or tex!=voucher_tex or r.size.y<=0.0: return r
+	var ar: float=float(tex.get_width())/maxf(1.0,float(tex.get_height()))
+	if r.size.x/r.size.y>=ar*0.92: return r
+	var w: float=r.size.y*ar
+	return Rect2(Vector2(r.get_center().x-w*0.5,r.position.y),Vector2(w,r.size.y))
+
 ## Draws recorded ops onto a layer. "xf" sets a rotation/offset for what follows (tilted tags).
 func _replay(target: Control,ops: Array,offset: Vector2) -> void:
 	target.draw_set_transform(offset,0.0,Vector2.ONE)
 	for op in ops:
 		match op[0]:
 			"text": target.draw_string(op[1],op[2],op[3],HORIZONTAL_ALIGNMENT_LEFT,-1,op[4],op[5])
-			"texture": target.draw_texture_rect(op[1],op[2],false)
+			"texture": target.draw_texture_rect(op[1],_keep_aspect(op[1],op[2]),false)
 			"region": target.draw_texture_rect_region(op[1],op[2],op[3])
 			"tinted": target.draw_texture_rect(op[1],op[2],false,op[3])
 			"tiled": target.draw_texture_rect(op[1],op[2],true,op[3])
