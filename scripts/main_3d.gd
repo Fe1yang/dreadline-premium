@@ -558,7 +558,11 @@ var settings_dev_taps:=0
 const CTRL_SAVE:=Rect2(278,152,196,58)
 const CTRL_KEYS:=["stick_left","stick_right","btn_reload","btn_swap","btn_frag","btn_flash","btn_fire","pause"]
 ## Saved position of every movable control, in real viewport coordinates.
-var touch_layout:={}
+var touch_layout:={}   # where every control is drawn right now (canvas units), rebuilt by _pin_sticks
+## Only the controls the player actually dragged, in 540x960 design units. The effective layout used
+## to be saved and fed back as if it were the player's choice, so positions worked out on one
+## canvas (the tall boot screen) were re-used on another and every button piled up at the bottom.
+var touch_custom:={}
 ## Key of the control under the finger in the layout editor ("" = not dragging).
 var ctrl_drag:=""
 ## The classic start screen (state "cover"): the title poster greets every launch, and any
@@ -610,7 +614,6 @@ func _ready() -> void:
 	# under it and the camera staged a frame the design never had. Keep the original
 	# rectangle and letterbox it on every device instead.
 	_update_aspect()
-	_pin_sticks()
 	touch_controls=OS.has_feature("mobile")
 	_boot_progress(2); await get_tree().process_frame
 	sound=SoundScript.new(); sound.muted=_read_muted(); _read_volumes(); add_child(sound)
@@ -709,6 +712,7 @@ func _boot_prepare_everything() -> void:
 		if is_instance_valid(boot_screen): boot_screen.call("set_progress", 0.95)
 		await get_tree().process_frame
 	booting=false
+	_update_aspect(); _pin_sticks()   # controls laid out on the frame the game really uses
 	BootTrace.mark("main: ready to play")
 	# a few frames of the real first screen drawn under the loading picture, so whatever it
 	# still has to compile happens out of sight
@@ -733,13 +737,13 @@ func default_touch_layout() -> Dictionary:
 ## reachable. Sticks are pinned to their stored place instead of a hardcoded corner.
 func _pin_sticks() -> void:
 	var defaults:=default_touch_layout()
+	touch_layout={}
 	for key in defaults.keys():
 		var p: Vector2=defaults[key]
-		var saved: Variant=touch_layout.get(key)
-		if saved is Vector2:
-			# saved against the 540x960 design canvas: re-project onto whatever canvas this device
-			# has, otherwise a taller screen clamped every control to the bottom edge.
-			p=Vector2(saved.x*ui_w/540.0, saved.y*ui_h/960.0)
+		var custom: Variant=touch_custom.get(key)
+		if custom is Vector2:
+			# the player's own spot, kept in design units: projected onto this canvas
+			p=Vector2(custom.x*ui_w/540.0, custom.y*ui_h/960.0)
 		touch_layout[key]=_clamped_control(key,p)
 	left_origin=touch_layout["stick_left"]; right_origin=touch_layout["stick_right"]
 	left_knob=left_origin; right_knob=right_origin
@@ -766,6 +770,8 @@ func control_at(pos: Vector2) -> String:
 func move_control(key: String,pos: Vector2) -> void:
 	if key=="": return
 	touch_layout[key]=_clamped_control(key,pos)
+	var q: Vector2=touch_layout[key]
+	touch_custom[key]=Vector2(q.x*540.0/maxf(ui_w,1.0), q.y*960.0/maxf(ui_h,1.0))
 	if key=="stick_left": left_origin=touch_layout[key]; left_knob=left_origin
 	elif key=="stick_right": right_origin=touch_layout[key]; right_knob=right_origin
 
@@ -6819,7 +6825,7 @@ func _pointer_down(pos: Vector2) -> bool:
 		if Rect2(66,810,408,64).has_point(pos): state=settings_return_state; return true
 	elif state=="controls":
 		if CTRL_RESET.has_point(pos):
-			touch_layout={}; _pin_sticks(); _save(); return true
+			touch_custom={}; _pin_sticks(); _save(); return true
 		if CTRL_SAVE.has_point(pos):
 			ctrl_drag=""; _save(); state="settings"; return true
 		ctrl_drag=control_at(pos)
@@ -6952,8 +6958,12 @@ func _load_save() -> void:
 		daily_day=str(c.get_value("missions","day","")); daily_stats=c.get_value("missions","stats",{}); daily_claimed=c.get_value("missions","claimed",{}); daily_swaps=c.get_value("missions","swaps",{})
 		event_window=int(c.get_value("event","window",-1)); event_stats=c.get_value("event","stats",{}); event_claimed=c.get_value("event","claimed",{}); event_swaps=c.get_value("event","swaps",{})
 		for id in meta_upgrades.keys(): meta_upgrades[id]=int(c.get_value("upgrades",id,0))
-	var saved_layout: Variant=c.get_value("controls","layout",{})
-	touch_layout=saved_layout if saved_layout is Dictionary else {}
+	# layout_v2 = only the controls the player dragged. The old "layout" key held whole effective
+	# layouts, some of them squashed by the bug above, so it is ignored: everyone starts again
+	# from the default layout and can drag controls back where they like them.
+	var saved_layout: Variant=c.get_value("controls","layout_v2",{})
+	touch_custom=saved_layout if saved_layout is Dictionary else {}
+	if not booting: _pin_sticks()
 	stamina.load_config(c)
 ## Settings volume sliders: track rects (also used by hud.gd to draw them).
 const SLIDER_MUSIC:=Rect2(200,214,214,36)
@@ -6979,11 +6989,7 @@ func _read_muted() -> bool:
 	return bool(c.get_value("audio","muted",false)) if (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK) else false
 ## Ctrl layout is written in design-canvas units so a different screen size cannot shift it.
 func _layout_for_save() -> Dictionary:
-	var out:={}
-	for key in touch_layout.keys():
-		var p: Vector2=touch_layout[key]
-		out[key]=Vector2(p.x*540.0/maxf(ui_w,1.0), p.y*960.0/maxf(ui_h,1.0))
-	return out
+	return touch_custom.duplicate()
 
 func _save() -> void:
 	if "--smoke-test" in OS.get_cmdline_user_args() or "--soak-test" in OS.get_cmdline_user_args() or "--lootbox-test" in OS.get_cmdline_user_args() or "--stamina-test" in OS.get_cmdline_user_args() or "--capture" in OS.get_cmdline_user_args() or "--capture-medic" in OS.get_cmdline_user_args() or "--capture-bike" in OS.get_cmdline_user_args(): return # test and capture runs must never touch the player's real save
@@ -7001,7 +7007,7 @@ func _save() -> void:
 	c.set_value("missions","day",daily_day); c.set_value("missions","stats",daily_stats); c.set_value("missions","claimed",daily_claimed); c.set_value("missions","swaps",daily_swaps)
 	c.set_value("event","window",event_window); c.set_value("event","stats",event_stats); c.set_value("event","claimed",event_claimed); c.set_value("event","swaps",event_swaps)
 	for id in meta_upgrades.keys(): c.set_value("upgrades",id,meta_upgrades[id])
-	c.set_value("controls","layout",_layout_for_save())
+	c.set_value("controls","layout_v2",_layout_for_save())
 	stamina.save_config(c)
 	c.set_value("audio","muted",sound.muted if is_instance_valid(sound) else false); c.save(SAVE_PATH)
 

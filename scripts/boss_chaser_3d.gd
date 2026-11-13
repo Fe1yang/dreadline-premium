@@ -7,6 +7,7 @@ const MODEL_PATH:="res://assets/models/actors/pursuer_abomination.glb"
 const SCALE:=2.15
 const ModelFix=preload("res://scripts/model_fix.gd")
 const AnimLibrary=preload("res://scripts/anim_library.gd")
+const SKIN_SHADER=preload("res://shaders/pursuer_skin.gdshader")
 ## Matching the road exactly needed the walk at 2.4x and it twitched. A bigger beast takes longer
 ## strides, and a calmer 1.6x cadence leaves only a little slide that the eye forgives.
 const WALK_CADENCE:=1.6
@@ -42,15 +43,18 @@ func _ready() -> void:
 		var src: Material=mi.material_override
 		if src==null and mi.mesh: src=mi.mesh.surface_get_material(0)
 		if src is StandardMaterial3D:
-			var bright: StandardMaterial3D=(src as StandardMaterial3D).duplicate() as StandardMaterial3D
-			bright.albedo_color=bright.albedo_color.lightened(0.30)
-			bright.roughness=clampf(maxf(bright.roughness,0.92),0.92,1.0)
-			bright.metallic=0.0
-			bright.metallic_specular=0.15
-			bright.specular_mode=BaseMaterial3D.SPECULAR_SCHLICK_GGX
-			mi.material_override=bright
+			# softer, partly desaturated skin with a wrapped light falloff (shaders/pursuer_skin)
+			var sm:=src as StandardMaterial3D
+			var skin:=ShaderMaterial.new(); skin.shader=SKIN_SHADER
+			skin.set_shader_parameter("albedo_tex",sm.albedo_texture)
+			skin.set_shader_parameter("albedo_color",sm.albedo_color)
+			if sm.normal_enabled and sm.normal_texture!=null:
+				skin.set_shader_parameter("normal_tex",sm.normal_texture)
+				skin.set_shader_parameter("use_normal",true)
+			mi.material_override=skin
+	# a neutral soft light in front of it, so the face reads at night without a warm cast
 	var glow:=OmniLight3D.new()
-	glow.light_color=Color("ffe0b8"); glow.light_energy=0.35; glow.omni_range=6.0; glow.omni_attenuation=1.1
+	glow.light_color=Color("e8ecf2"); glow.light_energy=0.28; glow.omni_range=6.0; glow.omni_attenuation=1.2
 	glow.position=Vector3(0,2.2,-1.5); add_child(glow)
 	# The GLB may park its clips on a nested player, and the clip name is not guaranteed to
 	# survive every re-export: take the first player that actually has animation data and
