@@ -5250,7 +5250,7 @@ func _damage_number(z: Node3D,amount: float,_color: Color,crit:=false) -> void:
 	var e = _fx_label_at(z.global_position+Vector3(rng.randf_range(-0.24,0.24),2.78,rng.randf_range(-0.12,0.12)),
 		text,col,Vector3(rng.randf_range(-0.16,0.16),1.05,0),0.78,big)
 	if glyphs != null:
-		var hgt := 0.62
+		var hgt := 0.92   # a size up from the plain red numbers so a crit reads at a glance
 		var k: float = hgt / float(CRIT_GLYPH_H)
 		var row: Array = []
 		for ch in body:
