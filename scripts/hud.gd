@@ -1130,13 +1130,20 @@ func _draw_armory() -> void:
 	if _wname.begins_with("n_"): _wname = id
 	_bold_text(_wname, Vector2(60, 552), 24, WHITE)
 	# bars: damage / rate / magazine, normalised against the strongest weapon
-	var dmg: float = float(stats.get("damage", 0.0))
+	# damage includes the bought levels; the next level is shown as a lighter extension and "a → b"
+	var base_dmg: float = float(stats.get("damage", 0.0))
+	var lv_now: int = game.armory_level()
+	var lv_top: int = game.armory_max_level()
+	var per_lv: float = game.player.WEAPON_LEVEL_BONUS
+	var dmg: float = base_dmg * (1.0 + lv_now * per_lv)
+	var dmg_next: float = base_dmg * (1.0 + (lv_now + 1) * per_lv) if lv_top > 0 and lv_now < lv_top else dmg
 	var rate: float = 1.0 / maxf(0.05, float(stats.get("rate", 0.3)))
 	var mag: float = float(stats.get("mag", 1))
 	var _zh: bool = String(game.language_code).begins_with("zh")
-	var rows := [[UiText.text(String(game.language_code),"damage"), dmg / 180.0, str(int(dmg))],
-		[UiText.text(String(game.language_code),"rate"), rate / (1.0 / 0.085), "%.1f/s" % rate],
-		[UiText.text(String(game.language_code),"mag"), mag / 100.0, str(int(mag))]]
+	var dmg_txt: String = str(roundi(dmg)) if dmg_next <= dmg else "%d → %d" % [roundi(dmg), roundi(dmg_next)]
+	var rows := [[UiText.text(String(game.language_code),"damage"), dmg / 180.0, dmg_txt, dmg_next / 180.0],
+		[UiText.text(String(game.language_code),"rate"), rate / (1.0 / 0.085), "%.1f/s" % rate, 0.0],
+		[UiText.text(String(game.language_code),"mag"), mag / 100.0, str(int(mag)), 0.0]]
 	var y: float = 596.0
 	for row in rows:
 		_text(String(row[0]), Vector2(60, y + 4), 15, MUTED)
@@ -1145,6 +1152,9 @@ func _draw_armory() -> void:
 		var bar := Rect2(150, y - 12, 240, 16)
 		_box(bar, Color(0.10, 0.11, 0.12, 0.95), Color(0.25, 0.26, 0.27, 1.0), 1.0)
 		var fill: float = clampf(float(row[1]), 0.0, 1.0)
+		var next_fill: float = clampf(float(row[3]), 0.0, 1.0)
+		if next_fill > fill:
+			_box(Rect2(bar.position.x + 1, bar.position.y + 1, (bar.size.x - 2) * next_fill, bar.size.y - 2), Color(1.0, 0.84, 0.37, 0.30), Color(1.0, 0.84, 0.37, 0.30), 0.0)
 		if fill > 0.0:
 			_box(Rect2(bar.position.x + 1, bar.position.y + 1, (bar.size.x - 2) * fill, bar.size.y - 2), Color("ffd75e"), Color("ffd75e"), 0.0)
 		_text(String(row[2]), Vector2(404, y + 4), 15, GOLD)
@@ -1164,6 +1174,7 @@ func _draw_armory() -> void:
 	_box(Rect2(420, 736, 60, 44), Color(0.10, 0.11, 0.12, 1.0), Color(LINE, 1.0), 0)
 	_text_center("›", Vector2(450, 764), 22, WHITE)
 	_button(Rect2(24, 24, 100, 48), "‹  " + game.localize("back"), false)
+	_toast(800)
 
 func _draw_shop() -> void:
 	# The 3D window between the panels is a close-up of the gear being upgraded.
@@ -1218,6 +1229,7 @@ func _draw_shop() -> void:
 		_panel(rect,Color(0.12,0.13,0.13,0.95) if on else Color(0.07,0.075,0.08,0.90),RED if on else LINE,0)
 		_chip_text(ShopText.text(lang,chip.name_key),rect,WHITE if on else MUTED)
 	_text_center(UiText.text(String(game.language_code),"premium"),Vector2(270,936),12,Color("cf8c75"))
+	_toast(540)
 
 func _draw_languages() -> void:
 	draw_rect(Rect2(0,0,540,game.ui_h),Color(0.018,0.022,0.023,0.88))
@@ -2298,7 +2310,8 @@ func _draw_letter(m: Dictionary,lang: String) -> void:
 	if has_gift:
 		var claimed: bool=game.mail_claimed.has(String(m.id))
 		_box(Rect2(x,y+12,w,1),Color(1,1,1,0.14))
-		_reward_line(Vector2(x+130,y+66),int(m.coins),int(m.vouchers),24,int(m.get("cans",0)))
+		var rw: float=_reward_line_width(int(m.coins),int(m.vouchers),24,int(m.get("cans",0)))
+		_reward_line(Vector2(view.get_center().x-rw*0.5,y+66),int(m.coins),int(m.vouchers),24,int(m.get("cans",0)))   # centred
 		var b: Rect2=game.letter_claim_rect()
 		if claimed: _ghost_button(b,ExtraText.text(lang,"claimed"),Color(1,1,1,0.4))
 		else: _store_price(b,ExtraText.text(lang,"claim"),true)
@@ -2389,6 +2402,15 @@ func _share_button(r: Rect2,lang: String) -> void:
 	var col:=Color("e2dfd7")
 	for p in [ic+Vector2(-7,0),ic+Vector2(7,-8),ic+Vector2(7,8)]: clean_ops.append(["poly",_circle_pts(p,3.5,10),col])
 	clean_ops.append(["line",PackedVector2Array([ic+Vector2(7,-8),ic+Vector2(-7,0),ic+Vector2(7,8)]),col,1.6])
+
+## Width _reward_line will take, so a gift row can be centred.
+func _reward_line_width(coins: int,vouchers: int,size:=22,cans:=0) -> float:
+	var w:=0.0
+	if cans>0: w+=size+16+bold.get_string_size("×%d"%cans,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(size)).x
+	if coins>0: w+=size+16+bold.get_string_size(_grouped(coins),HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(size)).x
+	if vouchers>0: w+=(size+4)*1.6+6+bold.get_string_size("×%d"%vouchers,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(size)).x
+	elif w>0.0: w-=8.0
+	return w
 
 func _reward_line(pos: Vector2,coins: int,vouchers: int,size:=22,cans:=0) -> void:
 	var x:=pos.x
@@ -2499,9 +2521,10 @@ func _draw_signin() -> void:
 			clean_ops.append(["line",PackedVector2Array([cc+Vector2(-18,0),cc+Vector2(-5,13),cc+Vector2(20,-14)]),WHITE,6.0])
 
 	if avail:
-		_plain_button(game.SIGNIN_CLAIM,ProgressCatalog.text(lang,"claim"))
+		# today's reward is waiting: a lit (red) button, not the grey of an already-claimed day
+		_button(game.SIGNIN_CLAIM,ProgressCatalog.text(lang,"claim"),true)
 		_ad_x2_button(game.SIGNIN_DOUBLE,"busy" if game.ad_pending=="signin_double" else "ready")
-	else: _ghost_button(Rect2(game.SIGNIN_CLAIM.position,Vector2(game.SIGNIN_DOUBLE.end.x-game.SIGNIN_CLAIM.position.x,game.SIGNIN_CLAIM.size.y)),ProgressCatalog.text(lang,"claim"))
+	else: _ghost_button(Rect2(game.SIGNIN_CLAIM.position,Vector2(game.SIGNIN_DOUBLE.end.x-game.SIGNIN_CLAIM.position.x,game.SIGNIN_CLAIM.size.y)),ProgressCatalog.text(lang,"claimed"))
 	_toast(712)
 
 func _draw_tasks() -> void:

@@ -1103,8 +1103,9 @@ func apply_meta(upgrades: Dictionary) -> void:
 	# bonus lands exactly once per gun — never squared by applying it again here.
 	damage=base_damage(weapon)*weapon_bonus(weapon)
 
+const WEAPON_LEVEL_BONUS := 0.12   # damage per bought weapon level (armory shows the same figure)
 func weapon_bonus(id: String) -> float:
-	return 1.0+int(weapon_levels.get(id,0))*0.12
+	return 1.0+int(weapon_levels.get(id,0))*WEAPON_LEVEL_BONUS
 
 ## The gun's damage before gate buffs and shop upgrades — one source of truth shared by
 ## set_weapon and apply_meta so a bought level always lands exactly once.

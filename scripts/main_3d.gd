@@ -2598,6 +2598,14 @@ var armory_pivot: Node3D
 var armory_model: Node3D
 var armory_spin := 0.0
 var armory_drag := false
+var armory_touches := {}    # finger index -> position, for the two-finger pinch zoom
+var armory_pinch := 0.0     # finger gap at the last pinch step (0 = no pinch running)
+var armory_zoom := 1.0
+const ARMORY_ZOOM_MIN := 0.6
+const ARMORY_ZOOM_MAX := 2.6
+func _armory_zoom(factor: float) -> void:
+	armory_zoom = clampf(armory_zoom * factor, ARMORY_ZOOM_MIN, ARMORY_ZOOM_MAX)
+	if is_instance_valid(armory_pivot): armory_pivot.scale = Vector3.ONE * armory_zoom
 
 ## Damage / rate / magazine for every weapon, taken from the same table set_weapon uses.
 const ARMORY_STATS := {
@@ -2666,6 +2674,7 @@ func _armory_show_weapon() -> void:
 		armory_stage.add_child(armory_pivot)
 	armory_pivot.add_child(model)
 	armory_pivot.rotation = Vector3.ZERO
+	armory_zoom = 1.0; armory_pivot.scale = Vector3.ONE
 	armory_model = model
 	# normalise: centre it and scale the longest side to a fixed length on screen
 	var box := AABB()
@@ -3275,6 +3284,13 @@ func close_offer() -> void:
 
 const RESOURCE_PACKS:={"coins":"coins_1","silver":"silver_1","vouchers":"vouchers_1","cans":"cans_1"}
 func open_resource_pack(kind: String) -> void:
+	if PREMIUM_BUILD:
+		# nothing is for sale in the buy-once build: just say what is short, no pack popup
+		if kind=="vouchers": store_toast_text=ShopText.text(language_code,"case_no_voucher")
+		elif kind=="coins": store_toast_text=ExtraText.text(language_code,"not_enough_coins")
+		else: store_toast_text=ExtraText.text(language_code,"not_enough_silver")
+		store_toast=1.8
+		return
 	if not RESOURCE_PACKS.has(kind): return
 	resource_pack_id=String(RESOURCE_PACKS[kind])
 	resource_pack_return_state=state
@@ -3416,7 +3432,10 @@ var mail_return_state:="character_select"
 var mail_http: HTTPRequest
 
 func _builtin_mail() -> Array:
-	return [{"id":"welcome_v1","title":ExtraText.text(language_code,"welcome_title"),"body":ExtraText.text(language_code,"welcome_body"),"coins":0,"vouchers":3,"cans":0}]
+	# the roadmap paragraph goes in just before the gift line and the signature
+	var paras: PackedStringArray=ExtraText.text(language_code,"welcome_body").split("\n\n")
+	paras.insert(maxi(0,paras.size()-2),ExtraText.plans(language_code))
+	return [{"id":"welcome_v1","title":ExtraText.text(language_code,"welcome_title"),"body":"\n\n".join(paras),"coins":0,"vouchers":3,"cans":0}]
 
 func _mail_text(v,fallback:="") -> String:
 	if v is Dictionary: return String(v.get(language_code,v.get("en",fallback)))
@@ -6521,6 +6540,27 @@ func _update_touch_aim() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if booting: return
+	# Armory preview: two fingers pinch to zoom the gun (wheel / trackpad pinch on desktop).
+	if state == "armory" and is_instance_valid(armory_model):
+		if event is InputEventScreenTouch:
+			if event.pressed: armory_touches[event.index] = event.position
+			else:
+				armory_touches.erase(event.index)
+				if armory_touches.size() < 2: armory_pinch = 0.0
+		elif event is InputEventScreenDrag and armory_touches.has(event.index):
+			armory_touches[event.index] = event.position
+			if armory_touches.size() >= 2:
+				var pts: Array = armory_touches.values()
+				var gap: float = (pts[0] as Vector2).distance_to(pts[1] as Vector2)
+				if armory_pinch > 0.0 and gap > 1.0: _armory_zoom(gap / armory_pinch)
+				armory_pinch = gap
+				return   # two fingers zoom; they do not spin the gun
+		elif event is InputEventMagnifyGesture:
+			_armory_zoom(event.factor); return
+		elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			_armory_zoom(1.1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.1); return
+	elif not armory_touches.is_empty():
+		armory_touches.clear(); armory_pinch = 0.0
 	if armory_drag and is_instance_valid(armory_model):
 		if event is InputEventScreenDrag or (event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_LEFT)):
 			# spin around a pivot so horizontal drag is a yaw and vertical drag a pitch,

@@ -61,6 +61,15 @@ func _ready() -> void:
 	for hide in ["Merchant_HD","Crate.001","CrateLatch.001","Crate.002","CrateLatch.002"]:
 		var n:=truck.find_child(hide,true,false)
 		if n: n.visible=false
+	# The rear wheel's arch and tyre poke up through the lower shelf: in the ammo-case close-up
+	# their faces fought with the shelf and flickered. Nothing of that wheel shows from the shop
+	# camera except through the shelf, so it is hidden.
+	for n in truck.find_children("*","MeshInstance3D",true,false):
+		var nm: String=String(n.name)
+		if nm in ["Fender_003","Tire_003","Hub_003","HubCap_003"]: n.visible=false
+		elif nm.begins_with("TireTread_"):
+			var k: int=int(nm.get_slice("_",1))
+			if k>=48 and k<=63: n.visible=false
 	_build_lighting()
 	_build_back_wall()
 	_build_shelves()
@@ -68,7 +77,7 @@ func _ready() -> void:
 	_build_floor_clutter()
 	_build_counter()
 	_build_focus_lights()
-	_register("ammo",truck.find_child("Crate_002",true,false) as Node3D)
+	_build_supply_stock()
 
 ## Called when the shop opens: start on the overview, then glide to the first item.
 func reset_view(first_id: String) -> void:
@@ -219,6 +228,17 @@ func _prop(path: String,length: float,pos: Vector3,yaw:=0.0,lay_long_axis_on_x:=
 	holder.position=pos; holder.rotation.y=yaw
 	return holder
 
+## Turns a prop upside down (180° about X) and sets it back on its lowest point.
+func _dome_down(holder: Node3D) -> void:
+	if holder==null or holder.get_child_count()==0: return
+	var model:=holder.get_child(0) as Node3D
+	model.position=Vector3.ZERO
+	model.rotation.x=PI
+	var box:=_aabb_rotated(model)
+	var offset:=-box.get_center()
+	offset.y=-box.position.y
+	model.position=offset
+
 func _aabb_rotated(model: Node3D) -> AABB:
 	var box:=AABB(); var first:=true
 	for m in model.find_children("*","MeshInstance3D",true,false):
@@ -269,18 +289,20 @@ func _build_back_wall() -> void:
 func _build_shelves() -> void:
 	# Upper shelf (top surface y≈2.10): medical, helmets, grenades.
 	var top:=2.10
-	_prop("res://assets/models/medkit.glb",0.30,Vector3(-0.35,top+0.07,-0.55),0.15)
-	_prop("res://assets/models/medkit.glb",0.30,Vector3(0.00,top+0.07,-0.57),-0.1)
-	_prop("res://assets/models/helmet.glb",0.30,Vector3(0.45,top+0.07,-0.55),0.6)
-	_prop("res://assets/models/helmet.glb",0.30,Vector3(0.82,top+0.07,-0.57),-0.4)
+	# sitting on the shelf (they used to hover 7 cm above it)
+	_prop("res://assets/models/medkit.glb",0.30,Vector3(-0.35,top,-0.55),0.15)
+	_prop("res://assets/models/medkit.glb",0.30,Vector3(0.00,top,-0.57),-0.1)
+	# helmets rest upside down on the dome, chin strap up, like they would on a real shelf
+	_dome_down(_prop("res://assets/models/helmet.glb",0.30,Vector3(0.45,top,-0.55),0.6))
+	_dome_down(_prop("res://assets/models/helmet.glb",0.30,Vector3(0.82,top,-0.57),-0.4))
 	_box(Vector3(0.46,0.06,0.22),Vector3(1.32,top+0.03,-0.70),Color("3d4a33"),0.9)
 	for i in range(4):
 		_prop("res://assets/models/frag_grenade.glb",0.10,Vector3(1.15+i*0.11,top+0.06,-0.70),i*0.7)
 	for i in range(3):
 		_prop("res://assets/models/flashbang.glb",0.13,Vector3(1.72+i*0.12,top,-0.70),i*0.4)
 	_prop("res://assets/models/fire_round.glb",0.16,Vector3(2.18,top,-0.70),0.3)
-	# Lower shelf already carries the truck's ammo boxes; add loose ammo cans at the ends.
-	_prop("res://assets/models/ammo_pickup.glb",0.28,Vector3(2.32,1.64,-0.52),0.2)
+	# (The loose ammo can that sat on the lower shelf poked through the truck's crates in the
+	# ammo-case close-up, so it is gone.)
 
 func _build_side_walls() -> void:
 	# Left wall (behind the cab): armour vest on a hook, a city map and a hand-written price list.
@@ -297,22 +319,43 @@ func _build_side_walls() -> void:
 	for i in range(9):
 		_cyl(0.012,0.07,Vector3(2.44,2.55-i*0.06,-0.15+i*0.025),Color("c9a24a"),0.35,0.9).rotation.z=PI*0.5
 
+## The truck model's placeholder boxes (the white/green "ammo boxes" on the lower shelf and the
+## four green crates on the counter) are swapped for the game's real medkit and ammo-can models.
+func _build_supply_stock() -> void:
+	for n in truck.find_children("*","MeshInstance3D",true,false):
+		var nm: String=String(n.name)
+		if nm.begins_with("AmmoBox") or nm.begins_with("MedicalCross") or nm.begins_with("SupplyLabel"): n.visible=false
+		elif nm in ["Crate","Crate_001","Crate_002","Crate_003","CrateLatch","CrateLatch_001","CrateLatch_002","CrateLatch_003"]: n.visible=false
+	# lower shelf (top y~1.575): medkits and ammo cans, fewer and spaced so nothing touches
+	var shelf_y:=1.575
+	var shelf:=[["res://assets/models/medkit.glb",-0.20,0.15],["res://assets/models/ammo_pickup.glb",0.30,-0.2],
+		["res://assets/models/medkit.glb",0.82,-0.1],["res://assets/models/ammo_pickup.glb",1.34,0.25],
+		["res://assets/models/medkit.glb",1.86,0.1]]
+	for it in shelf:
+		_prop(String(it[0]),0.34,Vector3(float(it[1]),shelf_y,-0.62),float(it[2]))
+	# counter (top y~1.49): the ammo can in the middle is the one the ammo-case upgrade zooms to
+	var counter_y:=1.49
+	_prop("res://assets/models/medkit.glb",0.36,Vector3(0.68,counter_y,1.36),0.2)
+	_register("ammo",_prop("res://assets/models/ammo_pickup.glb",0.44,Vector3(1.42,counter_y,1.34),-0.15))
+	_prop("res://assets/models/ammo_pickup.glb",0.34,Vector3(1.92,counter_y,1.38),0.3)
+
 func _build_floor_clutter() -> void:
 	# Crates, a barrel and jerrycans on the cargo floor (mostly hidden behind the counter wall,
 	# visible through the window edges for depth).
 	var wood:=Color("6b5233")
 	_box(Vector3(0.55,0.42,0.45),Vector3(-0.38,FLOOR_Y+0.21,-0.65),wood,0.95)
-	_box(Vector3(0.45,0.36,0.40),Vector3(-0.40,FLOOR_Y+0.60,-0.66),wood.darkened(0.12),0.95)
+	# (the second crate stacked on top reached y≈1.79 and stuck up through the lower shelf,
+	# straight into the left medkit, so it is gone)
 	_box(Vector3(0.30,0.40,0.16),Vector3(2.25,FLOOR_Y+0.20,0.45),Color("8e2420"),0.6,0.2)
 	_box(Vector3(0.30,0.40,0.16),Vector3(2.25,FLOOR_Y+0.20,0.25),Color("3f5a2c"),0.6,0.2)
-	_prop("res://assets/models/barrel.glb",0.85,Vector3(2.15,FLOOR_Y,-0.62),0.4)
+	# (no barrel: the road's explosive barrel model looked out of place in a supply truck and
+	# poked up through the lower shelf)
 
 func _build_counter() -> void:
 	# Counter top surface y≈1.50: goods laid out for the player.
 	var top:=COUNTER_TOP
 	_prop("res://assets/models/weapons/pistol.glb",0.24,Vector3(0.18,top,1.40),-0.5)
-	_prop("res://assets/models/ammo_pickup.glb",0.22,Vector3(1.55,top,1.10),0.3)
-	_prop("res://assets/models/medkit.glb",0.26,Vector3(1.62,top,1.38),-0.2)
+	# (the ammo can and medkit that sat here were wedged between the counter crates and clipped)
 	_prop("res://assets/models/frag_grenade.glb",0.10,Vector3(0.40,top,1.50),0.0)
 	# Cash tin, radio and a coffee mug.
 	_box(Vector3(0.22,0.08,0.15),Vector3(1.02,top+0.04,1.38),Color("2e5b50"),0.5,0.5)
