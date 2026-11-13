@@ -8,8 +8,8 @@ uniform sampler2D albedo_tex : source_color, filter_linear_mipmap, repeat_enable
 uniform sampler2D normal_tex : hint_normal, filter_linear_mipmap, repeat_enable;
 uniform bool use_normal = false;
 uniform vec4 albedo_color : source_color = vec4(1.0);
-uniform float saturation = 0.62;
-uniform float brightness = 1.12;
+uniform float saturation = 0.70;
+uniform float brightness = 0.92;
 void fragment() {
 	vec3 c = texture(albedo_tex, UV).rgb * albedo_color.rgb;
 	float l = dot(c, vec3(0.299, 0.587, 0.114));
@@ -21,6 +21,6 @@ void fragment() {
 		NORMAL_MAP = texture(normal_tex, UV).rgb;
 		NORMAL_MAP_DEPTH = 0.8;
 	}
-	RIM = 0.16;
+	RIM = 0.10;
 	RIM_TINT = 0.5;
 }
