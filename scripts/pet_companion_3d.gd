@@ -163,6 +163,24 @@ func _ensure_death_clips() -> void:
 			if k>=0: a.track_set_path(t,NodePath(prefix+p.substr(k+10)))
 		a.loop_mode=Animation.LOOP_NONE
 		if not lib.has_animation(clip): lib.add_animation(clip,a)
+## Some animal imports (the white tiger) carry their clips as Dog_Run / Dog_Idle / Dog_Bite
+## instead of Gallop / Idle / Bite. Without a Gallop clip the pet found no animation player at
+## all and slid down the road frozen in its rest pose. Copy the clips under the names the
+## pet logic uses, so every breed animates the same way.
+const CLIP_ALIASES:={"Gallop":["Dog_Run"],"Trot":["Dog_Run"],"Walk":["Dog_Run"],"Idle":["Dog_Idle"],
+	"Bite":["Dog_Bite"],"Bite_Up":["Dog_Bite"],"Attack":["Dog_Bite"],"Bark":["Dog_Idle"]}
+static func _alias_clips(player: AnimationPlayer) -> void:
+	var lib: AnimationLibrary
+	if player.has_animation_library(&""):
+		lib=player.get_animation_library(&"")
+	else:
+		lib=AnimationLibrary.new(); player.add_animation_library(&"",lib)
+	for clip in CLIP_ALIASES:
+		if player.has_animation(clip): continue
+		for source in CLIP_ALIASES[clip]:
+			if player.has_animation(source):
+				lib.add_animation(clip,player.get_animation(source).duplicate())
+				break
 var bark_wait:=0.0
 var bark_stop:=0.0
 
@@ -185,6 +203,7 @@ func setup(index: int, slot:=0) -> void:
 	anim=null
 	for ap in model.find_children("*","AnimationPlayer",true,false):
 		var player := ap as AnimationPlayer
+		if player != null: _alias_clips(player)
 		if player != null and player.has_animation(RUN_CLIP):
 			anim = player
 			break
