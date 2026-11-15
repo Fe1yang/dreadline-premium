@@ -1621,6 +1621,9 @@ var warmup_nodes: Array=[]
 func _warm_up_begin() -> void:
 	warmup_view=SubViewport.new(); warmup_view.size=Vector2i(48,48)
 	warmup_view.render_target_update_mode=SubViewport.UPDATE_ALWAYS
+	# Its own world: a SubViewport shares the main World3D by default, so the warm-up zombies
+	# (all at the origin) were drawn in the real scene, standing inside the supply case.
+	warmup_view.own_world_3d=true
 	add_child(warmup_view)
 	warmup_root=Node3D.new(); warmup_view.add_child(warmup_root)
 	var cam:=Camera3D.new(); cam.position=Vector3(0,0.6,3.0); cam.current=true; warmup_root.add_child(cam)
@@ -2831,6 +2834,10 @@ func open_lootbox() -> void:
 	lootbox_return_state=state; lootbox_message=""; lootbox_reward_title=""
 	state="lootbox"; _release_touches(); lootbox_scene.reset_case()
 	lootbox_scene.visible=true; lobby.visible=false; shop_truck.visible=false; player.visible=false
+	# The title-screen zombies are never cleared before the first run, and they shuffle up to
+	# the origin, which is where the case table stands: they appeared inside the open case.
+	for z in zombies:
+		if is_instance_valid(z): z.visible=false
 
 ## How many ad opens are left today.
 func lootbox_ads_left() -> int:
@@ -2953,6 +2960,9 @@ func buy_lootbox(use_voucher:=false, free:=false) -> bool:
 func close_lootbox() -> void:
 	lootbox_scene.visible=false; state=lootbox_return_state
 	shop_truck.visible=state in ["shop", "armory"]; player.visible=state in ["playing","paused","gameover","intro","cover","health_ad"]
+	if state=="cover":
+		for z in zombies:
+			if is_instance_valid(z): z.visible=true
 
 ## ---- Wallet row and the real-money store -------------------------------------------------
 ## Full wallet (lobby/store): can energy, silver, gold and voucher, each with a + (opens the store).
@@ -5849,6 +5859,9 @@ func _roller_id() -> String:
 	return String(choices[rng.randi_range(0,choices.size()-1)])
 
 func _break_crate(crate: Node3D) -> void:
+	# one reward per platform or barrel, however many hit paths reach it in the same moment
+	if bool(crate.get("rewarded")): return
+	crate.set("rewarded",true)
 	sound.play("pickup"); shake=maxf(shake,0.35)
 	var center: Vector3=crate.position+Vector3(0,0.55,0)
 	_burst(center,Color("8a6a3c"),16); _burst(center+Vector3(0,0.6,0),Color("6cc8ff"),10)
@@ -5997,7 +6010,11 @@ func _vehicle_smash() -> void:
 		if c.has_method("is_roller"):
 			# Rolling barrel: the shell is thrown apart and the item is collected at once,
 			# so nothing is left on the road to look like it rolls backwards.
-			_smash_wood(c.position); _fly_apart(c); _break_crate(c)
+			# It used to stay "not broken" here, so for every frame the vehicle was still over
+			# it the reward was paid again: ten SNIPER popups and ten pickup sounds per barrel.
+			_smash_wood(c.position); _fly_apart(c)
+			c.broken=true; c.dead=true; c.arrived=true; c.visible=false
+			_break_crate(c)
 		else:
 			_smash_wood(c.position)
 			if c.take_hit(99999): _break_crate(c)
@@ -6302,8 +6319,9 @@ func _vehicle_blast() -> void:
 	player.take_damage(player.max_health*(0.35 if player.has_armor else 0.6))
 	damage_flash=0.6; shake=1.0; sound.play("hurt")
 
-func _custom_explosion(pos: Vector3) -> void:
+func _custom_explosion(pos: Vector3,size:=1.0) -> void:
 	var fx:=ExplosionScript.new()
+	fx.radius_scale=size
 	fx.position=pos
 	add_child(fx)
 	effects.append(fx)
@@ -7886,26 +7904,52 @@ const CANNON_PERIOD:=1.25
 const CANNON_COST:=13.0
 const CANNON_RANGE:=42.0
 const CANNON_HALF_WIDTH:=2.1
+## Barrel tip of the tank: the GLB faces +Z with its muzzle at z=1.70, y=1.11; the hull is
+## turned to face -Z and scaled 1.2. (The old point sat BEHIND the hull, where every shot left
+## a cluster of pale-yellow spark balls.)
+const TANK_MUZZLE:=Vector3(-0.05,1.33,-2.05)
+const TANK_FLASH_SCENE:="res://assets/BinbunVFX/muzzle_flash/effects/big_flash/big_flash_04.tscn"
+const TANK_BLAST_SCALE:=2.1
 func _fire_cannon() -> void:
-	var muzzle:=player.position+Vector3(0,1.55,1.05)
-	# tracer + muzzle blast
-	_burst(muzzle,Color("ffe3a6"),16)
-	_burst(muzzle,Color("8a7f68"),8)
-	var beam:=EffectScript.new(); beam.position=muzzle
-	add_child(beam); effects.append(beam)
+	var muzzle:=player.position+TANK_MUZZLE
+	_tank_muzzle_flash(muzzle)
 	sound.play("explosion"); shake=maxf(shake,0.5)
 	# dynamic damage: every zombie standing in the lane takes its own full health
+	var impact:=Vector3.INF; var impact_dz:=INF
 	for i in range(zombies.size()-1,-1,-1):
 		var z=zombies[i]
 		if not is_instance_valid(z): continue
 		var dz: float=(player.position.z-z.global_position.z)
 		if dz<=0.0 or dz>CANNON_RANGE: continue
 		if absf(z.global_position.x-player.position.x)>CANNON_HALF_WIDTH: continue
+		if dz<impact_dz: impact_dz=dz; impact=z.global_position
 		_blood_spray(z.global_position+Vector3(0,1.0,0),22)
 		_hit_zombie(z,1e9,"torso",z.global_position+Vector3(0,1.0,0))
+	# the shell lands on the closest zombie in the lane, or on the road 16 m ahead: a big
+	# version of the barrel blast goes off on the ground there
+	if impact_dz==INF: impact=player.position+Vector3(0,0,-16.0)
+	impact.y=0.0
+	_custom_explosion(impact+Vector3(0,0.55*TANK_BLAST_SCALE,0),TANK_BLAST_SCALE)
 	player.cannon_kick=1.0
 	player.vehicle_durability-=CANNON_COST
 	if player.vehicle_durability<=0.0: _vehicle_breakdown()
+
+## Muzzle fire at the tank barrel: the big muzzle-flash effect, pointed down the road, freed
+## once it has played.
+var _tank_flash_scene: PackedScene
+func _tank_muzzle_flash(at: Vector3) -> void:
+	if _tank_flash_scene==null and ResourceLoader.exists(TANK_FLASH_SCENE):
+		_tank_flash_scene=load(TANK_FLASH_SCENE) as PackedScene
+	if _tank_flash_scene==null: return
+	var fx:=_tank_flash_scene.instantiate() as Node3D
+	if fx==null: return
+	add_child(fx)
+	fx.global_position=at
+	fx.rotation=TANK_FLASH_ROTATION
+	fx.scale=Vector3.ONE*TANK_FLASH_SIZE
+	get_tree().create_timer(0.6).timeout.connect(fx.queue_free)
+const TANK_FLASH_ROTATION:=Vector3(0,0,0)
+const TANK_FLASH_SIZE:=1.0
 
 ## DEV ONLY: unlock every purchasable thing on this account, so the vehicles can be
 ## tested without going through the store / ad flow. Flip to false before shipping.

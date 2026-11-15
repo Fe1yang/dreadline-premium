@@ -20,12 +20,52 @@ func _ready() -> void:
 	case_model=ModelFix.spawn("res://assets/models/props/supply_case.glb")
 	if case_model==null: return
 	case_model.scale=Vector3.ONE*1.55; case_model.position=Vector3(0,0.62,0); add_child(case_model)
+	_hide_case_lettering()
 	lid=case_model.find_child("CrateLid",true,false) as Node3D
 	lock_core=case_model.find_child("CrateCore",true,false) as Node3D
 	reward=Node3D.new(); reward.position=Vector3(0,0.66,0); add_child(reward)
 	glow=OmniLight3D.new(); glow.light_color=Color("ffc46c"); glow.light_energy=0.0; glow.omni_range=2.8
 	glow.position=Vector3(0,1.0,.25); add_child(glow)
 	_make_sparks()
+
+## The case model still carried the old "DEAD FRONTIER / DF-07 FIELD ISSUE" silkscreen. The game
+## has been renamed and the case reads better plain, so every surface painted with the
+## ivory silkscreen material is made invisible.
+func _hide_case_lettering() -> void:
+	var clear:=StandardMaterial3D.new()
+	clear.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	clear.albedo_color=Color(0,0,0,0)
+	clear.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+	for node in case_model.find_children("*","MeshInstance3D",true,false):
+		var mi:=node as MeshInstance3D
+		if mi==null or mi.mesh==null: continue
+		for i in range(mi.mesh.get_surface_count()):
+			var m: Material=mi.get_active_material(i)
+			if m!=null and ("丝印" in m.resource_name or "silkscreen" in m.resource_name.to_lower()):
+				mi.set_surface_override_material(i,clear)
+
+## Reward models come in wildly different authored sizes (the vest is ~120 units long), so a
+## fixed scale made some of them so big the camera looked straight through them and the case
+## seemed empty. Fit every reward into a box a little smaller than the case opening.
+const REWARD_MAX_SPAN:=1.05
+func _fit_reward(node: Node3D) -> void:
+	var box:=AABB(); var first:=true
+	for m in node.find_children("*","MeshInstance3D",true,false):
+		var mi:=m as MeshInstance3D
+		if mi==null or mi.mesh==null: continue
+		var xf:=Transform3D.IDENTITY; var p: Node=mi
+		while p!=null and p!=node:
+			if p is Node3D: xf=(p as Node3D).transform*xf
+			p=p.get_parent()
+		var a:=xf*mi.get_aabb()
+		box=a if first else box.merge(a); first=false
+	if first: return
+	var span:=maxf(box.size.x,maxf(box.size.y,box.size.z))
+	if span<=0.0001: return
+	var s:=REWARD_MAX_SPAN/span
+	node.scale=Vector3.ONE*s
+	# centre it over the case and stand it on the reward pivot
+	node.position=-Vector3(box.get_center().x,box.position.y,box.get_center().z)*s
 
 func _mat(color: Color,rough:=.75,metal:=0.0) -> StandardMaterial3D:
 	var m:=StandardMaterial3D.new(); m.resource_name="Case table · "+color.to_html(); m.albedo_color=color; m.roughness=rough; m.metallic=metal
@@ -88,17 +128,17 @@ func open_case(reward_id: String) -> void:
 		var dog: Node3D=(load(pets[pi].asset) as PackedScene).instantiate() as Node3D
 		reward.add_child(dog)
 		var mf:=load("res://scripts/model_fix.gd")
-		dog.position.y=mf.fit_pet(dog,0.9)-0.35; mf.play_animation(dog,"Dog_Idle"); return
+		_fit_reward(dog); mf.play_animation(dog,"Dog_Idle"); return
 	if reward_id.begins_with("char_"):
 		# a paid survivor won from the case: owned for good, shown standing in the box
 		var chars: Array=(load("res://scripts/lobby_scene_3d.gd") as GDScript).CHARACTERS
 		var ci:=clampi(int(reward_id.trim_prefix("char_")),0,chars.size()-1)
 		var actor: Node3D=(load(chars[ci].asset) as PackedScene).instantiate() as Node3D
 		reward.add_child(actor)
-		actor.position.y=-0.35; actor.scale=Vector3.ONE*0.62
+		_fit_reward(actor)
 	if ResourceLoader.exists(path):
 		var model: Node3D=(load(path) as PackedScene).instantiate() as Node3D
-		model.scale=Vector3.ONE*(1.35 if reward_id.begins_with("w_") else 1.1); reward.add_child(model)
+		reward.add_child(model); _fit_reward(model)
 
 func _process(delta: float) -> void:
 	if not visible: return

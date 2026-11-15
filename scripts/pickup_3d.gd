@@ -52,7 +52,15 @@ func _model_span(node: Node3D) -> float:
 		var mi := m as MeshInstance3D
 		if mi == null or mi.mesh == null:
 			continue
-		var a: AABB = mi.get_aabb()
+		# include the node transforms between the mesh and the model root: the frag grenade
+		# GLB is ~13 units long inside a 0.01-scaled node, and judging it by the raw mesh
+		# shrank the real 13 cm grenade to about a centimetre (only its glow was left)
+		var xf := Transform3D.IDENTITY
+		var p: Node = mi
+		while p != null and p != node:
+			if p is Node3D: xf = (p as Node3D).transform * xf
+			p = p.get_parent()
+		var a: AABB = xf * mi.get_aabb()
 		box = a if first else box.merge(a)
 		first = false
 	if first:

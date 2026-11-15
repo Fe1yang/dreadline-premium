@@ -47,6 +47,7 @@ var hits_left := 10
 var max_hits := 10
 var half_extents := Vector2(0.72,0.64) # x / z, same convention as road obstacles
 var broken := false
+var rewarded := false   # the reward was already paid (main_3d._break_crate)
 var dead := false # aim code treats targets uniformly
 var arrived := false
 var flight := 0.0
@@ -293,6 +294,7 @@ func reuse(id: String, hits: int) -> void:
 	broken = false
 	dead = false
 	arrived = false
+	rewarded = false
 	flight = 0.0
 	punch = 0.0
 	spin = 0.0

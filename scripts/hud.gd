@@ -244,14 +244,24 @@ func _draw_clean() -> void:
 func _draw_list() -> void:
 	_replay(list_clip,list_ops,-list_clip.position)
 
-## The voucher art is a wide ticket (240x147). Many slots were laid out as near-squares, which
+## The voucher art is a wide golden ticket (480x227). Many slots were laid out as near-squares, which
 ## squashed it into a tall stub; keep its height and widen it around the same centre instead.
 func _keep_aspect(tex: Texture2D,r: Rect2) -> Rect2:
 	if tex==null or tex!=voucher_tex or r.size.y<=0.0: return r
 	var ar: float=float(tex.get_width())/maxf(1.0,float(tex.get_height()))
-	if r.size.x/r.size.y>=ar*0.92: return r
-	var w: float=r.size.y*ar
-	return Rect2(Vector2(r.get_center().x-w*0.5,r.position.y),Vector2(w,r.size.y))
+	var box: float=r.size.x/r.size.y
+	if absf(box-ar)<ar*0.06: return r
+	var w: float; var h: float
+	if box<1.3:
+		# near-square slot (check-in tiles, mail rows): there is room around it, so keep the
+		# height and widen the ticket, at most to 1.6x the slot
+		w=minf(r.size.y*ar,r.size.x*1.6); h=w/ar
+	else:
+		# a strip next to a number (wallet, reward lines): never grow past the slot's width,
+		# so the count beside it is not covered; shrink the height instead
+		w=minf(r.size.x,r.size.y*ar); h=w/ar
+	var c:=r.get_center()
+	return Rect2(Vector2(c.x-w*0.5,c.y-h*0.5),Vector2(w,h))
 
 ## Draws recorded ops onto a layer. "xf" sets a rotation/offset for what follows (tilted tags).
 func _replay(target: Control,ops: Array,offset: Vector2) -> void:
@@ -626,18 +636,20 @@ func _draw_lootbox() -> void:
 	var lang: String=game.language_code
 	# Keep the real 3D case visible; only the header and reward console are overlaid.
 	draw_rect(Rect2(0,0,540,110),Color(0.018,0.022,0.023,0.84))
-	draw_rect(Rect2(0,704,540,256),Color(0.018,0.022,0.023,0.90))
+	# The reward lines sit ABOVE the AD strip (736) now: they used to share its rows and the
+	# yellow strip covered "PERMANENT UPGRADE ACQUIRED" and the reward name.
+	draw_rect(Rect2(0,622,540,338),Color(0.018,0.022,0.023,0.90))
 	_button(Rect2(24,24,100,48),"‹  "+game.localize("back"),false)
 	_text_center(ShopText.text(lang,"cases_title"),Vector2(328,61),26,WHITE)
-	_text_center("DF–07  /  FIELD ISSUE",Vector2(270,132),13,MUTED)
 	if game.lootbox_scene.revealed:
-		_text_center(ShopText.text(lang,"case_reward"),Vector2(270,742),15,GOLD)
-		_bold_text(game.lootbox_reward_title,Vector2(130,778),25,WHITE)
+		_text_center(ShopText.text(lang,"case_reward"),Vector2(270,652),15,GOLD)
+		var _rw: float=bold.get_string_size(game.lootbox_reward_title,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(24)).x
+		_bold_text(game.lootbox_reward_title,Vector2(270-_rw*0.5,692),24,WHITE)
 	elif game.lootbox_scene.opening:
-		_text_center(ShopText.text(lang,"case_opening"),Vector2(270,756),21,WHITE)
+		_text_center(ShopText.text(lang,"case_opening"),Vector2(270,682),21,WHITE)
 	else:
-		_text_center(ShopText.text(lang,"case_hint"),Vector2(270,722),15,MUTED)
-	if not game.lootbox_message.is_empty(): _text_center(game.lootbox_message,Vector2(270,786),14,Color("ef9b82"))
+		_text_center(ShopText.text(lang,"case_hint"),Vector2(270,676),15,MUTED)
+	if not game.lootbox_message.is_empty(): _text_center(game.lootbox_message,Vector2(270,718),14,Color("ef9b82"))
 	var action: String=ShopText.text(lang,"case_again" if game.lootbox_scene.revealed else "case_open")
 	_button(game.LOOTBOX_GOLD_RECT,action+"  ·  %d %s"%[game.LOOTBOX_COST,StoreCatalog.text(lang,"silver")],game.bank_silver>=game.LOOTBOX_COST)
 	_button(game.LOOTBOX_VOUCHER_RECT,action+"  ·  1 %s"%ShopText.text(lang,"voucher"),game.bank_vouchers>=1)
