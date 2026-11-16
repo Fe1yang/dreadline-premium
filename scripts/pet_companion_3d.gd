@@ -80,6 +80,9 @@ var age:=0.0
 var bite_time:=0.0
 var breed:=0
 var slot_index:=0
+## Where this pet stands around a zombie it is biting, in radians. Golden-angle
+## spacing plus a little jitter keeps two pets from ever arriving on the same arc.
+var bite_bearing:=0.0
 var base_y:=0.0
 var heading:=0.0       # where the nose points: 0 = down the road (-Z)
 var stride_rate:=1.0   # smoothed playback rate of the gallop
@@ -187,6 +190,7 @@ var bark_stop:=0.0
 func setup(index: int, slot:=0) -> void:
 	breed=clampi(index,0,LobbyScene.PETS.size()-1)
 	slot_index=clampi(slot,0,FORMATION_OFFSETS.size()-1)
+	bite_bearing=float(slot_index)*2.39996+randf_range(-0.35,0.35)
 	model=ModelFix.spawn(String(LobbyScene.PETS[breed].asset))
 	if model==null: return
 	add_child(model); ModelFix.double_sided(model)
@@ -333,7 +337,9 @@ func tick(delta: float) -> void:
 	var attacking: bool=_valid_target()
 	# Left slot bites from the left flank, right slot from the right, so two pets on one
 	# zombie stand shoulder to shoulder instead of inside each other.
-	if attacking: desired=target.position+Vector3(-0.55 if slot_index%2==0 else 0.55,0.0,0.15)
+	if attacking:
+		var reach: float=float(target.radius)+0.52
+		desired=target.position+Vector3(sin(bite_bearing)*reach,0.0,cos(bite_bearing)*reach)
 	var flat_delta: Vector3=desired-position; flat_delta.y=0
 	var distance: float=flat_delta.length()
 	var bite_range: float=0.72+(float(target.radius) if attacking else 0.0)
