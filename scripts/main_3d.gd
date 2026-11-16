@@ -4752,7 +4752,7 @@ func _tick_bullets(delta: float) -> void:
 					break
 		if not consumed:
 			for barrel in barrels:
-				if not barrel.dead and not b.hit_targets.has(barrel) and b.position.y<2.4 and _swept_2d(prev,b.position,barrel.position,barrel.radius+0.34):
+				if not barrel.dead and not b.hit_targets.has(barrel) and _swept_2d(prev,b.position,barrel.position,barrel.radius+0.75):
 					b.hit_targets.append(barrel)
 					if barrel.take_hit(b.damage): _explode(barrel)
 					consumed=true; break
@@ -6533,33 +6533,14 @@ func _update_mouse_aim() -> void:
 ## fired level from the shoulder would otherwise sail straight over.
 var aim_on_banshee:=false
 func _update_touch_aim() -> void:
-	aim_target=null; aim_on_banshee=false
-	# No stick input means no aiming: the shot simply goes where the survivor faces. Snapping
-	# onto barrels and platforms while the stick was idle is what made the gun shoot the scenery.
-	if right_stick.length()<=0.16:
-		return
-	var best_score:=0.995
+	# The right stick is the only aim. Nothing is snapped or locked: earlier versions pulled the
+	# shot onto barrels and supply platforms, which made the gun fire at the scenery by itself.
+	aim_target=null
 	aim_on_banshee=false
 	for z in zombies:
-		# no lock: this only notes whether the stick is pointing straight at the Banshee, so that
-		# shot keeps its punch-through and can reach her behind the pack
 		if not is_instance_valid(z) or z.dead or z.kind!="banshee": continue
 		var b_flat: Vector3=z.global_position-player.global_position; b_flat.y=0
 		if b_flat.length()>0.2 and aim_direction.dot(b_flat.normalized())>0.9986: aim_on_banshee=true
-	for barrel in barrels:
-		if not is_instance_valid(barrel) or barrel.dead: continue
-		var flat: Vector3=barrel.global_position-player.global_position; flat.y=0
-		if flat.length()<0.2 or flat.length()>42: continue
-		var score: float=aim_direction.dot(flat.normalized())-flat.length()*0.0008
-		if score>best_score:
-			best_score=score; aim_target=barrel; aim_point=barrel.global_position+Vector3(0,barrel.height*0.5,0)
-	for crate in crates:
-		if not is_instance_valid(crate) or crate.broken: continue
-		var flat: Vector3=crate.global_position-player.global_position; flat.y=0
-		if flat.length()<0.2 or flat.length()>42: continue
-		var score: float=aim_direction.dot(flat.normalized())-flat.length()*0.0008
-		if score>best_score:
-			best_score=score; aim_target=crate; aim_point=crate.global_position+Vector3(0,0.45,0)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if booting: return
