@@ -1206,8 +1206,8 @@ func _draw_shop() -> void:
 	_text(ShopText.text(lang,"pick"),Vector2(151,91),13,MUTED)
 	_button(Rect2(404,24,112,48),ShopText.text(lang,"cases"),true)
 	# armory entry: a second button under the case button
-	_box(game.ARMORY_BTN, Color(0.10, 0.11, 0.12, 0.95), Color(LINE, 1.0), 0)
-	_text_center(UiText.text(String(lang),"armory"), game.ARMORY_BTN.get_center() + Vector2(0, 6), 16, WHITE)
+	# same box, same shadow and same type as the case button above it
+	_button(game.ARMORY_BTN, UiText.text(String(lang),"armory"), false)
 	_wallet_shop_only(game.WALLET_SHOP)
 	# plain entry into the store, next to the balance
 	var sb: Rect2=game.SHOP_STORE_BTN
@@ -1687,7 +1687,7 @@ func _wallet(origin: Vector2,plus:=true,k:=1.0) -> void:
 	var cans: String="∞/∞" if game.infinite_resources() else "%d/%d"%[game.stamina.value,game.stamina.CAP]
 	var infw: bool = game.infinite_resources()
 	var coins:=("∞" if infw else _compact(game.bank_coins)); var silver:=("∞" if infw else _compact(game.bank_silver)); var vouchers:=("∞" if infw else _compact(game.bank_vouchers))
-	var ts:=int(round(24*k))
+	var ts:=int(round(30*k))   # the wallet numbers were small enough to be hard to read on a phone
 	game.wallet_text_w=Vector4(bold.get_string_size(cans,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x,bold.get_string_size(coins,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x,bold.get_string_size(silver,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x,bold.get_string_size(vouchers,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(ts)).x)
 	var w: Dictionary=game.wallet_layout(origin,k)
 	if w.has("can_icon"):
@@ -1697,7 +1697,7 @@ func _wallet(origin: Vector2,plus:=true,k:=1.0) -> void:
 	_clean_text(bold,w.coin_text,silver,ts,Color(0.66,0.70,0.74))
 	clean_ops.append(["texture",coin_tex,w.silver_icon])
 	_clean_text(bold,w.silver_text,coins,ts,GOLD)
-	clean_ops.append(["texture",voucher_tex,w.v_icon])
+	clean_ops.append(["texture",voucher_tex,_keep_aspect(voucher_tex,w.v_icon)])
 	_clean_text(bold,w.v_text,vouchers,ts,VOUCHER_COL)
 	if plus:
 		if w.has("can_plus"): _plus_button(w.can_plus)

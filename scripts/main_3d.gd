@@ -2583,7 +2583,7 @@ func _freeze_world(on: bool) -> void:
 
 
 ## Armory: a browsable 3D catalogue of every weapon, opened from the supply truck.
-const ARMORY_BTN := Rect2(404, 80, 112, 40)
+const ARMORY_BTN := Rect2(404, 78, 112, 48)   # same size as the case button, 6 px gap
 const ARMORY_WEAPONS := ["PISTOL", "MAKAROV", "SUOMI", "SMG", "SHOTGUN", "SNIPER", "LAUNCHER", "FLAME"]
 const ARMORY_VIEW := Rect2(40, 158, 460, 380)
 ## Per-weapon size multiplier for the armory stage (compact guns would fill the frame).
@@ -2998,12 +2998,13 @@ func wallet_layout_premium(origin: Vector2,k:=1.0) -> Dictionary:
 	var cw: float=wallet_text_w.z
 	var gw: float=wallet_text_w.y
 	var vw: float=wallet_text_w.w
-	var coin_icon:=Rect2(origin,Vector2(34,34)*k)
-	var silver_icon:=Rect2(Vector2(coin_icon.end.x+11*k+cw+18*k,origin.y),Vector2(34,34)*k)
-	var v_icon:=Rect2(Vector2(silver_icon.end.x+11*k+gw+18*k,origin.y+2*k),Vector2(50,31)*k)
-	return {"coin_icon":coin_icon,"coin_text":Vector2(coin_icon.end.x+11*k,origin.y+24.5*k),
-		"silver_icon":silver_icon,"silver_text":Vector2(silver_icon.end.x+11*k,origin.y+24.5*k),
-		"v_icon":v_icon,"v_text":Vector2(v_icon.end.x+6*k,origin.y+24.5*k)}
+	# bigger icons and a lower baseline to match the 30 px wallet numbers
+	var coin_icon:=Rect2(origin,Vector2(42,42)*k)
+	var silver_icon:=Rect2(Vector2(coin_icon.end.x+12*k+cw+20*k,origin.y),Vector2(42,42)*k)
+	var v_icon:=Rect2(Vector2(silver_icon.end.x+12*k+gw+20*k,origin.y+3*k),Vector2(62,38)*k)
+	return {"coin_icon":coin_icon,"coin_text":Vector2(coin_icon.end.x+12*k,origin.y+30*k),
+		"silver_icon":silver_icon,"silver_text":Vector2(silver_icon.end.x+12*k,origin.y+30*k),
+		"v_icon":v_icon,"v_text":Vector2(v_icon.end.x+7*k,origin.y+30*k)}
 
 
 func wallet_layout(origin: Vector2,k:=1.0) -> Dictionary:
