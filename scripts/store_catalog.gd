@@ -43,12 +43,6 @@ const PACKS:=[
 	{"id":"silver_4","kind":"silver","silver":7400,"vouchers":0,"tier":3,"bonus":23,"glow":"silver","rays":10,"art":"silver_4"},
 	{"id":"silver_5","kind":"silver","silver":19500,"vouchers":0,"tier":4,"bonus":30,"glow":"silver","rays":12,"art":"silver_5"},
 	{"id":"silver_6","kind":"silver","silver":41000,"vouchers":0,"tier":5,"bonus":37,"glow":"silver","rays":16,"art":"silver_6"},
-	{"id":"vouchers_1","kind":"vouchers","coins":0,"vouchers":1,"tier":0,"bonus":0,"glow":"red","rays":6},
-	{"id":"vouchers_2","kind":"vouchers","coins":0,"vouchers":5,"tier":2,"bonus":0,"glow":"red","rays":6},
-	{"id":"vouchers_3","kind":"vouchers","coins":0,"vouchers":10,"tier":3,"bonus":0,"glow":"red","rays":8},
-	{"id":"vouchers_4","kind":"vouchers","coins":0,"vouchers":25,"tier":4,"bonus":25,"glow":"violet","rays":10},
-	{"id":"vouchers_5","kind":"vouchers","coins":0,"vouchers":50,"tier":5,"bonus":0,"glow":"violet","rays":12},
-	{"id":"vouchers_6","kind":"vouchers","coins":0,"vouchers":100,"tier":6,"bonus":0,"glow":"violet","rays":16},
 	# Unlockable survivors and outfits: Mason and Riley are free; everyone else is a
 	# one-time App Store purchase. `char` indexes lobby.CHARACTERS, `skin` indexes lobby.SKINS.
 	{"id":"char_darius","kind":"character","name":"char_darius","char":2,"perk":"perk_darius","coins":2600,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"gold","rays":8},
