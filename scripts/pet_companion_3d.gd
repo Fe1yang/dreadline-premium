@@ -300,6 +300,16 @@ func _valid_target() -> bool:
 	return is_instance_valid(target) and not target.dead and game.zombies.has(target) \
 		and target.position.z<game.player.position.z+GIVE_UP_BEHIND
 
+## Another pet already closing on this zombie? Then it is taken, so two dogs never pile onto
+## the same body and clip through each other.
+func _claimed_by_other(z: Node3D) -> bool:
+	if game == null: return false
+	for other in game.companion_pets:
+		if other == self or not is_instance_valid(other): continue
+		if other.target == z and other.position.distance_to(z.position) < 2.6:
+			return true
+	return false
+
 func _acquire_target() -> void:
 	target=null
 	var best:=ACQUIRE_RANGE
@@ -307,6 +317,7 @@ func _acquire_target() -> void:
 		if not is_instance_valid(z) or z.dead: continue
 		# Protect the immediate running lane, prioritising zombies close to the survivor.
 		if z.position.z>game.player.position.z-AHEAD_MARGIN: continue  # passed already: ignore
+		if _claimed_by_other(z): continue
 		var d: float=z.position.distance_to(game.player.position)
 		if d<best:
 			best=d; target=z
@@ -320,7 +331,9 @@ func tick(delta: float) -> void:
 	if not _valid_target(): _acquire_target()
 	var desired: Vector3=game.player.position+follow_offset(slot_index)
 	var attacking: bool=_valid_target()
-	if attacking: desired=target.position
+	# Left slot bites from the left flank, right slot from the right, so two pets on one
+	# zombie stand shoulder to shoulder instead of inside each other.
+	if attacking: desired=target.position+Vector3(-0.55 if slot_index%2==0 else 0.55,0.0,0.15)
 	var flat_delta: Vector3=desired-position; flat_delta.y=0
 	var distance: float=flat_delta.length()
 	var bite_range: float=0.72+(float(target.radius) if attacking else 0.0)
