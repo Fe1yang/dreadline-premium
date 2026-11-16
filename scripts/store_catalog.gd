@@ -51,8 +51,8 @@ const PACKS:=[
 	{"id":"vouchers_6","kind":"vouchers","coins":0,"vouchers":100,"tier":6,"bonus":0,"glow":"violet","rays":16},
 	# Unlockable survivors and outfits: Mason and Riley are free; everyone else is a
 	# one-time App Store purchase. `char` indexes lobby.CHARACTERS, `skin` indexes lobby.SKINS.
-	{"id":"char_darius","kind":"character","name":"char_darius","char":2,"perk":"perk_darius","coins":1200,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"gold","rays":8},
-	{"id":"char_maya","kind":"character","name":"char_maya","char":3,"perk":"perk_maya","coins":1600,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"violet","rays":10},
+	{"id":"char_darius","kind":"character","name":"char_darius","char":2,"perk":"perk_darius","coins":2600,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"gold","rays":8},
+	{"id":"char_maya","kind":"character","name":"char_maya","char":3,"perk":"perk_maya","coins":3400,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"violet","rays":10},
 	{"id":"char_riley","kind":"character","name":"char_riley","char":1,"coins":5000,"vouchers":0,"tier":7,"bonus":0,"once":true,"glow":"teal","rays":8},
 	{"id":"pet_0","kind":"pet","name":"pets","pet":0,"coins":2500,"silver":0,"vouchers":0,"tier":2,"bonus":0,"once":true,"glow":"gold","rays":8},
 	{"id":"pet_1","kind":"pet","name":"pets","pet":1,"silver":0,"coins":3500,"vouchers":0,"tier":2,"bonus":0,"once":true,"glow":"amber","rays":8},
