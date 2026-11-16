@@ -4752,7 +4752,7 @@ func _tick_bullets(delta: float) -> void:
 					break
 		if not consumed:
 			for barrel in barrels:
-				if not barrel.dead and not b.hit_targets.has(barrel) and _swept_2d(prev,b.position,barrel.position,barrel.radius+0.75):
+				if not barrel.dead and not b.hit_targets.has(barrel) and _swept_2d(prev,b.position,barrel.position,barrel.radius+0.18):
 					b.hit_targets.append(barrel)
 					if barrel.take_hit(b.damage): _explode(barrel)
 					consumed=true; break
