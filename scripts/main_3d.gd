@@ -3364,7 +3364,7 @@ func _open_airdrop() -> void:
 ## On the phone this opens the system share sheet (Facebook, WhatsApp, Messages, X ...) with a
 ## screenshot of the results and a line of text, through an iOS share plugin singleton if one is
 ## installed. Without one (editor / desktop) the text is copied to the clipboard instead.
-const SHARE_RECT:=Rect2(66,832,408,54)   # same width/height as the shop button, same 20 px gap
+const SHARE_RECT:=Rect2(66,758,408,54)   # moved up into the slot the shop button used
 const SHARE_SINGLETONS:=["GodotShare","Share","NativeShare"]
 var share_toast:=0.0
 var share_node: Node   # created on the first share
@@ -3772,6 +3772,8 @@ func can_double_run() -> bool:
 
 ## Results screen: the ×2 button sits beside the total, under the kill breakdown.
 func gameover_double_rect() -> Rect2:
+	# its own slot on the right of the panel, back where it belongs: the money block is kept to
+	# the left column so nothing overlaps it
 	var y:=340.0
 	for kind in ["banshee","brute","jockey","runner","walker"]:
 		if int(kill_counts.get(kind,0))>0: y+=22.0
@@ -6462,11 +6464,99 @@ func _burst(pos: Vector3,color: Color,count: int) -> void:
 		_fx_spark_at(pos,color,rng.randf_range(0.035,0.075),Vector3(rng.randf_range(-2,2),rng.randf_range(0.5,3),rng.randf_range(-2,2)),-5.0,rng.randf_range(0.35,0.65))
 
 ## Rolled on every kill. A voucher is announced with the same popup the coins use.
+## The voucher notice is drawn as one image with a different pastel per glyph: a Label3D can only
+## carry a single colour, so the whole string is rendered once into a texture and shown as a quad.
+var voucher_pic_cache := {}
+
+## "You found a voucher!" in every shipped language: the notice used to be Chinese-or-English
+## only, so eighteen languages read English there.
+const VOUCHER_FOUND_TEXT := {
+	"en": "You found a voucher!",
+	"zh_CN": "你获得了一张礼券！",
+	"zh_TW": "你獲得到了一張禮券！",
+	"ja": "チケットを手に入れた！",
+	"ko": "티켓을 획득했다!",
+	"es": "¡Has encontrado un cupón!",
+	"fr": "Vous avez trouvé un bon !",
+	"de": "Du hast einen Gutschein gefunden!",
+	"pt": "Você encontrou um cupom!",
+	"ru": "Вы нашли купон!",
+	"ar": "لقد وجدت قسيمة!",
+	"hi": "आपको एक वाउचर मिला!",
+	"id": "Kamu menemukan voucher!",
+	"it": "Hai trovato un buono!",
+	"tr": "Bir kupon buldun!",
+	"nl": "Je hebt een voucher gevonden!",
+	"pl": "Znalazłeś kupon!",
+	"th": "คุณพบคูปอง!",
+	"vi": "Bạn đã tìm thấy một phiếu!",
+	"uk": "Ви знайшли купон!",
+}
+
+func _voucher_picture() -> Texture2D:
+	var key := String(language_code)
+	if voucher_pic_cache.has(key):
+		return voucher_pic_cache[key]
+	var text := String(VOUCHER_FOUND_TEXT.get(key, VOUCHER_FOUND_TEXT["en"]))
+	var font: Font = RunText.font()
+	var fs := 72
+	# one hue per letter, sweeping like a rainbow across the whole line
+	var stops := [Color("f78fb3"), Color("f9a87c"), Color("f7e07a"), Color("9be38a"),
+		Color("7fd9d2"), Color("86a8f0"), Color("b79cf0")]
+	var widths: Array = []
+	var total := 0
+	for i in range(text.length()):
+		var w := int(ceil(font.get_string_size(text.substr(i,1), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x))
+		widths.append(w); total += w + 10
+	var vp := SubViewport.new()
+	vp.transparent_bg = true
+	vp.size = Vector2i(maxi(8, total), 112)
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(vp)
+	var x := 0
+	for i in range(text.length()):
+		var ch := text.substr(i,1)
+		for layer in [0,1]:
+			var l := Label.new(); l.text=ch
+			l.position=Vector2(x+5, 4); l.size=Vector2(widths[i], 104)
+			l.add_theme_font_override("font", font)
+			l.add_theme_font_size_override("font_size", fs)
+			if layer==0:
+				l.add_theme_color_override("font_color", Color("4a4450"))
+				l.add_theme_color_override("font_outline_color", Color("4a4450"))
+				l.add_theme_constant_override("outline_size", 8)
+			else:
+				var frac: float = 0.0 if text.length() <= 1 else float(i) / float(text.length() - 1)
+				var seg: float = frac * float(stops.size() - 1)
+				var lo: int = clampi(int(floor(seg)), 0, stops.size() - 1)
+				var hi: int = mini(lo + 1, stops.size() - 1)
+				l.add_theme_color_override("font_color", (stops[lo] as Color).lerp(stops[hi] as Color, seg - float(lo)))
+			vp.add_child(l)
+		x += int(widths[i]) + 10
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var tex := ImageTexture.create_from_image(vp.get_texture().get_image())
+	vp.queue_free()
+	voucher_pic_cache[key] = tex
+	return tex
+
+func _show_voucher_notice(pos: Vector3) -> void:
+	var tex: Texture2D = voucher_pic_cache.get(String(language_code), null)
+	if tex == null:
+		tex = await _voucher_picture()
+	var e = EffectScript.new()
+	e.position = pos
+	add_child(e)
+	e.show_picture(tex, 0.34)
+	e.velocity = Vector3(0.0, 0.8, 0.0); e.gravity = 0.0
+	e.arm(1.1)
+	effects.append(e)
+
 func _roll_voucher_drop(z_pos: Vector3) -> void:
 	if rng.randf() >= VOUCHER_DROP_CHANCE:
 		return
 	bank_vouchers += 1
-	_popup(z_pos + Vector3(0.0, 2.4, 0.0), "你获得了一张礼券！" if String(language_code).begins_with("zh") else "You found a voucher!", Color("ffe9f3"), true)
+	_show_voucher_notice(z_pos + Vector3(0.0, 2.4, 0.0))
 	sound.play("coin_get")
 	_save()
 
@@ -6882,17 +6972,6 @@ func _pointer_down(pos: Vector2) -> bool:
 			return true
 		return true
 	elif state=="settings":
-		# dev tap: five taps on the heading add 10000 coins for testing
-		if SETTINGS_DEV_TAP.has_point(pos):
-			settings_dev_taps += 1
-			if settings_dev_taps >= 5:
-				settings_dev_taps = 0
-				bank_coins += 10000
-				store_toast_text = "+10000"
-				store_toast = 1.6
-				sound.play("coin_get")
-				_save()
-			return true
 		if SLIDER_MUSIC.grow(8).has_point(pos): volume_drag="music"; _set_volume_from(pos.x); return true
 		if SLIDER_SFX.grow(8).has_point(pos): volume_drag="sfx"; _set_volume_from(pos.x); return true
 		if Rect2(66,348,408,70).has_point(pos): auto_reload=not auto_reload; _save(); return true
@@ -6912,7 +6991,7 @@ func _pointer_down(pos: Vector2) -> bool:
 	if state=="gameover" and gameover_double_rect().has_point(pos): request_reward_ad("run_double"); return true
 	if state=="gameover" and Rect2(66,586,408,70).has_point(pos) and (not revive_used or PREMIUM_BUILD): request_revival(); return true
 	if state=="gameover" and Rect2(66,672,408,66).has_point(pos): go_to_lobby(); return true
-	if state=="gameover" and Rect2(66,758,408,54).has_point(pos): open_shop(); return true
+	# no supply-shop tap on the results screen any more: it was hit by accident
 	if state=="gameover" and SHARE_RECT.has_point(pos): share_result(); return true
 	if state=="shop":
 		if ARMORY_BTN.has_point(pos): open_armory(); return true
@@ -6990,7 +7069,9 @@ func _load_save() -> void:
 	for f in ["--smoke-test","--soak-test","--lootbox-test","--stamina-test","--capture","--capture-medic","--capture-bike"]:
 		if f in OS.get_cmdline_user_args(): isolated=true; break
 	if not isolated and (c.load(SAVE_PATH)==OK or c.load(SAVE_PATH_LEGACY)==OK):
-		best_distance=int(c.get_value("run","best",0)); character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)) if c.has_section_key("display","quality_high") else device_can_run_high(); look_mode=clampi(int(c.get_value("display","look",4)),0,LOOK_COUNT-1); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
+		best_distance=int(c.get_value("run","best",0))
+		# 99999 is the number old test runs wrote into the save; it is not a real record
+		if best_distance>=99999: best_distance=0; character_choice=int(c.get_value("run","character",0)); skin_choice=_dict_or_empty(c.get_value("run","skins",{})); pet_choice=clampi(int(c.get_value("run","pet",0)),0,3); pet_equipped=bool(c.get_value("run","pet_equipped",false)); owned_pets=_dict_or_empty(c.get_value("pets","owned",{})) if int(c.get_value("pets","rules",0))>=2 else {}; mail_claimed=_dict_or_empty(c.get_value("mail","claimed",{})); airdrop_day=str(c.get_value("airdrop","day","")); intro_seen=bool(c.get_value("run","intro_seen",false)) or best_distance>0; ad_run_used=bool(c.get_value("run","ad_run_used",false)); auto_reload=bool(c.get_value("gameplay","auto_reload_v4",false)); text_size=clampi(int(c.get_value("display","text_size",1)),0,2); quality_high=bool(c.get_value("display","quality_high",true)) if c.has_section_key("display","quality_high") else device_can_run_high(); look_mode=clampi(int(c.get_value("display","look",4)),0,LOOK_COUNT-1); owned_vehicle=str(c.get_value("vehicles","owned","")); loadout_on=bool(c.get_value("run","loadout_on",true)); passes=c.get_value("pass","owned",{}); pass_days=c.get_value("pass","days",{}); puzzle_pieces=c.get_value("puzzle","pieces",{}); all_access=bool(c.get_value("pass","all_access",false))
 		if owned_vehicle=="CAR": owned_vehicle="CRUISER" # old save name for the third bike
 		owned_characters=_dict_or_empty(c.get_value("chars","owned",{})); owned_skins=_dict_or_empty(c.get_value("chars","skins",{}))
 		terms_accepted=bool(c.get_value("legal","terms_premium_v1",false))   # own key: an acceptance stored by the old in-app-purchase build does not count for this one

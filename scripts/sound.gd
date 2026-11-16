@@ -20,7 +20,7 @@ var title_music: AudioStreamPlayer
 const LOBBY_TRACKS := ["res://assets/audio/lobby_music.ogg","res://assets/audio/lobby_serenade.mp3","res://assets/audio/lobby_beyond_routine.mp3","res://assets/audio/lobby_smooth_podcast.mp3"]
 var lobby_music: AudioStreamPlayer
 var lobby_streams: Array = []
-## Supply shop (è¡¥ç»™å•†åº—) rotates randomly through these too; the theme copy is duplicated so
+## Supply shop (补给商店) rotates randomly through these too; the theme copy is duplicated so
 ## its loop can stay off here while the shared `music` player keeps looping it elsewhere.
 ## The old quiet theme (dead_run_theme.wav, -21 dBFS, 24 s) is gone: the user asked for it to be
 ## removed from the supply shop. The file stays on disk so it can be brought back in one line.
@@ -28,7 +28,7 @@ const SHOP_TRACKS := ["res://assets/audio/shop_disco.mp3"]
 var shop_music: AudioStreamPlayer
 var shop_streams: Array = []
 ## States that are the main screen, including the popups shown over it.
-## Note: "terms" is NOT here â€” it sits over the cover (login page), so it keeps the
+## Note: "terms" is NOT here — it sits over the cover (login page), so it keeps the
 ## login/title music, not the lobby music.
 const LOBBY_STATES:=["character_select","signin","offer"]
 var chase_streams: Array = []

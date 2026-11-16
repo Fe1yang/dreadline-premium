@@ -1263,6 +1263,24 @@ func _draw_languages() -> void:
 		_text_center(item.native,rect.get_center()+Vector2(0,6),16,WHITE)
 	_button(Rect2(66,840,408,60),game.localize("back"),true)
 
+## Currency name for the results row. StoreCatalog has no "silver" key, so the row used to read
+## the literal word "silver" in every language.
+const SILVER_LABEL := {
+	"en": "Silver", "zh_CN": "银币", "zh_TW": "銀幣", "ja": "シルバー", "ko": "실버",
+	"es": "Plata", "fr": "Argent", "de": "Silber", "pt": "Prata", "ru": "Серебро",
+	"ar": "فضة", "hi": "चांदी", "id": "Perak", "it": "Argento", "tr": "Gümüş",
+	"nl": "Zilver", "pl": "Srebro", "th": "เงิน", "vi": "Bạc", "uk": "Срібло",
+}
+
+## Coin name for the results wallet line: the row used to say "wallet" and leave the two numbers
+## unlabelled, which read as one mystery figure.
+const COIN_LABEL := {
+	"en": "Coins", "zh_CN": "金币", "zh_TW": "金幣", "ja": "コイン", "ko": "코인",
+	"es": "Monedas", "fr": "Pièces", "de": "Münzen", "pt": "Moedas", "ru": "Монеты",
+	"ar": "عملات", "hi": "सिक्के", "id": "Koin", "it": "Monete", "tr": "Altın",
+	"nl": "Munten", "pl": "Monety", "th": "เหรียญ", "vi": "Xu", "uk": "Монети",
+}
+
 func _draw_gameover() -> void:
 	var zh: bool=game.language_code.begins_with("zh")
 	# The street where the run ended stays visible; darkness pools at the top (title) and
@@ -1270,36 +1288,40 @@ func _draw_gameover() -> void:
 	_box(Rect2(0,0,540,game.ui_h),Color(0.012,0.015,0.016,0.58))
 	_box(Rect2(0,0,540,240),Color(0.012,0.015,0.016,0.35))
 	_box(Rect2(0,560,540,400),Color(0.012,0.015,0.016,0.45))
+	# panel first: it now contains the record line and the "revive used" note, so it has to be
+	# behind them instead of covering them
+	var panel_h: float = 416.0 + (34.0 if game.revive_used else 0.0)
+	_panel(Rect2(54,176,432,panel_h),Color(0.04,0.045,0.048,0.92),LINE,0)
+	_box(Rect2(54,176,4,panel_h),PAINT_RED)
 	if game.new_record: _draw_new_record()
 	else:
 		# Red brush splash with white caps — the same section-title language as every menu.
-		_section(Vector2(-1,128),game.localize("run_over"),32)
-		_clean_center(font,Vector2(270,214),ProgressCatalog.text(game.language_code,"best").replace("%d",_grouped(game.best_distance)),15,MUTED)
-	_panel(Rect2(54,238,432,330),Color(0.04,0.045,0.048,0.92),LINE,0)
-	_box(Rect2(54,238,4,330),PAINT_RED) # single blood-red edge, like the reference's red marks
-	_stat(game.localize("distance"),"%d m"%int(game.distance),Vector2(80,272)); _stat(game.localize("kills"),"%d"%game.kills,Vector2(300,272))
+		_clean_center(bold,Vector2(270,150),game.localize("run_over"),32,WHITE)
+		_clean_center(font,Vector2(270,226),ProgressCatalog.text(game.language_code,"best").replace("%d",_grouped(game.best_distance)),16,MUTED)
+	_stat(game.localize("distance"),"%d m"%int(game.distance),Vector2(80,268)); _stat(game.localize("kills"),"%d"%game.kills,Vector2(300,268))
 	# Kill breakdown: tougher zombies are worth more coins.
 	var lang: String=game.language_code
-	var y:=348.0
+	var y:=344.0
 	for kind in ["banshee","brute","jockey","runner","walker"]:
 		var n: int=int(game.kill_counts.get(kind,0))
 		if n<=0: continue
-		clean_ops.append(["text",font,Vector2(80,y),ShopText.text(lang,"k_"+kind),_scaled(16),Color(1,1,1,0.75)])
-		clean_ops.append(["text",font,Vector2(262,y),"× %d"%n,_scaled(16),MUTED])
+		clean_ops.append(["text",font,Vector2(80,y),ShopText.text(lang,"k_"+kind),_scaled(18),Color(1,1,1,0.8)])
+		clean_ops.append(["text",font,Vector2(262,y),"× %d"%n,_scaled(18),MUTED])
 		var coins:="+%d"%int(game.kill_coins.get(kind,0))
-		clean_ops.append(["text",font,Vector2(458-font.get_string_size(coins,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(16)).x,y),coins,_scaled(16),GOLD])
-		y+=21.0
-	clean_ops.append(["text",font,Vector2(80,y),GameText.text(lang,"survival"),_scaled(16),Color(1,1,1,0.75)])
+		clean_ops.append(["text",font,Vector2(458-font.get_string_size(coins,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(19)).x,y),coins,_scaled(18),GOLD])
+		y+=24.0
+	clean_ops.append(["text",font,Vector2(80,y),GameText.text(lang,"survival"),_scaled(18),Color(1,1,1,0.8)])
 	var surv:="+%d"%game.survival_bonus
-	clean_ops.append(["text",font,Vector2(458-font.get_string_size(surv,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(16)).x,y),surv,_scaled(16),GOLD])
-	draw_rect(Rect2(80,y+12,378,1),Color(1,1,1,0.12))
-	_text(GameText.text(lang,"total"),Vector2(80,y+38),16,MUTED)
-	var total:="+%d"%(game.last_reward+game.run_double_bonus)
-	clean_ops.append(["text",bold,Vector2(80,y+78),total,_scaled(36),GOLD])
-	if game.run_double_bonus>0:
-		var tw: float=bold.get_string_size(total,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(36)).x
-		clean_ops.append(["text",bold,Vector2(88+tw,y+78),"200%",_scaled(24),HILITE])
-	_text(GameText.text(lang,"wallet")+"  %d"%game.bank_coins,Vector2(80,y+104),14,MUTED)
+	clean_ops.append(["text",font,Vector2(458-font.get_string_size(surv,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(19)).x,y),surv,_scaled(18),GOLD])
+	# Two stacked lines, one currency each, and nothing else: the wallet rows were the clutter.
+	var coin_name := String(COIN_LABEL.get(String(lang), COIN_LABEL["en"]))
+	var silver_name := String(SILVER_LABEL.get(String(lang), SILVER_LABEL["en"]))
+	var run_coins: int = int(game.last_reward) + int(game.run_double_bonus)
+	draw_rect(Rect2(80,478,378,1),Color(1,1,1,0.12))
+	_text(coin_name,Vector2(80,520),18,MUTED)
+	clean_ops.append(["text",bold,Vector2(160,520),"+%d"%run_coins,_scaled(26),GOLD])
+	_text(silver_name,Vector2(80,562),18,MUTED)
+	clean_ops.append(["text",bold,Vector2(160,562),"+%d"%int(game.run_silver),_scaled(26),Color("dfe9f5")])
 	if game.last_reward>0:
 		var mode:="done" if game.run_double_bonus>0 else ("busy" if game.ad_pending=="run_double" else "ready")
 		_ad_x2_button(game.gameover_double_rect(),mode)
@@ -1312,9 +1334,10 @@ func _draw_gameover() -> void:
 			nudge=ProgressCatalog.text(lang,"rec_close").replace("%d",str(game.record_metres_left()))
 		if nudge!="": _clean_center(bold,Vector2(270,580),nudge,17,HILITE)
 	else:
-		_text_center("本局复活已使用" if zh else "REVIVE ALREADY USED THIS RUN",Vector2(270,628),16,MUTED)
+		_text_center("本局复活已使用" if zh else "REVIVE ALREADY USED THIS RUN",Vector2(270,196.0+panel_h-24.0),16,MUTED)
 	_button(Rect2(66,672,408,66),ShopText.text(game.language_code,"to_lobby"),true)
-	_button(Rect2(66,758,408,54),game.localize("shop"),false)
+	# The supply-shop button used to sit here and was hit by accident on almost every death;
+	# the share button now fills its place.
 	_share_button(game.SHARE_RECT,lang)
 	if game.share_toast>0.0: _clean_center(bold,Vector2(270,game.SHARE_RECT.end.y+24),ExtraText.text(lang,"copied"),14,Color(HILITE,minf(1.0,game.share_toast*2.0)))
 	if game.new_record: _record_confetti()
@@ -2415,11 +2438,17 @@ func _draw_airdrop() -> void:
 
 ## Share button on the results screen: an outlined button with a share glyph.
 func _share_button(r: Rect2,lang: String) -> void:
-	# same box, size and type as the shop button above it, plus a small share mark
+	# The label and its icon are laid out as ONE group and centred together: drawing the text
+	# centred and then hanging the icon off to its left made the word look off-centre.
 	var label: String=ExtraText.text(lang,"share")
-	_button(r,label,false)
+	_button(r,"",false)
 	var tw: float=font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,_scaled(24)).x
-	var ic:=Vector2(r.get_center().x-tw*0.5-20,r.get_center().y)
+	var icon_w := 26.0
+	var group_w := tw + icon_w
+	var text_x: float = r.get_center().x - group_w*0.5 + icon_w
+	var col_text := Color("e2dfd7")
+	clean_ops.append(["text",font,Vector2(text_x,r.get_center().y+_scaled(24)*0.36),label,_scaled(24),col_text])
+	var ic:=Vector2(text_x-icon_w*0.5-6.0,r.get_center().y)
 	var col:=Color("e2dfd7")
 	for p in [ic+Vector2(-7,0),ic+Vector2(7,-8),ic+Vector2(7,8)]: clean_ops.append(["poly",_circle_pts(p,3.5,10),col])
 	clean_ops.append(["line",PackedVector2Array([ic+Vector2(7,-8),ic+Vector2(-7,0),ic+Vector2(7,8)]),col,1.6])

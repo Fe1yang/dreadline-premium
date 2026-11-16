@@ -17,6 +17,29 @@ var age := 0.0
 
 ## The effects are pooled by main_3d: the first call builds the node, every later one
 ## just re-arms it (arm/disarm below), so a fight allocates nothing.
+## A pre-rendered text image on one billboard quad. Needed because a Label3D can only carry a
+## single colour, and the voucher notice has to be several pastel colours at once.
+var pic: MeshInstance3D
+
+func show_picture(tex: Texture2D, height: float) -> void:
+	mode="picture"
+	if label != null: label.visible=false
+	if pic != null:
+		pic.queue_free(); pic=null
+	var quad:=MeshInstance3D.new()
+	var mesh:=QuadMesh.new()
+	var aspect: float=float(tex.get_width())/maxf(1.0,float(tex.get_height()))
+	mesh.size=Vector2(height*aspect,height)
+	var mat:=StandardMaterial3D.new()
+	mat.albedo_texture=tex
+	mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.billboard_mode=BaseMaterial3D.BILLBOARD_ENABLED
+	mat.billboard_keep_scale=true
+	mat.texture_filter=BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	quad.mesh=mesh; quad.material_override=mat
+	add_child(quad); pic=quad; visual=null
+
 func make_text(text: String,color: Color) -> void:
 	mode="text"
 	if label==null:
@@ -136,10 +159,18 @@ func disarm() -> void:
 	elif visual: visual.visible=false
 	for q in crit_quads: q.visible=false
 
+func mat_alpha(node: MeshInstance3D, a: float) -> void:
+	var m := node.material_override as StandardMaterial3D
+	if m != null:
+		var c := m.albedo_color
+		m.albedo_color = Color(c.r, c.g, c.b, a)
+
 func tick(delta: float) -> void:
 	life-=delta; age+=delta; position+=velocity*delta; velocity.y+=gravity*delta
 	var a:=clampf(life/total_life,0,1)
-	if label:
+	if mode=="picture" and pic!=null:
+		mat_alpha(pic, a)
+	elif label:
 		if has_meta("fx_rainbow"):
 			# soft pastel drift: low saturation, slowly cycling hue, so it reads as coloured
 			# text instead of a neon sign
