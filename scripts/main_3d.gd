@@ -4651,7 +4651,7 @@ func flat_fwd_of(v: Vector3) -> Vector3:
 	return Vector3(v.x, 0.0, v.z).normalized()
 
 func _fire() -> bool:
-	if is_instance_valid(player) and player.vehicle in ["SEDAN","CRUISER","GOLD_CAR"]: return false  # cars do not shoot; bikes and the tank do
+	if is_instance_valid(player) and player.vehicle in ["SEDAN","GOLD_CAR"]: return false  # only the two cars have no gun
 	if not player.can_fire(): return false
 	if player.weapon=="LAUNCHER": return _fire_launcher()
 	if player.weapon=="FLAME": return _fire_flame()
