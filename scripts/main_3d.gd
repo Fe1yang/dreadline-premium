@@ -6423,12 +6423,14 @@ func _fx_drop_at(pos: Vector3,color: Color,size: float,vel: Vector3,grav: float,
 	e.position=pos; e.velocity=vel; e.gravity=grav; e.arm(seconds)
 	effects.append(e)
 
-func _fx_label_at(pos: Vector3,text: String,color: Color,vel: Vector3,seconds: float,big: bool):
+func _fx_label_at(pos: Vector3,text: String,color: Color,vel: Vector3,seconds: float,big: bool,rainbow:=false):
 	var e
 	if fx_labels.is_empty(): e=EffectScript.new(); add_child(e)
 	else: e=fx_labels.pop_back()
 	e.make_text(text,color)
 	e.set_meta("fx_kind","label")
+	if rainbow: e.set_meta("fx_rainbow",true)
+	elif e.has_meta("fx_rainbow"): e.remove_meta("fx_rainbow")
 	if big: e.label.font_size=84; e.label.pixel_size=0.0095; e.label.outline_size=14
 	e.position=pos; e.velocity=vel; e.gravity=0.0; e.arm(seconds)
 	effects.append(e)
@@ -6465,8 +6467,8 @@ func _roll_voucher_drop(z_pos: Vector3) -> void:
 	_save()
 
 
-func _popup(pos: Vector3,text: String,color: Color) -> void:
-	_fx_label_at(pos,text,color,Vector3(0,0.8,0),0.85,false)
+func _popup(pos: Vector3,text: String,color: Color,rainbow:=false) -> void:
+	_fx_label_at(pos,text,color,Vector3(0,0.8,0),0.85,false,rainbow)
 
 func _tick_effects(delta: float) -> void:
 	for i in range(effects.size()-1,-1,-1):

@@ -13,6 +13,7 @@ var effect_material: StandardMaterial3D
 ## scaled, because rebuilding a mesh + material per explosion was what stalled the frame.
 var base_scale := 1.0
 var smoke_mat := false
+var age := 0.0
 
 ## The effects are pooled by main_3d: the first call builds the node, every later one
 ## just re-arms it (arm/disarm below), so a fight allocates nothing.
@@ -136,10 +137,15 @@ func disarm() -> void:
 	for q in crit_quads: q.visible=false
 
 func tick(delta: float) -> void:
-	life-=delta; position+=velocity*delta; velocity.y+=gravity*delta
+	life-=delta; age+=delta; position+=velocity*delta; velocity.y+=gravity*delta
 	var a:=clampf(life/total_life,0,1)
 	if label:
-		label.modulate.a=a
+		if has_meta("fx_rainbow"):
+			# soft pastel drift: low saturation, slowly cycling hue, so it reads as coloured
+			# text instead of a neon sign
+			label.modulate=Color.from_hsv(fmod(age*0.34,1.0),0.28,1.0,a)
+		else:
+			label.modulate.a=a
 		for q in crit_quads:
 			if q.visible: q.set_instance_shader_parameter("fade", a)
 	elif mode in ["blast","smoke","shockwave"] and visual:
