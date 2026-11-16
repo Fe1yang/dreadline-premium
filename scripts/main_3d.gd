@@ -5998,9 +5998,12 @@ func _vehicle_smash() -> void:
 	# Only what is actually under the body counts: the saloon is 4 m long, the tank ~2.4 m.
 	# The old box reached 1.3 m behind the player and two lanes wide, which hoovered items
 	# up before the car touched them.
-	var half_width: float=0.90 if player.vehicle=="SEDAN" else 0.62
-	var front: float=-3.72 if player.vehicle=="SEDAN" else -1.32
-	var rear: float=0.24
+	# measured from the model that is actually mounted (see player.vehicle_hitbox), so the
+	# crate or barrel is only taken when the body reaches it
+	var _hb: Vector3=player.vehicle_hitbox()
+	var half_width: float=_hb.x
+	var front: float=_hb.y
+	var rear: float=_hb.z
 	for c in crates.duplicate():
 		if not is_instance_valid(c) or c.broken: continue
 		# Real box overlap with the platform's own footprint, not a magic radius.
@@ -6020,8 +6023,9 @@ func _vehicle_smash() -> void:
 			if c.take_hit(99999): _break_crate(c)
 	for b in barrels.duplicate():
 		if not is_instance_valid(b) or b.dead: continue
-		if absf(b.position.x-player.position.x)>half_width+0.30: continue
-		if b.position.z+0.30<front or b.position.z-0.30>rear: continue
+		var br: float=float(b.radius)
+		if absf(b.position.x-player.position.x)>half_width+br: continue
+		if b.position.z+br<front or b.position.z-br>rear: continue
 		# An explosive barrel is explosive: ramming it sets it off for real. The blast hits
 		# the vehicle's durability first, so the car survives a hit the survivor would not.
 		barrels.erase(b)

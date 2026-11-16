@@ -384,7 +384,58 @@ func mount_vehicle(id: String) -> void:
 		rider=(load("res://scripts/rider_pose.gd") as GDScript).new() as SkeletonModifier3D
 		rider.set("body",model); skeleton.add_child(rider)
 
+
 ## Back on foot (bike broken or the run reset): drop the pose; the run cycle never stopped.
+## The hitbox has to be the body the player can actually see. Measuring the mounted model
+## once is what stops crates being collected (and barrels detonated) a metre before contact.
+var veh_half_width := 0.45
+var veh_front := -1.0
+var veh_rear := 0.20
+
+var _hb_for := ""
+
+## Measured on demand, never at mount time: the model's transforms (and the per-vehicle scale)
+## are only settled once it has been in the tree for a frame.
+func vehicle_hitbox() -> Vector3:
+	if vehicle != "" and _hb_for != vehicle:
+		_measure_vehicle_hitbox()
+		_hb_for = vehicle
+	return Vector3(veh_half_width, veh_front, veh_rear)
+
+func _measure_vehicle_hitbox() -> void:
+	veh_half_width=0.45; veh_front=-1.0; veh_rear=0.20
+	if not is_instance_valid(vehicle_model):
+		return
+	var box:=AABB()
+	var first:=true
+	for mi in vehicle_model.find_children("*","MeshInstance3D",true,false):
+		var m:=mi as MeshInstance3D
+		if m==null or m.mesh==null: continue
+		# local transforms only: global ones are still stale on the frame the vehicle is mounted
+		var xf:=Transform3D.IDENTITY
+		var walk: Node=m
+		while walk!=null and walk!=vehicle_model:
+			xf=(walk as Node3D).transform*xf
+			walk=walk.get_parent()
+		var a:AABB=xf*m.get_aabb()
+		box=a if first else box.merge(a)
+		first=false
+	if first:
+		return
+	# player local: ahead is -Z. A 6 cm grace keeps it fair without reaching early.
+	var w: float=maxf(absf(box.position.x),absf(box.end.x))+0.06
+	var f: float=box.position.z-0.06
+	var r: float=box.end.z+0.06
+	# Sanity clamps: a model still carrying its authoring scale must never become a 97 m box
+	# that slurps crates from the other side of the road.
+	if w>1.30 or (r-f)>5.2 or f<-3.4 or r>3.0 or (String(vehicle)=="SEDAN" and (r-f)<1.6):
+		w=0.45 if String(vehicle)!="SEDAN" and String(vehicle)!="TANK" else (0.90 if String(vehicle)=="SEDAN" else 1.05)
+		f=-1.05 if String(vehicle)!="SEDAN" else -2.05
+		r=1.05 if String(vehicle)!="SEDAN" else 1.55
+	veh_half_width=w
+	veh_front=f
+	veh_rear=r
+
 func dismount_vehicle() -> void:
 	vehicle=""
 	if is_instance_valid(model):
