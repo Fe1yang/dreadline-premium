@@ -13,3 +13,10 @@ backup_models_20261106/
 store_assets/
 "Claude outputs"/
 ^*.tmp$
+# promo material and scratch scripts: never part of the game
+Claude outputs/
+*.avi
+*.mp4
+*.mov
+commit_tiger_fix.bat
+record_movie.bat
