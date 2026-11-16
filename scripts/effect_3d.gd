@@ -143,7 +143,7 @@ func tick(delta: float) -> void:
 		if has_meta("fx_rainbow"):
 			# soft pastel drift: low saturation, slowly cycling hue, so it reads as coloured
 			# text instead of a neon sign
-			label.modulate=Color.from_hsv(fmod(age*0.34,1.0),0.28,1.0,a)
+			label.modulate=Color.from_hsv(fmod(age*0.34,1.0),0.42,1.0,a)
 		else:
 			label.modulate.a=a
 		for q in crit_quads:
