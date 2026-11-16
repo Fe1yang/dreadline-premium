@@ -342,7 +342,9 @@ func tick(delta: float,player_target: Vector3) -> void:
 		body.scale = Vector3.ONE*(1.0+0.08*punch)
 		counter.modulate = Color("fbfbf6").lerp(Color("ff4a3a"),punch)
 		weapon_pivot.position.y = 1.85+sin(spin*2.6)*0.07
-		if weapon_pivot: weapon_pivot.rotation.y = spin*1.9+(PI*0.5 if weapon_id in ["BIKE","SPORT","CRUISER"] else 0.0) if not is_pet() else spin*0.6
+		# one slow turn every drop: pets spun at 0.6 and vehicles at 1.9, so the car
+		# lapped the dog more than three times as fast
+		if weapon_pivot: weapon_pivot.rotation.y = spin*0.6+(PI*0.5 if weapon_id in ["BIKE","SPORT","CRUISER"] else 0.0)
 		if glow_ring: glow_ring.rotation.x = 0.0
 		if light: light.light_energy = 1.4+0.4*sin(spin*5.0)
 		return
