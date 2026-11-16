@@ -6462,7 +6462,7 @@ func _roll_voucher_drop(z_pos: Vector3) -> void:
 	if rng.randf() >= VOUCHER_DROP_CHANCE:
 		return
 	bank_vouchers += 1
-	_popup(z_pos + Vector3(0.0, 2.4, 0.0), "你获得了一张礼券！" if String(language_code).begins_with("zh") else "You found a voucher!", Color(1, 1, 1, 1))
+	_popup(z_pos + Vector3(0.0, 2.4, 0.0), "你获得了一张礼券！" if String(language_code).begins_with("zh") else "You found a voucher!", Color("ffe9f3"), true)
 	sound.play("coin_get")
 	_save()
 
